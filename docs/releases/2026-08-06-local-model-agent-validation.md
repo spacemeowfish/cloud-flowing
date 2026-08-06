@@ -7,11 +7,19 @@
 - 测试方式：本机 Ollama，单模型串行加载
 - 重要说明：本文的“吐词速度”指文本生成速度（token/s），不是语音合成或播放速度。
 
-## 1. 结论先行
+## 1. 当前最终结论
 
-本次已在测试进程中打开 `MODEL_PROVIDER=cloud`，通过本机 Ollama 的 `/v1/chat/completions` 接入 Agent。当前可作为 Agent 默认本地模型的是 `qwen2.5:3b`：固定 60 条评测集的意图准确率、工具准确率、Schema 合规率均为 100%，归一化后的端到端 dry-run 准确率为 96.67%。
+本报告包含两次接入结果：第 4 节是改版前 `CloudModelAdapter` 的历史对照；第 10 节及本节是当前 `OllamaModelAdapter` 的最终复测。此前报告中 LFM 的 0% 来自旧文件 `work/local-model-validation/lfm.json`，不能代表当前适配器的结果。
 
-`qwen3:1.7b` 和 `lfm2.5-thinking:1.2b` 的裸生成速度更高，但没有与当前结构化输出适配器兼容，不能因为 token/s 更高就作为当前 Agent 的替代模型。
+当前测试进程使用 `MODEL_PROVIDER=ollama`，通过 Ollama 原生 `/api/chat` 接入 Agent。固定 60 条评测集的最终结果如下：
+
+| 模型 | 意图准确率 | 参数准确率 | Schema 合规 | 端到端 dry-run |
+|---|---:|---:|---:|---:|
+| `qwen2.5:3b` | 100.00% | 90.00% | 100.00% | 96.67% |
+| `qwen3:1.7b` | 90.00% | 78.33% | 90.00% | 65.00% |
+| `lfm2.5-thinking:1.2b` | 91.67% | 66.67% | 91.67% | 81.67% |
+
+因此，LFM 当前不是 0%：其意图和 Schema 合规率均为 91.67%，端到端 dry-run 为 81.67%。但它的参数准确率为 66.67%，尚未达到 `qwen2.5:3b` 的稳定程度，不能仅因裸 token/s 更高就作为默认模型。
 
 本次没有修改项目默认 `.env`。这样离线测试仍保持 `mock` 默认行为；需要复现本报告时使用文中的进程级环境变量。
 
@@ -20,8 +28,9 @@
 - Ollama：`0.32.5`
 - 地址：`http://127.0.0.1:11434`
 - GPU：AMD Radeon RX 6700 XT
-- Agent 端点：本机 Ollama OpenAI-compatible `/v1/chat/completions`
-- Agent 适配器：项目现有 `CloudModelAdapter`
+- 当前 Agent 端点：本机 Ollama 原生 `/api/chat`
+- 当前 Agent 适配器：`OllamaModelAdapter`
+- 改版前历史对照：OpenAI-compatible `/v1/chat/completions` + `CloudModelAdapter`
 
 | 模型 | 大小 | Ollama digest 前缀 |
 |---|---:|---|
@@ -43,7 +52,9 @@
 
 速度结果是文本模型基准，不包含 ASR、TTS、声卡播放和唤醒词链路。本项目当前没有在本次测试中测量音频吐词时延。
 
-## 4. 接入 Agent 后的固定 60 条功能结果
+## 4. 改版前 Cloud Adapter 对照结果
+
+本节保留改版前的固定 60 条结果，用于说明原问题和验证适配器改动效果；它不是当前推荐配置的测试结论。特别是 LFM 的 0% 仅属于本节的旧接入路径。
 
 ### 4.1 总体指标
 
@@ -69,10 +80,10 @@
 
 qwen2.5 的 6 条原始参数不完全匹配（`knowledge-03/05`、`schedule-02/04`、`text-04`、`todo-04`）都被项目已有归一化规则修正，归一化契约准确率仍为 100%。
 
-### 4.3 qwen3:1.7b 与 lfm2.5-thinking:1.2b 的失败形态
+### 4.3 改版前 qwen3:1.7b 与 lfm2.5-thinking:1.2b 的失败形态
 
 - Qwen3：60 条中 45 条被判定为 `Cloud model returned invalid structured JSON`；只有部分预路由请求能生成可解析 JSON。其有效内容常为空，推理文本出现在响应的 `reasoning` 字段，当前适配器只读取 `message.content`。
-- LFM2.5 Thinking：60 条全部结构化输出无效；同样返回了推理内容而不是 `message.content` 中的 JSON。
+- LFM2.5 Thinking：60 条全部结构化输出无效；同样返回了推理内容而不是 `message.content` 中的 JSON。这对应旧 `lfm.json` 的 0%，不对应当前 `ollama-native-lfm.json` 的 91.67% Schema 合规率和 81.67% 端到端结果。
 - 这不是网络不通：在相同的 `NO_PROXY` 条件下，两个模型都能返回 HTTP 200。失败点是当前 Agent 的结构化响应协议和模型输出格式不兼容。
 
 ## 5. 运行中的关键条件与问题
@@ -107,8 +118,10 @@ $env:no_proxy = "127.0.0.1,localhost"
 - 任务记录：[2026-08-06-local-model-agent-validation.md](../tasks/2026-08-06-local-model-agent-validation.md)
 - 速度脚本：`scripts/benchmark_local_models.ps1`
 - 速度原始结果：`work/local-model-validation/speed.json`
-- Agent 原始结果：`work/local-model-validation/qwen25.json`、`qwen3.json`、`lfm.json`
-- Agent 原始快照：`work/local-model-validation/qwen25.raw.jsonl`、`qwen3.raw.jsonl`、`lfm.raw.jsonl`
+- 当前 Agent 结果：`work/local-model-validation/ollama-native-qwen25.json`、`ollama-native-qwen3.json`、`ollama-native-lfm.json`
+- 当前 Agent 快照：`work/local-model-validation/ollama-native-qwen25.raw.jsonl`、`ollama-native-qwen3.raw.jsonl`、`ollama-native-lfm.raw.jsonl`
+- 改版前对照结果：`work/local-model-validation/qwen25.json`、`qwen3.json`、`lfm.json`
+- 改版前对照快照：`work/local-model-validation/qwen25.raw.jsonl`、`qwen3.raw.jsonl`、`lfm.raw.jsonl`
 
 ## 9. 回归测试状态
 
@@ -116,7 +129,7 @@ $env:no_proxy = "127.0.0.1,localhost"
 
 结果：307 个测试中 306 个通过，1 个失败。失败为 `tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`：测试固定创建 `2026-07-29` 和 `2026-07-30` 的日程，而当前日期为 `2026-08-06`，默认日程查询窗口已不再包含这两个过去日期，因此候选为空。该问题与本次模型速度脚本、模型环境变量和报告文件无关，未在本次任务中修改。
 
-## 10. Ollama 原生适配器改版复测
+## 10. 当前最终结果：Ollama 原生适配器复测
 
 在基线提交 `9a0d97e` 之后，新增 `MODEL_PROVIDER=ollama` 和 `OllamaModelAdapter`。它使用原生 `/api/chat`、`format=json`、可配置 `think`，并对本机回环地址关闭 `httpx` 的系统代理读取。以下结果来自改版后的同一批 60 条用例；旧 Cloud Adapter 结果保留在第 4 节，作为改版前对照。
 
