@@ -1,0 +1,10 @@
+embedding:
+  provider: hashing
+  dimensions: 256
+chunking:
+  min_chars: 300
+  max_chars: 1200
+  overlap_chars: 120
+retrieval:
+  top_k: 5
+

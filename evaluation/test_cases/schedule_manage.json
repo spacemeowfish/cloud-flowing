@@ -1,0 +1,7 @@
+[
+  {"id":"schedule-01","input_text":"创建日程 明天下午2点项目会","expected_intent":"schedule_manage","expected_arguments":{"action":"create"},"expected_tool":"schedule_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"schedule-02","input_text":"创建日程 每周一三五上午9点站会","expected_intent":"schedule_manage","expected_arguments":{"action":"create","recurrence":"weekly","weekdays":[0,2,4]},"expected_tool":"schedule_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"schedule-03","input_text":"今天下午有什么安排","expected_intent":"schedule_manage","expected_arguments":{"action":"query","range":"today"},"expected_tool":"schedule_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"schedule-04","input_text":"取消日程 项目例会","expected_intent":"schedule_manage","expected_arguments":{"action":"query","title_query":"项目例会"},"expected_tool":"schedule_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"schedule-05","input_text":"取消日程 12","expected_intent":"schedule_manage","expected_arguments":{"action":"cancel","id":12},"expected_tool":"schedule_manage","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}}
+]

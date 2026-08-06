@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "source_model_id": "Qwen/Qwen2.5-3B-Instruct",
+  "source_model_revision": "PIN_EXACT_HUGGINGFACE_COMMIT_BEFORE_EXPORT",
+  "target_platform": "RK3588",
+  "quantized_dtype": "W8A8",
+  "quantized_algorithm": "normal",
+  "optimization_level": 1,
+  "num_npu_core": 3,
+  "max_context": 4096,
+  "hybrid_rate": 0,
+  "load_device": "cuda",
+  "load_dtype": "float32"
+}

@@ -1,0 +1,125 @@
+"""Composition root for the application and its replaceable modules."""
+
+import asyncio
+from collections.abc import Coroutine
+from dataclasses import dataclass, field
+
+from agent_platform.adapters import DisabledFileOpener, MockWeatherConnector, SystemFileOpener
+from agent_platform.adapters.notifications import windows_toast
+from agent_platform.config import Settings
+from agent_platform.core.agent_core import AgentCore
+from agent_platform.core.audit_service import AuditService
+from agent_platform.core.connection_manager import ConnectionManager
+from agent_platform.core.data_classification import DataClassificationService
+from agent_platform.core.edge_cloud_router import EdgeCloudRouter
+from agent_platform.core.model_gateway import ModelGateway
+from agent_platform.core.policy_engine import PolicyEngine
+from agent_platform.core.resource_monitor import ResourceMonitor
+from agent_platform.core.session_manager import SessionManager
+from agent_platform.core.task_api import TaskAPI
+from agent_platform.core.tool_executor import ToolExecutor
+from agent_platform.core.tool_registry import ToolRegistry
+from agent_platform.tools import FileSearchTool, KnowledgeBaseTool, MeetingNotesTool, ReminderTool, ScheduleTool, TextProcessingTool, TodoTool
+
+
+@dataclass
+class ApplicationContainer:
+    settings: Settings
+    store: SessionManager
+    tasks: TaskAPI
+    gateway: ModelGateway
+    classifier: DataClassificationService
+    audit: AuditService
+    registry: ToolRegistry
+    agent: AgentCore
+    connections: ConnectionManager
+    knowledge: KnowledgeBaseTool
+    reminders: ReminderTool
+    todos: TodoTool
+    schedules: ScheduleTool
+    background_tasks: set[asyncio.Task[object]] = field(default_factory=set)
+
+    @classmethod
+    def build(cls, settings: Settings) -> "ApplicationContainer":
+        classifier = DataClassificationService()
+        store = SessionManager(settings.database_path)
+        tasks = TaskAPI(store)
+        gateway = ModelGateway.from_settings(settings)
+        audit = AuditService(
+            settings.audit_dir,
+            classifier,
+            retention_days=settings.retention_days,
+            flush_size=settings.audit_flush_size,
+        )
+        opener = SystemFileOpener() if settings.file_open_enabled else DisabledFileOpener()
+        knowledge = KnowledgeBaseTool(
+            settings.knowledge_roots,
+            settings.database_path.with_name("knowledge.db"),
+            classifier,
+        )
+        reminders = ReminderTool(settings.database_path.with_name("reminders.db"), settings.timezone, callback=windows_toast)
+        todos = TodoTool(settings.database_path.with_name("todos.db"), settings.timezone)
+        schedules = ScheduleTool(settings.database_path.with_name("schedules.db"), settings.timezone, callback=windows_toast)
+        registry = ToolRegistry()
+        for tool in (
+            FileSearchTool(settings.authorized_file_roots, opener),
+            knowledge,
+            reminders,
+            todos,
+            schedules,
+            TextProcessingTool(gateway),
+            MeetingNotesTool(settings.authorized_file_roots, settings.meeting_output_dir, classifier),
+        ):
+            registry.register(tool)
+        registry.freeze()
+        executor = ToolExecutor(registry, idempotency_ttl_seconds=settings.idempotency_ttl_seconds)
+        resources = ResourceMonitor(settings.resource_mode)
+        agent = AgentCore(
+            tasks=tasks,
+            gateway=gateway,
+            registry=registry,
+            executor=executor,
+            classifier=classifier,
+            policy=PolicyEngine(),
+            router=EdgeCloudRouter(classifier),
+            resources=resources,
+            audit=audit,
+            network_available=settings.network_available,
+        )
+        connections = ConnectionManager(classifier)
+        connections.register(MockWeatherConnector())
+        connections.freeze()
+        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules)
+
+    async def initialize(self) -> None:
+        await self.tasks.initialize()
+        await self.store.purge_expired(self.settings.retention_days)
+        await self.audit.purge_expired()
+        await self.reminders.start_scheduler()
+        await self.schedules.start_scheduler()
+
+    def spawn(self, coroutine: Coroutine[object, object, object]) -> None:
+        task = asyncio.create_task(coroutine)
+        self.background_tasks.add(task)
+        task.add_done_callback(self.background_tasks.discard)
+
+    async def close(self) -> None:
+        if self.background_tasks:
+            done, pending = await asyncio.wait(self.background_tasks, timeout=5)
+            for task in pending:
+                task.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+        await self.reminders.stop_scheduler()
+        await self.schedules.stop_scheduler()
+        self.reminders.close()
+        self.todos.close()
+        self.schedules.close()
+        self.knowledge.close()
+        await self.audit.flush()
+        await self.connections.close()
+        await self.gateway.close()
+        await self.store.close()
+
+
+__all__ = ["ApplicationContainer"]

@@ -1,0 +1,12 @@
+[
+  {"id":"reminder-01","input_text":"提醒我30分钟后开会","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-02","input_text":"明天下午3点提醒我交报告","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-03","input_text":"提醒我周五提交代码","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-04","input_text":"查看未来7天待办","expected_intent":"reminder_create","expected_arguments":{"action":"query"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-05","input_text":"查询已过期提醒","expected_intent":"reminder_create","expected_arguments":{"action":"query"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-06","input_text":"取消提醒 12","expected_intent":"reminder_create","expected_arguments":{"action":"cancel"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-07","input_text":"每周一上午9点提醒我开周会","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-08","input_text":"后天下午2点提醒我客户拜访","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-09","input_text":"查看未来7天提醒","expected_intent":"reminder_create","expected_arguments":{"action":"query"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"reminder-10","input_text":"待办：1小时后检查服务","expected_intent":"reminder_create","expected_arguments":{"action":"create"},"expected_tool":"reminder_create","expected_pipeline_outcome":"executed","tolerance":{}}
+]

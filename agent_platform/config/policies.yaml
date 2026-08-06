@@ -1,0 +1,9 @@
+roles:
+  user:
+    domains: [personal, public]
+    max_risk: R2
+  admin:
+    domains: ['*']
+    max_risk: R3
+confirm_risks: [R2, R3]
+

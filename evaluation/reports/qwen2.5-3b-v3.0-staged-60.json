@@ -1,0 +1,2309 @@
+{
+  "metrics": {
+    "total": 60,
+    "intent_accuracy": 0.2833333333333333,
+    "argument_accuracy": 0.23333333333333334,
+    "tool_accuracy": 0.2833333333333333,
+    "schema_compliance": 0.2833333333333333,
+    "latency_p50_ms": 815.5126001220196,
+    "latency_p95_ms": 1025.5475998856127,
+    "latency_p99_ms": 1060.2929000742733
+  },
+  "per_intent": {
+    "file_open": 0.3,
+    "knowledge_query": 0.1,
+    "meeting_process": 0.6,
+    "reminder_create": 0.2,
+    "schedule_manage": 0.0,
+    "text_polish": 0.1,
+    "todo_manage": 0.8
+  },
+  "failures": [
+    {
+      "id": "file-03",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-04",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-06",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-07",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-08",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-09",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "file-10",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-01",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-02",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-03",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-05",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-06",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-07",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-08",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-09",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "knowledge-10",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "meeting-03",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "meeting-05",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "meeting-07",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "meeting-10",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-01",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-02",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-03",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-05",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-06",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-07",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-08",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "reminder-09",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "reminder_create"
+    },
+    {
+      "id": "reminder-10",
+      "expected_intent": "reminder_create",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "schedule-01",
+      "expected_intent": "schedule_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "schedule-02",
+      "expected_intent": "schedule_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "schedule-03",
+      "expected_intent": "schedule_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "schedule-04",
+      "expected_intent": "schedule_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "schedule-05",
+      "expected_intent": "schedule_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-01",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-02",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-03",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-04",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-05",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-06",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-07",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-08",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-09",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    },
+    {
+      "id": "text-10",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "text_polish"
+    },
+    {
+      "id": "todo-01",
+      "expected_intent": "todo_manage",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "todo_manage"
+    },
+    {
+      "id": "todo-02",
+      "expected_intent": "todo_manage",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON"
+    }
+  ],
+  "previous_diff": {
+    "intent_accuracy": -0.5666666666666667,
+    "argument_accuracy": -0.4333333333333333,
+    "tool_accuracy": -0.5666666666666667,
+    "schema_compliance": -0.6166666666666667
+  },
+  "detailed": {
+    "metrics": {
+      "total": 60,
+      "raw_intent_accuracy": 0.2833333333333333,
+      "raw_tool_accuracy": 0.2833333333333333,
+      "raw_contract_accuracy": 0.26666666666666666,
+      "raw_exact_argument_accuracy": 0.23333333333333334,
+      "normalized_contract_accuracy": 0.26666666666666666,
+      "semantic_match_rate": 0.25,
+      "semantic_adjudicated_accuracy": 0.25,
+      "semantic_coverage": 1.0,
+      "needs_review_count": 0,
+      "model_schema_invalid_count": 43,
+      "end_to_end_accuracy": 0.25
+    },
+    "cases": [
+      {
+        "id": "file-01",
+        "raw_result": {
+          "arguments": {
+            "query": "年度报告"
+          },
+          "confidence": 1.0,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 6005.880600074306,
+        "route_source": "pre_route:explicit_file_action",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "年度报告"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-02",
+        "raw_result": {
+          "arguments": {
+            "query": "预算表.xlsx"
+          },
+          "confidence": 1.0,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 398.88669992797077,
+        "route_source": "pre_route:explicit_file_action",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "预算表.xlsx"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-03",
+        "raw_result": {
+          "arguments": {
+            "query": "项目计划"
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 720.8102000877261,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-04",
+        "raw_result": {
+          "arguments": {
+            "query": ""
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 685.0819999817759,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-05",
+        "raw_result": {
+          "arguments": {
+            "query": "合同模板"
+          },
+          "confidence": 1.0,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 349.2715999018401,
+        "route_source": "pre_route:explicit_file_action",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "合同模板"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-06",
+        "raw_result": {
+          "arguments": {
+            "query": "readme.md"
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 711.923599941656,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-07",
+        "raw_result": {
+          "arguments": {
+            "query": "销售清单"
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 727.6271998416632,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-08",
+        "raw_result": {
+          "arguments": {
+            "query": "设备手册"
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 720.9304999560118,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-09",
+        "raw_result": {
+          "arguments": {
+            "query": ""
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 731.1392000410706,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-10",
+        "raw_result": {
+          "arguments": {
+            "query": "中文说明.txt"
+          },
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 739.1596001107246,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-01",
+        "raw_result": {
+          "arguments": {
+            "query": "查询产品保修期"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 815.5126001220196,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-02",
+        "raw_result": {
+          "arguments": {
+            "query": "请假制度"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 722.6543000433594,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-03",
+        "raw_result": {
+          "arguments": {
+            "query": "告诉我设备重启方法"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 760.2526999544352,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-04",
+        "raw_result": {
+          "arguments": {
+            "query": "公司报销标准是什么"
+          },
+          "confidence": 1.0,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 418.75150008127093,
+        "route_source": "pre_route:knowledge_question",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "公司报销标准是什么"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-05",
+        "raw_result": {
+          "arguments": {
+            "query": "知识库里有安全规范吗"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 815.5398999806494,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-06",
+        "raw_result": {
+          "arguments": {
+            "query": "查询售后联系电话"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 711.4009999204427,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-07",
+        "raw_result": {
+          "arguments": {
+            "query": "版本发布流程"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 734.6311998553574,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-08",
+        "raw_result": {
+          "arguments": {
+            "query": "如何申请采购"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 730.6325000245124,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-09",
+        "raw_result": {
+          "arguments": {
+            "query": "会议室规则是什么"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 716.0641001537442,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-10",
+        "raw_result": {
+          "arguments": {
+            "query": "查询产品参数"
+          },
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 704.2346999514848,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "meeting-01",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:\\demo\\m1.txt"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 544.7162999771535,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "C:\\demo\\m1.txt"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-02",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:\\demo\\m2.md"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 437.5347001478076,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "C:\\demo\\m2.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-03",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/docs/周会.txt"
+          },
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 853.1258997973055,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "meeting-04",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/tmp/meeting.md"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 412.80409996397793,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/tmp/meeting.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-05",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/data/产品会.txt"
+          },
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 845.9334000945091,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "meeting-06",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:\\data\\销售会.md"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 436.12980004400015,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "C:\\data\\销售会.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-07",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/input/研发会.txt"
+          },
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 831.5729000605643,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "meeting-08",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/data/m8.txt"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 411.85629996471107,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/data/m8.txt"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-09",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/data/m9.md"
+          },
+          "confidence": 1.0,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 408.83709979243577,
+        "route_source": "pre_route:meeting_text_path",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/data/m9.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-10",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/meeting/总结.txt"
+          },
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 816.9569000601768,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-01",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "开会",
+            "when": "30分钟后"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 1011.0401001293212,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-02",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "交报告",
+            "when": "明天下午3点"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 934.6221000887454,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-03",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "提交代码",
+            "when": "周五"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 889.762399950996,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-04",
+        "raw_result": {
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "confidence": 1.0,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 413.87559985741973,
+        "route_source": "pre_route:reminder_scope_query",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query",
+          "scope": "next_7_days"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-05",
+        "raw_result": {
+          "arguments": {},
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 873.1951999943703,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-06",
+        "raw_result": {
+          "arguments": {
+            "id": "12"
+          },
+          "confidence": 1,
+          "intent": "reminder_cancel",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 793.8268000725657,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-07",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "开周会",
+            "when": "每周一上午9点"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 954.5477000065148,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-08",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "客户拜访",
+            "when": "后天下午2点"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 973.4171000309289,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-09",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "未来7天提醒",
+            "when": ""
+          },
+          "confidence": 0.99,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 473.92669995315373,
+        "route_source": "pre_route:explicit_reminder",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "未来7天提醒",
+          "when": ""
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Strict field differs: action",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "reminder-10",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "text": "检查服务",
+            "when": "1小时后"
+          },
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 906.302300048992,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "schedule-01",
+        "raw_result": {
+          "arguments": {
+            "start_text": "明天下午2点",
+            "title": "项目会"
+          },
+          "intent": "schedule_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 1025.6467000581324,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "schedule-02",
+        "raw_result": {
+          "arguments": {
+            "start_text": "每周一、周三、周五 上午 9 点",
+            "title": "站会"
+          },
+          "intent": "schedule_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 1025.5475998856127,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "schedule-03",
+        "raw_result": {
+          "arguments": {
+            "start_text": "今天下午",
+            "title_query": "今天下午有什么安排"
+          },
+          "intent": "schedule_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 832.9636000562459,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "schedule-04",
+        "raw_result": {
+          "arguments": {
+            "action": "cancel",
+            "title": "项目例会"
+          },
+          "intent": "schedule_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 834.1944999992847,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "schedule-05",
+        "raw_result": {
+          "arguments": {
+            "action": "cancel",
+            "title": "取消日程 12"
+          },
+          "intent": "schedule_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 888.9189998153597,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-01",
+        "raw_result": {
+          "arguments": {
+            "text": "项目将在[DATE]上线"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 1060.2929000742733,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-02",
+        "raw_result": {
+          "arguments": {
+            "text": "上一次输出是完整 JSON，但违反当前参数 Schema。"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 887.1584001462907,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-03",
+        "raw_result": {
+          "arguments": {
+            "text": "通知大家明天开会"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 842.297799885273,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-04",
+        "raw_result": {
+          "arguments": {
+            "text": "这是一段需要压缩的长文本"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 930.596400052309,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-05",
+        "raw_result": {
+          "arguments": {
+            "text": "本季度完成了三个项目"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 861.6985001135617,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-06",
+        "raw_result": {
+          "arguments": {
+            "text": "请尽快提交材料"
+          },
+          "intent": "polish"
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 726.2754000257701,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-07",
+        "raw_result": {
+          "arguments": {
+            "text": "预算为300万元"
+          },
+          "confidence": 1,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 881.7254998721182,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-08",
+        "raw_result": {
+          "arguments": {
+            "text": "草拟项目延期说明"
+          },
+          "intent": "polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 860.2424999698997,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-09",
+        "raw_result": {
+          "arguments": {
+            "text": "联系电话是[PHONE]"
+          },
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 991.6050001047552,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-10",
+        "raw_result": {
+          "arguments": {
+            "operation": "polish",
+            "text": "麻烦你处理一下"
+          },
+          "confidence": 0.98,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 1015.5861999373883,
+        "route_source": "pre_route:text_operation_prefix",
+        "model_calls": 2,
+        "schema_repaired": true,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "operation": "tone_adjust",
+          "text": "麻烦你处理一下"
+        },
+        "normalization_rules": [
+          "text_polish.tone_adjust_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "todo-01",
+        "raw_result": {
+          "arguments": {
+            "action": "add",
+            "title": "提交报告"
+          },
+          "confidence": 1.0,
+          "intent": "todo_manage",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 552.6996999979019,
+        "route_source": "pre_route:explicit_todo",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "action": "add",
+          "title": "提交报告"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Strict field differs: action",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "todo-02",
+        "raw_result": {
+          "arguments": {
+            "priority": "high",
+            "title": "添加待办 整理材料"
+          },
+          "confidence": 1.0,
+          "intent": "todo_manage",
+          "missing_fields": []
+        },
+        "model_error": "ModelSchemaError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 962.0423000305891,
+        "route_source": "legacy_one_shot",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "todo-03",
+        "raw_result": {
+          "arguments": {
+            "action": "query"
+          },
+          "confidence": 1.0,
+          "intent": "todo_manage",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 345.53970000706613,
+        "route_source": "pre_route:explicit_todo",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "todo-04",
+        "raw_result": {
+          "arguments": {
+            "action": "query",
+            "title_query": "提交报告"
+          },
+          "confidence": 0.97,
+          "intent": "todo_manage",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 1005.5321999825537,
+        "route_source": "pre_route:explicit_todo",
+        "model_calls": 2,
+        "schema_repaired": true,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query",
+          "title_query": "提交报告"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "todo-05",
+        "raw_result": {
+          "arguments": {
+            "action": "delete",
+            "id": 12
+          },
+          "confidence": 1.0,
+          "intent": "todo_manage",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 407.28610008955,
+        "route_source": "pre_route:explicit_todo",
+        "model_calls": 1,
+        "schema_repaired": false,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "delete",
+          "id": 12
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      }
+    ]
+  },
+  "run_metadata": {
+    "provider": "cloud",
+    "model": "qwen2.5:3b",
+    "model_digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+    "prompt_version": "qwen2.5-3b-staged-v3.0",
+    "dataset_digest": "3f39010433aa3ba6b9cd8024c2d46d3119098a412a9f0971cdf5cc273a8b5f70",
+    "baseline_report_digest": "c95e03830f574cc7e05eaebd432c68da291f7464654cbd245b5ecbccdd594084",
+    "baseline_snapshot_digest": "d417db5e19ceed6ee3edf4bf57a3e3029bec0429b7688b3f5a04373a7f4b5c2a"
+  }
+}

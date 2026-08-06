@@ -1,0 +1,7 @@
+[
+  {"id":"todo-01","input_text":"添加待办 提交报告","expected_intent":"todo_manage","expected_arguments":{"action":"create","title":"提交报告"},"expected_tool":"todo_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"todo-02","input_text":"添加待办 整理材料，高优先级","expected_intent":"todo_manage","expected_arguments":{"action":"create","priority":"high"},"expected_tool":"todo_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"todo-03","input_text":"查看待办","expected_intent":"todo_manage","expected_arguments":{"action":"query"},"expected_tool":"todo_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"todo-04","input_text":"完成待办 提交报告","expected_intent":"todo_manage","expected_arguments":{"action":"query","title_query":"提交报告"},"expected_tool":"todo_manage","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"todo-05","input_text":"删除待办 12","expected_intent":"todo_manage","expected_arguments":{"action":"delete","id":12},"expected_tool":"todo_manage","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}}
+]

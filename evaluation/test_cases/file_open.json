@@ -1,0 +1,12 @@
+[
+  {"id":"file-01","input_text":"打开年度报告","expected_intent":"file_open","expected_arguments":{"query":"年度报告"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-02","input_text":"请打开预算表.xlsx","expected_intent":"file_open","expected_arguments":{"query":"预算表.xlsx"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-03","input_text":"帮我打开项目计划","expected_intent":"file_open","expected_arguments":{"query":"项目计划"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-04","input_text":"找会议记录","expected_intent":"file_open","expected_arguments":{"query":"会议记录"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-05","input_text":"找一下合同模板","expected_intent":"file_open","expected_arguments":{"query":"合同模板"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-06","input_text":"打开 readme.md","expected_intent":"file_open","expected_arguments":{"query":"readme.md"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-07","input_text":"请帮我打开销售清单","expected_intent":"file_open","expected_arguments":{"query":"销售清单"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-08","input_text":"找文件在哪：设备手册","expected_intent":"file_open","expected_arguments":{},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-09","input_text":"查找文件季度复盘","expected_intent":"file_open","expected_arguments":{},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"file-10","input_text":"打开中文说明.txt","expected_intent":"file_open","expected_arguments":{"query":"中文说明.txt"},"expected_tool":"file_open","expected_pipeline_outcome":"executed","tolerance":{}}
+]

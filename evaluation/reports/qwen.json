@@ -1,0 +1,156 @@
+{
+  "metrics": {
+    "total": 50,
+    "intent_accuracy": 0.94,
+    "argument_accuracy": 0.68,
+    "tool_accuracy": 0.94,
+    "schema_compliance": 1.0,
+    "latency_p50_ms": 532.8485999489203,
+    "latency_p95_ms": 641.6206000139937,
+    "latency_p99_ms": 1121.6821999987587
+  },
+  "per_intent": {
+    "file_open": 0.9,
+    "knowledge_query": 1.0,
+    "meeting_process": 1.0,
+    "reminder_create": 0.8,
+    "text_polish": 1.0
+  },
+  "failures": [
+    {
+      "id": "file-04",
+      "expected_intent": "file_open",
+      "actual_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool"
+      ]
+    },
+    {
+      "id": "file-06",
+      "expected_intent": "file_open",
+      "actual_intent": "file_open",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-01",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-03",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-04",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-05",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-06",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "knowledge-07",
+      "expected_intent": "knowledge_query",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "meeting-01",
+      "expected_intent": "meeting_process",
+      "actual_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "meeting-06",
+      "expected_intent": "meeting_process",
+      "actual_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "reminder-04",
+      "expected_intent": "reminder_create",
+      "actual_intent": "reminder_create",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "reminder-06",
+      "expected_intent": "reminder_create",
+      "actual_intent": "reminder_create",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "reminder-08",
+      "expected_intent": "reminder_create",
+      "actual_intent": "meeting_process",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool"
+      ]
+    },
+    {
+      "id": "reminder-09",
+      "expected_intent": "reminder_create",
+      "actual_intent": "knowledge_query",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool"
+      ]
+    },
+    {
+      "id": "text-04",
+      "expected_intent": "text_polish",
+      "actual_intent": "text_polish",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    },
+    {
+      "id": "text-05",
+      "expected_intent": "text_polish",
+      "actual_intent": "text_polish",
+      "failed_dimensions": [
+        "arguments"
+      ]
+    }
+  ],
+  "previous_diff": {}
+}

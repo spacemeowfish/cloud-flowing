@@ -1,0 +1,29 @@
+rules:
+  - name: api_key
+    level: D3
+    pattern: '(?i)\b(?:sk|ak)-[A-Za-z0-9_-]{12,}\b'
+    replacement: '[REDACTED:API_KEY]'
+  - name: secret_field
+    level: D3
+    pattern: '(?i)\b(?:password|passwd|token|secret|api[_-]?key)\s*[:=]\s*[^\s,;]{4,}'
+    replacement: '[REDACTED:SECRET]'
+  - name: chinese_id
+    level: D3
+    pattern: '(?<!\d)\d{17}[0-9Xx](?!\d)'
+    replacement: '[REDACTED:ID]'
+  - name: phone
+    level: D2
+    pattern: '(?<!\d)1[3-9]\d{9}(?!\d)'
+    replacement: '[PHONE]'
+  - name: email
+    level: D2
+    pattern: '\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b'
+    replacement: '[EMAIL]'
+  - name: internal_marker
+    level: D2
+    pattern: '(?i)(?:\b(?:internal|confidential)\b|机密|内部资料)'
+    replacement: '[SENSITIVE]'
+  - name: date
+    level: D1
+    pattern: '(?<!\d)20\d{2}[-/.年]\d{1,2}(?:[-/.月]\d{1,2}日?)?(?!\d)'
+    replacement: '[DATE]'

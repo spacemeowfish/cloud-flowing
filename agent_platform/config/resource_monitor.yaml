@@ -1,0 +1,11 @@
+modes:
+  normal:
+    utilization_percent: 40
+    thermal_throttled: false
+  high_load:
+    utilization_percent: 85
+    thermal_throttled: false
+  throttled:
+    utilization_percent: 90
+    thermal_throttled: true
+

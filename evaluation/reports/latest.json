@@ -1,0 +1,21 @@
+{
+  "metrics": {
+    "total": 50,
+    "intent_accuracy": 1.0,
+    "argument_accuracy": 1.0,
+    "tool_accuracy": 1.0,
+    "schema_compliance": 1.0,
+    "latency_p50_ms": 0.03300001844763756,
+    "latency_p95_ms": 0.15189999248832464,
+    "latency_p99_ms": 0.28899998869746923
+  },
+  "per_intent": {
+    "file_open": 1.0,
+    "knowledge_query": 1.0,
+    "meeting_process": 1.0,
+    "reminder_create": 1.0,
+    "text_polish": 1.0
+  },
+  "failures": [],
+  "previous_diff": {}
+}

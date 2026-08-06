@@ -1,0 +1,1592 @@
+{
+  "metrics": {
+    "total": 50,
+    "intent_accuracy": 0.98,
+    "argument_accuracy": 0.76,
+    "tool_accuracy": 0.98,
+    "schema_compliance": 0.98,
+    "latency_p50_ms": 440.7401999924332,
+    "latency_p95_ms": 521.2930999696255,
+    "latency_p99_ms": 626.3370998203754
+  },
+  "per_intent": {
+    "file_open": 1.0,
+    "knowledge_query": 1.0,
+    "meeting_process": 1.0,
+    "reminder_create": 1.0,
+    "text_polish": 0.9
+  },
+  "failures": [
+    {
+      "id": "file-02",
+      "expected_intent": "file_open",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "file_open"
+    },
+    {
+      "id": "knowledge-04",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "knowledge_query"
+    },
+    {
+      "id": "knowledge-05",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "knowledge_query"
+    },
+    {
+      "id": "knowledge-08",
+      "expected_intent": "knowledge_query",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "knowledge_query"
+    },
+    {
+      "id": "meeting-01",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-02",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-03",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-05",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-06",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-07",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "meeting-10",
+      "expected_intent": "meeting_process",
+      "failed_dimensions": [
+        "arguments"
+      ],
+      "actual_intent": "meeting_process"
+    },
+    {
+      "id": "text-09",
+      "expected_intent": "text_polish",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool",
+        "schema"
+      ],
+      "model_error": "ModelError: Cloud model returned invalid structured JSON"
+    }
+  ],
+  "previous_diff": {},
+  "detailed": {
+    "metrics": {
+      "total": 50,
+      "raw_intent_accuracy": 0.98,
+      "raw_tool_accuracy": 0.98,
+      "raw_contract_accuracy": 0.76,
+      "raw_exact_argument_accuracy": 0.76,
+      "normalized_contract_accuracy": 0.96,
+      "semantic_match_rate": 0.92,
+      "semantic_adjudicated_accuracy": 0.9583333333333334,
+      "semantic_coverage": 0.96,
+      "needs_review_count": 2,
+      "model_schema_invalid_count": 1,
+      "end_to_end_accuracy": 0.9
+    },
+    "cases": [
+      {
+        "id": "file-01",
+        "raw_result": {
+          "arguments": {
+            "query": "年度报告"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 626.3370998203754,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "年度报告"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-02",
+        "raw_result": {
+          "arguments": {
+            "keyword": "预算表.xlsx"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 410.28089984320104,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "query": "预算表.xlsx"
+        },
+        "normalization_rules": [
+          "file_open.keyword_to_query"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-03",
+        "raw_result": {
+          "arguments": {
+            "query": "项目计划"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 397.1066998783499,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "项目计划"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-04",
+        "raw_result": {
+          "arguments": {
+            "query": "会议记录"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 373.31390008330345,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "会议记录"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-05",
+        "raw_result": {
+          "arguments": {
+            "query": "合同模板"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 360.8611000236124,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "合同模板"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-06",
+        "raw_result": {
+          "arguments": {
+            "query": "readme.md"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 382.3004001751542,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "readme.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-07",
+        "raw_result": {
+          "arguments": {
+            "query": "销售清单"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 404.1468999348581,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "销售清单"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "file-08",
+        "raw_result": {
+          "arguments": {
+            "query": "设备手册"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 416.91150004044175,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "设备手册"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "needs_review",
+        "semantic_reason": "Case has no expected arguments to adjudicate",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-09",
+        "raw_result": {
+          "arguments": {
+            "query": "季度复盘"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 405.2343999501318,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "季度复盘"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "needs_review",
+        "semantic_reason": "Case has no expected arguments to adjudicate",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "file-10",
+        "raw_result": {
+          "arguments": {
+            "query": "中文说明.txt"
+          },
+          "confidence": 0.95,
+          "intent": "file_open",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 411.8880999740213,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "中文说明.txt"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-01",
+        "raw_result": {
+          "arguments": {
+            "query": "产品保修期"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 399.75520013831556,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "产品保修期"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-02",
+        "raw_result": {
+          "arguments": {
+            "query": "请假制度"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 403.4869000315666,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "请假制度"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-03",
+        "raw_result": {
+          "arguments": {
+            "query": "设备重启方法"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 405.9483997989446,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "设备重启方法"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-04",
+        "raw_result": {
+          "arguments": {
+            "query": "公司报销标准"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 404.86569982022047,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "query": "公司报销标准"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-05",
+        "raw_result": {
+          "arguments": {
+            "query": "安全规范"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 405.2252999972552,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "query": "安全规范"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-06",
+        "raw_result": {
+          "arguments": {
+            "query": "售后联系电话"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 386.40209985896945,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "售后联系电话"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-07",
+        "raw_result": {
+          "arguments": {
+            "query": "版本发布流程"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 415.8932000864297,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "版本发布流程"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-08",
+        "raw_result": {
+          "arguments": {
+            "query": "申请采购"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 378.2508000731468,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "query": "申请采购"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Expected field differs: query",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "knowledge-09",
+        "raw_result": {
+          "arguments": {
+            "query": "会议室规则"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 381.05199998244643,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "会议室规则"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "knowledge-10",
+        "raw_result": {
+          "arguments": {
+            "query": "产品参数"
+          },
+          "confidence": 0.95,
+          "intent": "knowledge_query",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 364.2392000183463,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "query": "产品参数"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-01",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/demo/m1.txt"
+          },
+          "confidence": 0.96,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 446.31299981847405,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\demo\\m1.txt"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-02",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/demo/m2.md"
+          },
+          "confidence": 0.95,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 442.6231998950243,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\demo\\m2.md"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-03",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/docs/周会.txt"
+          },
+          "confidence": 0.98,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 452.9562001116574,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\docs\\周会.txt"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-04",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/tmp/meeting.md"
+          },
+          "confidence": 0.96,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 425.2170999534428,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/tmp/meeting.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-05",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/data/产品会.txt"
+          },
+          "confidence": 0.98,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 454.5968999154866,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\data\\产品会.txt"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-06",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/data/销售会.md"
+          },
+          "confidence": 0.98,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 472.37630002200603,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\data\\销售会.md"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-07",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/input/研发会.txt"
+          },
+          "confidence": 0.98,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 465.4632001183927,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\input\\研发会.txt"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-08",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/data/m8.txt"
+          },
+          "confidence": 0.97,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 450.30259992927313,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/data/m8.txt"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-09",
+        "raw_result": {
+          "arguments": {
+            "source_path": "/data/m9.md"
+          },
+          "confidence": 0.96,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 456.40960009768605,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "source_path": "/data/m9.md"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "meeting-10",
+        "raw_result": {
+          "arguments": {
+            "source_path": "C:/meeting/总结.txt"
+          },
+          "confidence": 0.96,
+          "intent": "meeting_process",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 446.38180010952055,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": false,
+        "normalized_arguments": {
+          "source_path": "C:\\meeting\\总结.txt"
+        },
+        "normalization_rules": [
+          "meeting_process.source_path_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "awaiting_confirmation",
+        "pipeline_outcome_ok": true,
+        "pipeline_detail": "High-risk confirmation was required; tool was not executed",
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-01",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "in_30_minutes",
+            "text": "开会"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 487.6760998740792,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "开会",
+          "when": "提醒我30分钟后开会"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create",
+          "reminder_create.when_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-02",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "tomorrow afternoon 3pm",
+            "text": "交报告"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 495.3100997954607,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "交报告",
+          "when": "明天下午3点提醒我交报告"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create",
+          "reminder_create.when_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-03",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "next_friday",
+            "text": "周五提交代码"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 477.0552001427859,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "周五提交代码"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-04",
+        "raw_result": {
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "confidence": 0.96,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 440.7401999924332,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query",
+          "scope": "next_7_days"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-05",
+        "raw_result": {
+          "arguments": {
+            "action": "query",
+            "scope": "expired"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 405.0898998975754,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query",
+          "scope": "overdue"
+        },
+        "normalization_rules": [
+          "reminder_create.expired_to_overdue"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-06",
+        "raw_result": {
+          "arguments": {
+            "action": "cancel",
+            "id": 12
+          },
+          "confidence": 0.97,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 414.2668000422418,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "cancel",
+          "id": 12
+        },
+        "normalization_rules": [
+          "reminder_create.cancel_with_id_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-07",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "next_week_monday_9am",
+            "text": "开周会"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 518.3586999773979,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "开周会",
+          "when": "每周一上午9点提醒我开周会"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create",
+          "reminder_create.when_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-08",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "next_day_afternoon_2_hours",
+            "text": "客户拜访",
+            "when": "next_day_afternoon_2_hours"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 580.0434001721442,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "客户拜访",
+          "when": "日程：后天下午2点客户拜访"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create",
+          "reminder_create.when_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-09",
+        "raw_result": {
+          "arguments": {
+            "action": "query",
+            "scope": "today"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 411.06839990243316,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "query",
+          "scope": "next_7_days"
+        },
+        "normalization_rules": [
+          "reminder_create.today_to_next_7_days"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "reminder-10",
+        "raw_result": {
+          "arguments": {
+            "action": "create",
+            "scope": "in_1_hour",
+            "text": "1小时后检查服务"
+          },
+          "confidence": 0.98,
+          "intent": "reminder_create",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 504.3828999623656,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "action": "create",
+          "text": "1小时后检查服务",
+          "when": "待办：1小时后检查服务"
+        },
+        "normalization_rules": [
+          "reminder_create.drop_scope_for_create",
+          "reminder_create.when_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-01",
+        "raw_result": {
+          "arguments": {
+            "operation": "polish",
+            "text": "项目将在[DATE]上线"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 521.2930999696255,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "polish",
+          "text": "项目将在[DATE]上线"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-02",
+        "raw_result": {
+          "arguments": {
+            "operation": "polish",
+            "text": "本季度完成了三个项目"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 455.80580015666783,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "polish",
+          "text": "本季度完成了三个项目"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-03",
+        "raw_result": {
+          "arguments": {
+            "operation": "draft",
+            "text": "通知大家明天开会"
+          },
+          "confidence": 0.98,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 443.9473000820726,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "draft",
+          "text": "通知大家明天开会"
+        },
+        "normalization_rules": [
+          "text_polish.draft_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-04",
+        "raw_result": {
+          "arguments": {
+            "operation": "summarize",
+            "text": "这是一段需要压缩的长文本"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 492.8703000769019,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "summarize",
+          "text": "这是一段需要压缩的长文本"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-05",
+        "raw_result": {
+          "arguments": {
+            "operation": "summarize",
+            "text": "本季度完成了三个项目"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 467.049399856478,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "summarize",
+          "text": "本季度完成了三个项目"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-06",
+        "raw_result": {
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "请尽快提交材料",
+            "tone": "formal"
+          },
+          "confidence": 0.98,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 499.9501998536289,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "tone_adjust",
+          "text": "请尽快提交材料",
+          "tone": "formal"
+        },
+        "normalization_rules": [
+          "text_polish.tone_adjust_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-07",
+        "raw_result": {
+          "arguments": {
+            "operation": "polish",
+            "text": "预算为300万元",
+            "tone": "neutral"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 496.9467001501471,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "polish",
+          "text": "预算为300万元",
+          "tone": "neutral"
+        },
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-08",
+        "raw_result": {
+          "arguments": {
+            "operation": "draft",
+            "text": "项目延期说明"
+          },
+          "confidence": 0.95,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 429.9314001109451,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": true,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "draft",
+          "text": "项目延期说明"
+        },
+        "normalization_rules": [
+          "text_polish.draft_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      },
+      {
+        "id": "text-09",
+        "model_error": "ModelError: Cloud model returned invalid structured JSON",
+        "model_schema_invalid": true,
+        "latency_ms": 496.2742000352591,
+        "raw_intent_ok": false,
+        "raw_tool_ok": false,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": false,
+        "normalization_rules": [],
+        "normalized_contract_ok": false,
+        "semantic_status": "mismatch",
+        "semantic_reason": "Model result was unavailable or structurally invalid",
+        "pipeline_outcome": "not_run",
+        "pipeline_outcome_ok": false,
+        "pipeline_detail": "The pipeline is never invoked for invalid model output",
+        "end_to_end_ok": false
+      },
+      {
+        "id": "text-10",
+        "raw_result": {
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "麻烦你处理一下",
+            "tone": "礼貌请求"
+          },
+          "confidence": 0.98,
+          "intent": "text_polish",
+          "missing_fields": []
+        },
+        "model_schema_invalid": false,
+        "latency_ms": 499.59230003878474,
+        "raw_intent_ok": true,
+        "raw_tool_ok": true,
+        "raw_contract_ok": false,
+        "raw_exact_arguments_ok": true,
+        "normalized_arguments": {
+          "operation": "tone_adjust",
+          "text": "麻烦你处理一下"
+        },
+        "normalization_rules": [
+          "text_polish.tone_adjust_from_request"
+        ],
+        "normalized_contract_ok": true,
+        "semantic_status": "match",
+        "semantic_reason": "Expected arguments matched exactly or by registered alias",
+        "pipeline_outcome": "executed",
+        "pipeline_outcome_ok": true,
+        "end_to_end_ok": true
+      }
+    ]
+  }
+}

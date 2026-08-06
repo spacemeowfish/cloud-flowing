@@ -1,0 +1,12 @@
+[
+  {"id":"knowledge-01","input_text":"查询产品保修期","expected_intent":"knowledge_query","expected_arguments":{"query":"产品保修期"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-02","input_text":"查一下请假制度","expected_intent":"knowledge_query","expected_arguments":{"query":"请假制度"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-03","input_text":"告诉我设备重启方法","expected_intent":"knowledge_query","expected_arguments":{"query":"设备重启方法"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-04","input_text":"公司报销标准是什么","expected_intent":"knowledge_query","expected_arguments":{"query":"公司报销标准是什么"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{},"aliases":{"query":["公司报销标准"]}},
+  {"id":"knowledge-05","input_text":"知识库里有安全规范吗","expected_intent":"knowledge_query","expected_arguments":{"query":"知识库里有安全规范吗"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{},"aliases":{"query":["安全规范"]}},
+  {"id":"knowledge-06","input_text":"查询售后联系电话","expected_intent":"knowledge_query","expected_arguments":{"query":"售后联系电话"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-07","input_text":"查一下版本发布流程","expected_intent":"knowledge_query","expected_arguments":{"query":"版本发布流程"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-08","input_text":"如何申请采购","expected_intent":"knowledge_query","expected_arguments":{"query":"如何申请采购"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-09","input_text":"告诉我会议室规则","expected_intent":"knowledge_query","expected_arguments":{"query":"会议室规则"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"knowledge-10","input_text":"查询产品参数","expected_intent":"knowledge_query","expected_arguments":{"query":"产品参数"},"expected_tool":"knowledge_query","expected_pipeline_outcome":"executed","tolerance":{}}
+]

@@ -1,0 +1,42 @@
+{
+  "metrics": {
+    "total": 50,
+    "intent_accuracy": 0.96,
+    "argument_accuracy": 0.96,
+    "tool_accuracy": 0.96,
+    "schema_compliance": 1.0,
+    "latency_p50_ms": 1549.142099916935,
+    "latency_p95_ms": 3851.9994999514893,
+    "latency_p99_ms": 4809.021700057201
+  },
+  "per_intent": {
+    "file_open": 1.0,
+    "knowledge_query": 1.0,
+    "meeting_process": 0.9,
+    "reminder_create": 0.9,
+    "text_polish": 1.0
+  },
+  "failures": [
+    {
+      "id": "meeting-03",
+      "expected_intent": "meeting_process",
+      "actual_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool"
+      ]
+    },
+    {
+      "id": "reminder-09",
+      "expected_intent": "reminder_create",
+      "actual_intent": "file_open",
+      "failed_dimensions": [
+        "intent",
+        "arguments",
+        "tool"
+      ]
+    }
+  ],
+  "previous_diff": {}
+}

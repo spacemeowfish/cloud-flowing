@@ -1,0 +1,25 @@
+[Unit]
+Description=Local-first Agent Platform
+Requires=rkllm-server.service
+After=rkllm-server.service
+
+[Service]
+Type=simple
+User=agent-platform
+Group=agent-platform
+WorkingDirectory=/opt/agent-platform
+EnvironmentFile=/etc/agent-platform/rk3588.env
+ExecStartPre=/opt/agent-platform/.venv/bin/python /opt/agent-platform/deployment/rk3588/healthcheck.py --rkllm-only --wait 120
+ExecStart=/opt/agent-platform/.venv/bin/agent-platform serve
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=150
+TimeoutStopSec=30
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/agent-platform /var/log/agent-platform
+
+[Install]
+WantedBy=multi-user.target

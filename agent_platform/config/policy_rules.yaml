@@ -1,0 +1,34 @@
+rules:
+  - name: cancel_schedule
+    action: schedule_manage
+    argument_conditions:
+      action: cancel
+    risk_level: R2
+    allowed_roles: [user, admin]
+    requires_confirmation: true
+    title: 确认取消日程
+    message: 即将取消日程 ID {id}。确认继续？
+    impact: 日程 ID {id} 将被标记为已取消，不会再触发通知。
+    reversible: false
+  - name: delete_todo
+    action: todo_manage
+    argument_conditions:
+      action: delete
+    risk_level: R2
+    allowed_roles: [user, admin]
+    requires_confirmation: true
+    title: 确认删除待办
+    message: 即将永久删除待办 ID {id}。确认继续？
+    impact: 待办 ID {id} 将被永久删除，且不可撤销。
+    reversible: false
+  - name: delete_all_reminders
+    action: reminder_create
+    argument_conditions:
+      action: delete_all
+    risk_level: R3
+    allowed_roles: [user, admin]
+    requires_confirmation: true
+    title: 确认删除全部提醒
+    message: 即将删除全部提醒，此操作不可撤销。确认继续？
+    impact: 所有本地提醒和待办将被永久删除
+    reversible: false

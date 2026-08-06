@@ -1,0 +1,2 @@
+"""Fixed synthetic evaluation assets."""
+

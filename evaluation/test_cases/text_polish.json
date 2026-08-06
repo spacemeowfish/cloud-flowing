@@ -1,0 +1,12 @@
+[
+  {"id":"text-01","input_text":"润色：项目将在2026年8月1日上线","expected_intent":"text_polish","expected_arguments":{"operation":"polish"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-02","input_text":"改写这句话让它更清晰","expected_intent":"text_polish","expected_arguments":{"operation":"polish"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-03","input_text":"草拟：通知大家明天开会","expected_intent":"text_polish","expected_arguments":{"operation":"draft"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-04","input_text":"缩写：这是一段需要压缩的长文本","expected_intent":"text_polish","expected_arguments":{"operation":"summarize"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-05","input_text":"总结这段：本季度完成了三个项目","expected_intent":"text_polish","expected_arguments":{"operation":"summarize"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-06","input_text":"调整语气：请尽快提交材料","expected_intent":"text_polish","expected_arguments":{"operation":"tone_adjust"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-07","input_text":"润色：预算为300万元","expected_intent":"text_polish","expected_arguments":{"operation":"polish"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-08","input_text":"草拟项目延期说明","expected_intent":"text_polish","expected_arguments":{"operation":"draft"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-09","input_text":"改写：联系电话是13800138000","expected_intent":"text_polish","expected_arguments":{"operation":"polish"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}},
+  {"id":"text-10","input_text":"语气调整：麻烦你处理一下","expected_intent":"text_polish","expected_arguments":{"operation":"tone_adjust"},"expected_tool":"text_polish","expected_pipeline_outcome":"executed","tolerance":{}}
+]

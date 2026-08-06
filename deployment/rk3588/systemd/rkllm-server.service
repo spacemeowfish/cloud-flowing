@@ -1,0 +1,26 @@
+[Unit]
+Description=RKLLM OpenAI-compatible server
+After=local-fs.target
+Before=agent-platform.service
+
+[Service]
+Type=simple
+User=agent-platform
+Group=agent-platform
+SupplementaryGroups=render video
+WorkingDirectory=/opt/agent-platform/vendor/rkllm
+EnvironmentFile=/etc/agent-platform/rk3588.env
+Environment=RKLLM_ALLOW_INPROCESS_FREQ=0
+ExecStartPre=/usr/bin/test -r ${RKLLM_MODEL_PATH}
+ExecStartPre=+/usr/bin/bash /opt/agent-platform/vendor/rkllm/fix_freq_rk3588.sh
+ExecStart=/opt/agent-platform/.venv-rkllm/bin/python /opt/agent-platform/vendor/rkllm/flask_server_local.py --rkllm_model_path ${RKLLM_MODEL_PATH} --target_platform rk3588
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=180
+TimeoutStopSec=30
+LimitNOFILE=102400
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

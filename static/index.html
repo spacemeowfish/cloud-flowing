@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Agent Platform MVP 可视化功能与接口测试工作台">
+  <title>Agent Platform MVP · 操作台</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#pageRoot">跳到主要内容</a>
+  <div class="app-shell">
+    <aside id="sidebar" class="sidebar" aria-label="主要功能">
+      <div class="brand"><span class="brand-mark">AP</span><span><b>Agent Platform</b><small>FUNCTION WORKBENCH</small></span></div>
+      <nav id="mainNav" class="main-nav">
+        <p class="nav-label">工作台</p>
+        <a href="#overview" data-route="overview"><span>⌂</span>总览</a>
+        <a href="#console" data-route="console"><span>›_</span>通用任务</a>
+        <p class="nav-label">能力模块</p>
+        <a href="#knowledge" data-route="knowledge"><span>⌕</span>知识库问答</a>
+        <a href="#files" data-route="files"><span>▱</span>文件查找</a>
+        <a href="#reminders" data-route="reminders"><span>◷</span>提醒管理</a>
+        <a href="#todos" data-route="todos"><span>✓</span>待办事项</a>
+        <a href="#schedule" data-route="schedule"><span>□</span>日程管理</a>
+        <a href="#text" data-route="text"><span>Aa</span>文本处理</a>
+        <a href="#meetings" data-route="meetings"><span>≡</span>会议纪要</a>
+        <p class="nav-label">验证与追踪</p>
+        <a href="#api-lab" data-route="api-lab"><span>↔</span>接口测试中心</a>
+        <a href="#tasks" data-route="tasks"><span>◉</span>任务历史</a>
+      </nav>
+      <div class="sidebar-foot"><span id="sideHealthDot" class="status-dot"></span><span id="sideHealthText">连接服务中</span></div>
+    </aside>
+    <div id="navBackdrop" class="backdrop" hidden></div>
+
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button id="menuButton" class="icon-button menu-button" aria-label="打开导航" aria-expanded="false">☰</button>
+          <div><span id="pageEyebrow" class="eyebrow">WORKBENCH</span><h1 id="pageTitle">总览</h1></div>
+        </div>
+        <div class="topbar-actions">
+          <span id="runtimeBadge" class="runtime-badge"><i></i>正在检测</span>
+          <button id="inspectorButton" class="button quiet inspector-button">检查器</button>
+          <a class="button quiet docs-link" href="/docs" target="_blank" rel="noreferrer">API 文档 ↗</a>
+        </div>
+      </header>
+
+      <div class="content-grid">
+        <main id="pageRoot" class="page-root" tabindex="-1" aria-live="polite"></main>
+        <aside id="inspector" class="inspector" aria-label="请求与响应检查器">
+          <header class="inspector-head"><div><span class="eyebrow">LIVE INSPECTOR</span><h2>请求检查器</h2></div><button id="closeInspector" class="icon-button" aria-label="关闭检查器">×</button></header>
+          <div class="inspector-tabs" role="tablist">
+            <button class="active" data-inspector-tab="response" role="tab">响应</button>
+            <button data-inspector-tab="audit" role="tab">审计</button>
+            <button data-inspector-tab="contract" role="tab">契约</button>
+          </div>
+          <div id="inspectorContent" class="inspector-content"><div class="empty-state compact"><b>尚未选择任务</b><p>提交功能测试或从任务历史中选择一条记录。</p></div></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+  <div id="toastRegion" class="toast-region" aria-live="assertive"></div>
+  <script src="/app.js" defer></script>
+</body>
+</html>

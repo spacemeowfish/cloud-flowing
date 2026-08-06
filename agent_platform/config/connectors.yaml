@@ -1,0 +1,9 @@
+weather_mock:
+  data_level: D0
+  rate_per_second: 5
+  burst: 5
+  timeout_seconds: 3
+  retry_budget: 2
+  degraded_seconds: 30
+  fallback: cache
+

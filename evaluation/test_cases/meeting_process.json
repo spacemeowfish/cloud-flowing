@@ -1,0 +1,12 @@
+[
+  {"id":"meeting-01","input_text":"整理会议纪要 C:\\demo\\m1.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\demo\\m1.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-02","input_text":"处理会议记录 C:\\demo\\m2.md","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\demo\\m2.md"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-03","input_text":"会议文稿在 C:\\docs\\周会.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\docs\\周会.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-04","input_text":"整理会议 /tmp/meeting.md","expected_intent":"meeting_process","expected_arguments":{"source_path":"/tmp/meeting.md"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-05","input_text":"会议纪要 C:\\data\\产品会.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\data\\产品会.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-06","input_text":"请整理会议记录 C:\\data\\销售会.md","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\data\\销售会.md"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-07","input_text":"处理会议文稿 C:\\input\\研发会.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\input\\研发会.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-08","input_text":"生成会议纪要 /data/m8.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"/data/m8.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-09","input_text":"整理会议记录 /data/m9.md","expected_intent":"meeting_process","expected_arguments":{"source_path":"/data/m9.md"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}},
+  {"id":"meeting-10","input_text":"会议纪要 C:\\meeting\\总结.txt","expected_intent":"meeting_process","expected_arguments":{"source_path":"C:\\meeting\\总结.txt"},"expected_tool":"meeting_process","expected_pipeline_outcome":"awaiting_confirmation","tolerance":{}}
+]
