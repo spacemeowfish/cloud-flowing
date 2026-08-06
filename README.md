@@ -40,6 +40,18 @@ agent-platform import-docs demo_docs --force
 
 ## 模型对比评测
 
+本机 Ollama 模型优先使用原生 Provider。它会关闭 thinking、强制 JSON 输出，并自动绕过本机系统代理：
+
+```powershell
+$env:MODEL_PROVIDER="ollama"
+$env:MODEL_NAME="qwen2.5:3b"
+$env:OLLAMA_BASE_URL="http://127.0.0.1:11434"
+$env:OLLAMA_THINKING_ENABLED="false"
+agent-platform evaluate --mode ollama --detailed --expected-total 60
+```
+
+验证其他 Ollama 模型时只需替换 `MODEL_NAME`。协议可用不代表 Agent 质量达标，仍需比较固定评测集中的 Schema、意图、参数和端到端指标。
+
 准备好 `.env.deepseek`、`.env.qwen`，并确保 Ollama 已在 `127.0.0.1:11434` 加载 `qwen2.5:3b` 后执行：
 
 ```powershell

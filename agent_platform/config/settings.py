@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     model_api_key: str = Field(default="", validation_alias="MODEL_API_KEY")
     model_timeout_seconds: float = Field(default=30.0, gt=0, validation_alias="MODEL_TIMEOUT_SECONDS")
 
+    ollama_base_url: str = Field(default="http://127.0.0.1:11434", validation_alias="OLLAMA_BASE_URL")
+    ollama_timeout_seconds: float = Field(default=120.0, gt=0, validation_alias="OLLAMA_TIMEOUT_SECONDS")
+    ollama_thinking_enabled: bool = Field(default=False, validation_alias="OLLAMA_THINKING_ENABLED")
+    ollama_keep_alive: str = Field(default="10m", validation_alias="OLLAMA_KEEP_ALIVE")
+    ollama_max_new_tokens: int = Field(default=512, ge=1, le=8192, validation_alias="OLLAMA_MAX_NEW_TOKENS")
+
     rkllm_server_url: str = Field(default="http://127.0.0.1:8080/v1", validation_alias="RKLLM_SERVER_URL")
     rkllm_model_name: str = Field(default="rkllm", validation_alias="RKLLM_MODEL_NAME")
     rkllm_model_digest: str = Field(default="unknown", validation_alias="RKLLM_MODEL_DIGEST")

@@ -86,7 +86,7 @@ $env:NO_PROXY = "127.0.0.1,localhost"
 $env:no_proxy = "127.0.0.1,localhost"
 ```
 
-这是运行环境条件，不是 Ollama 模型服务故障。
+这是原始 `CloudModelAdapter` 的运行环境条件，不是 Ollama 模型服务故障。新增的 `OllamaModelAdapter` 使用原生 `/api/chat`，对回环地址自动关闭代理读取，不再依赖该环境变量。
 
 ### Thinking 模型兼容性
 
@@ -98,8 +98,8 @@ $env:no_proxy = "127.0.0.1,localhost"
 
 ## 7. 建议
 
-1. 当前本地 Agent 测试固定使用 `qwen2.5:3b`，并在启动脚本中明确设置 `NO_PROXY=127.0.0.1,localhost`。
-2. 如果要支持 qwen3/LFM，应单独增加 Ollama thinking 适配：使用原生 `/api/chat` 或确认 OpenAI 兼容层的 thinking 参数，并将推理与最终 JSON 分离后再进入 Schema 校验。
+1. 当前本地 Agent 默认优先使用 `MODEL_PROVIDER=ollama` 搭配 `qwen2.5:3b`；验证其他 Ollama 模型只需替换 `MODEL_NAME` 并重跑固定评测。
+2. qwen3/LFM 已经可以通过原生适配器进入 Agent，但仍需模型级提示、参数归一化和专项盲测，不能仅凭协议通过就作为产品默认模型。
 3. 在确认模型兼容性前，不应把 qwen3/LFM 的较高裸 token/s 写入产品级响应时延承诺。
 
 ## 8. 可复现证据
@@ -114,4 +114,18 @@ $env:no_proxy = "127.0.0.1,localhost"
 
 命令：`D:\my new work\cloud flowing\.venv\Scripts\python.exe -m pytest -q`
 
-结果：299 个测试中 298 个通过，1 个失败。失败为 `tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`：测试固定创建 `2026-07-29` 和 `2026-07-30` 的日程，而当前日期为 `2026-08-06`，默认日程查询窗口已不再包含这两个过去日期，因此候选为空。该问题与本次模型速度脚本、模型环境变量和报告文件无关，未在本次任务中修改。
+结果：306 个测试中 305 个通过，1 个失败。失败为 `tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`：测试固定创建 `2026-07-29` 和 `2026-07-30` 的日程，而当前日期为 `2026-08-06`，默认日程查询窗口已不再包含这两个过去日期，因此候选为空。该问题与本次模型速度脚本、模型环境变量和报告文件无关，未在本次任务中修改。
+
+## 10. Ollama 原生适配器改版复测
+
+在基线提交 `9a0d97e` 之后，新增 `MODEL_PROVIDER=ollama` 和 `OllamaModelAdapter`。它使用原生 `/api/chat`、`format=json`、可配置 `think`，并对本机回环地址关闭 `httpx` 的系统代理读取。以下结果来自改版后的同一批 60 条用例；旧 Cloud Adapter 结果保留在第 4 节，作为改版前对照。
+
+| 模型 | 意图准确率 | 参数准确率 | Schema 合规 | 归一化契约 | 端到端 dry-run | P50 / P95 | Schema 无效 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `qwen2.5:3b` | 100.00% | 90.00% | 100.00% | 100.00% | 96.67% | 338.91 / 770.76 ms | 0/60 |
+| `qwen3:1.7b` | 90.00% | 78.33% | 90.00% | 90.00% | 65.00% | 301.24 / 770.08 ms | 6/60 |
+| `lfm2.5-thinking:1.2b` | 91.67% | 66.67% | 91.67% | 91.67% | 81.67% | 337.84 / 792.77 ms | 5/60 |
+
+改版前 qwen3/LFM 的 45/60、60/60 条失败主要是 OpenAI-compatible 响应只有 `reasoning`、`message.content` 为空；改版后两者均能稳定进入 Agent 结构化解析和 dry-run 流程。改版并没有把小模型的参数抽取质量自动提升到 qwen2.5 水平，qwen3/LFM 仍需后续模型级提示、字段归一化或专项评测优化。
+
+改版新增验证：`tests/test_ollama_adapter.py` 11 项通过，`compileall` 通过。真实结果文件为 `work/local-model-validation/ollama-native-qwen25.json`、`ollama-native-qwen3.json`、`ollama-native-lfm.json`。

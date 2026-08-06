@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from jsonschema import Draft202012Validator
 from pydantic import JsonValue
 
-from agent_platform.adapters import CloudModelAdapter, MockModelAdapter, RKLLMModelAdapter
+from agent_platform.adapters import CloudModelAdapter, MockModelAdapter, OllamaModelAdapter, RKLLMModelAdapter
 from agent_platform.config import Settings
 from agent_platform.core.errors import ConfigurationError, ModelError, ModelSchemaError
 from agent_platform.core.interfaces import ModelAdapter
@@ -57,6 +57,15 @@ class ModelGateway:
                 model=settings.model_name,
                 api_key=settings.model_api_key,
                 timeout_seconds=settings.model_timeout_seconds,
+            )
+        elif provider == "ollama":
+            adapter = OllamaModelAdapter(
+                base_url=settings.ollama_base_url,
+                model=settings.model_name,
+                timeout_seconds=settings.ollama_timeout_seconds,
+                thinking_enabled=settings.ollama_thinking_enabled,
+                keep_alive=settings.ollama_keep_alive,
+                max_new_tokens=settings.ollama_max_new_tokens,
             )
         elif provider == "rkllm":
             adapter = RKLLMModelAdapter(

@@ -66,7 +66,7 @@ async def _evaluate(
             cases = service.load_cases(directory)
             if expected_total is not None and len(cases) != expected_total:
                 raise ValueError(f"Expected {expected_total} fixed cases, found {len(cases)}")
-            rate_limit = 1.0 if settings.model_provider == "cloud" else None
+            rate_limit = 1.0 if settings.model_provider in {"cloud", "ollama"} else None
             snapshots = EvaluationService.load_raw_snapshots(raw_snapshot) if raw_snapshot else None
             baseline_snapshots = (
                 EvaluationService.load_raw_snapshots(previous_raw_snapshot) if previous_raw_snapshot else None
@@ -155,7 +155,7 @@ def main() -> None:
     subparsers.add_parser("serve", help="Start the localhost FastAPI service")
     subparsers.add_parser("demo", help="Run one offline task")
     evaluate = subparsers.add_parser("evaluate", help="Run the fixed evaluation dataset")
-    evaluate.add_argument("--mode", choices=["mock", "cloud", "rkllm"], default="mock")
+    evaluate.add_argument("--mode", choices=["mock", "cloud", "ollama", "rkllm"], default="mock")
     evaluate.add_argument("--cases", type=Path, default=Path("evaluation/test_cases"))
     evaluate.add_argument("--output", type=Path, default=Path("evaluation/reports/latest.json"))
     evaluate.add_argument("--detailed", action="store_true", help="Enable raw, normalized, and isolated dry-run scoring")

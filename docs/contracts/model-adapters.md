@@ -20,6 +20,14 @@
 - 请求字段和响应 `choices[0].message.content`/`usage` 由 `rkllm_contract.py` 校验。
 - HTTP 429、503、5xx、连接失败和超时具有明确错误语义；400 类协议错误不可重试。
 
+## Ollama 原生协议
+
+- `MODEL_PROVIDER=ollama` 使用 `POST /api/chat`，不复用 OpenAI-compatible Cloud Adapter。
+- 固定 `stream=false`、`format=json`；`OLLAMA_THINKING_ENABLED=false` 时发送 `think=false`，避免推理内容耗尽结构化响应上限。
+- 意图响应继续使用共享的 192 Token 上限，并受 `OLLAMA_MAX_NEW_TOKENS` 更小上限约束。
+- 本机 `127.0.0.1`、`localhost`、`::1` 连接不读取系统代理，避免回环请求被代理转发。
+- 只把 `message.content` 作为最终答案；独立 thinking/reasoning 字段不得进入工具参数。
+
 ## 背压与回退
 
 - 默认 `RKLLM_MAX_CONCURRENCY=1`，等待超过 `RKLLM_QUEUE_TIMEOUT_SECONDS` 返回 retryable busy error。
