@@ -16,6 +16,7 @@ dependencies = [
   "pydantic-settings>=2.2,<3",
   "python-docx>=1.1,<2",
   "PyYAML>=6,<7",
+  "winotify>=1.1,<2; platform_system == 'Windows'",
   "tzdata>=2024.1; platform_system == 'Windows'",
   "uvicorn>=0.30,<1",
 ]
@@ -33,7 +34,7 @@ agent-rkllm-mock = "agent_platform.devtools.rkllm_mock_server:main"
 agent-rkllm-local = "agent_platform.devtools.local_rkllm_agent:main"
 
 [tool.setuptools.packages.find]
-include = ["agent_platform*"]
+include = ["agent_platform*", "evaluation*"]
 
 [tool.setuptools.package-data]
 agent_platform = ["config/*.yaml"]

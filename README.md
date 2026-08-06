@@ -11,6 +11,8 @@ python -m pip install -e ".[dev]"
 Copy-Item .env.example .env
 ```
 
+Windows 安装会同时安装 `winotify`，用于提醒和日程到期时的系统通知。如果只运行不涉及通知的本地评测，即使该包暂时缺失，程序也会退回控制台输出；推荐仍按上述命令在当前项目目录重新安装，避免调用旧目录中的全局 `agent-platform.exe`。
+
 Linux/ARM64 使用 Python 3.11 或更高版本执行同样的 `pip install -e ".[dev]"`。默认不下载 Embedding 模型、不调用外部 API、不打开桌面文件，只监听 `127.0.0.1`。
 
 ## 启动
