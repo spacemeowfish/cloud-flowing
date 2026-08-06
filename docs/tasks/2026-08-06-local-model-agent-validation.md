@@ -64,6 +64,6 @@ python -m agent_platform.cli evaluate --mode cloud --cases evaluation/test_cases
 ## 回归测试
 
 - 命令：`D:\my new work\cloud flowing\.venv\Scripts\python.exe -m pytest -q`
-- 结果：299 个测试中 298 个通过、1 个失败。
+- 本次适配器改动后的全量结果：307 个测试中 306 个通过、1 个失败；新增适配器测试共 11 项。
 - 失败测试：`tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`。
 - 判断：测试固定使用 2026-07-29/30 日程，而当前日期为 2026-08-06，默认查询窗口排除了过去日期；与本次模型接入测试文件无关，未修改。

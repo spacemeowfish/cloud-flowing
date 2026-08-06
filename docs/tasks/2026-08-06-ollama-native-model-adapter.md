@@ -32,4 +32,4 @@
 - qwen2.5：意图 100%、参数 90%、Schema 100%、归一化契约 100%、端到端 96.67%。
 - qwen3：意图 90%、参数 78.33%、Schema 90%、归一化契约 90%、端到端 65%，Schema 无效 6/60。
 - LFM2.5：意图 91.67%、参数 66.67%、Schema 91.67%、归一化契约 91.67%、端到端 81.67%，Schema 无效 5/60。
-- `pytest --tb=no`：306 项中 305 项通过、1 项失败；失败是现有固定过去日期的日程测试。模型结果保存于 `work/local-model-validation/ollama-native-*.json`。
+- `pytest --tb=no`：307 项中 306 项通过、1 项失败；失败是现有固定过去日期的日程测试。`pytest --collect-only -q` 确认新增适配器测试共 11 项。模型结果保存于 `work/local-model-validation/ollama-native-*.json`。

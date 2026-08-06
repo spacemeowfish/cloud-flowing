@@ -114,7 +114,7 @@ $env:no_proxy = "127.0.0.1,localhost"
 
 命令：`D:\my new work\cloud flowing\.venv\Scripts\python.exe -m pytest -q`
 
-结果：306 个测试中 305 个通过，1 个失败。失败为 `tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`：测试固定创建 `2026-07-29` 和 `2026-07-30` 的日程，而当前日期为 `2026-08-06`，默认日程查询窗口已不再包含这两个过去日期，因此候选为空。该问题与本次模型速度脚本、模型环境变量和报告文件无关，未在本次任务中修改。
+结果：307 个测试中 306 个通过，1 个失败。失败为 `tests/test_parameter_normalizer.py::test_schedule_title_request_queries_candidates_and_cancel_preview_is_pre_execution`：测试固定创建 `2026-07-29` 和 `2026-07-30` 的日程，而当前日期为 `2026-08-06`，默认日程查询窗口已不再包含这两个过去日期，因此候选为空。该问题与本次模型速度脚本、模型环境变量和报告文件无关，未在本次任务中修改。
 
 ## 10. Ollama 原生适配器改版复测
 
