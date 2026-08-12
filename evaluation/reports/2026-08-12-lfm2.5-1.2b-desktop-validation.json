@@ -5134,7 +5134,7 @@
     },
     {
       "name": "meeting_process_preview",
-      "prompt": "整理会议纪要 <TEMP>\agent-platform-three-model\authorized_files\项目评审会议.txt",
+      "prompt": "整理会议纪要 <TEMP>\\agent-platform-three-model\\authorized_files\\项目评审会议.txt",
       "initial": {
         "id": "c2aa214a-665f-4b06-9e80-22225427696c",
         "state": "awaiting_confirmation",
