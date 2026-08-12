@@ -257,10 +257,16 @@ def test_source_commit_requires_clean_matching_head(tmp_path: Path) -> None:
 
 def test_runtime_serializes_path_lists_as_json_arrays() -> None:
     common = (Path(__file__).parent / "runtime" / "Common.ps1").read_text(encoding="ascii")
+    self_check = (Path(__file__).parent / "runtime" / "Self-Check.ps1").read_text(encoding="ascii")
+    install = (Path(__file__).parent / "templates" / "INSTALL.md").read_text(encoding="utf-8")
     assert "ConvertTo-Json -InputObject $authorizedResolved -Compress" in common
     assert "ConvertTo-Json -InputObject $knowledgeResolved -Compress" in common
     assert '$env:PYTHONDONTWRITEBYTECODE = "1"' in common
     assert '$env:PYTHONUTF8 = "1"' in common
+    assert '$longestFullLength -ge 260' in self_check
+    assert '$longestFullLength -ge 240' in self_check
+    assert "C:\\CloudFlowing" in self_check
+    assert "C:\\CloudFlowing" in install
 
 
 def test_offline_license_snapshots_are_complete_and_pinned() -> None:

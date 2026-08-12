@@ -26,6 +26,33 @@ else {
     Add-CheckPass "Windows x64"
 }
 
+try {
+    $metadataPath = Join-Path $bundleRoot "BUILD-METADATA.json"
+    $metadata = Read-JsonFile -Path $metadataPath -Description "build metadata"
+    $pathValidation = Get-JsonProperty -InputObject $metadata -Name "portable_path_validation" -DefaultValue $null
+    if ($null -eq $pathValidation) {
+        throw "BUILD-METADATA.json has no portable_path_validation record."
+    }
+    $longestRelative = [string](Get-JsonProperty -InputObject $pathValidation -Name "longest_relative_path" -DefaultValue "")
+    if ([string]::IsNullOrWhiteSpace($longestRelative)) {
+        throw "BUILD-METADATA.json has no longest relative path."
+    }
+    $longestFullPath = Resolve-BundlePath -BundleRoot $bundleRoot -RelativePath $longestRelative -Description "longest bundle path"
+    $longestFullLength = $longestFullPath.Length
+    if ($longestFullLength -ge 260) {
+        Add-CheckFailure "Extraction path is too long ($longestFullLength characters). Move the package to a shorter directory such as C:\CloudFlowing."
+    }
+    elseif ($longestFullLength -ge 240) {
+        Add-CheckWarning "Extraction path is close to the legacy Windows limit ($longestFullLength characters). Prefer a shorter directory such as C:\CloudFlowing."
+    }
+    else {
+        Add-CheckPass "Portable extraction path ($longestFullLength characters maximum)"
+    }
+}
+catch {
+    Add-CheckFailure "Portable path validation failed: $($_.Exception.Message)"
+}
+
 $layout = $null
 $bundleConfiguration = Get-BundleConfiguration -BundleRoot $bundleRoot
 try { $layout = Get-BundleLayout -BundleRoot $bundleRoot } catch { Add-CheckFailure $_.Exception.Message }
