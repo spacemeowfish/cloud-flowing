@@ -21,13 +21,21 @@ Linux/ARM64 使用 Python 3.11 或更高版本执行同样的 `pip install -e ".
 python -m pip install -e ".[dev,tts]"
 ```
 
+Windows 桌面试用还需要麦克风和 Faster-Whisper 依赖：
+
+```powershell
+python -m pip install -e ".[dev,tts,voice]"
+```
+
+Faster-Whisper 和 ZipVoice 模型仍放在仓库外，通过设置页或项目 `.env` 指向实际目录。
+
 ## 启动
 
 以下命令均建议在本 checkout 根目录执行。为避免调用其他目录里旧版本的全局命令，使用模块入口最稳妥：
 
 ```powershell
 Set-Location 'D:\my new work\cloud-flowing_0806'
-python -m agent_platform.cli serve
+python -m agent_platform.cli desktop
 ```
 
 打开 `http://127.0.0.1:8000/` 使用 Web 功能操作台；`http://127.0.0.1:8000/docs` 是 API 文档。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。运行演示和评测：
@@ -38,7 +46,11 @@ python -m agent_platform.cli evaluate --mode mock
 pytest
 ```
 
-服务进程启动时读取一次环境变量和 `.env`。修改模型或其他配置后，请先按 `Ctrl+C` 停止服务，再重新启动；已经运行的服务不会自动切换模型。
+`desktop` 是 Windows 本机试用的推荐入口：它会打开操作台，并在设置页保存后优雅重启服务。`serve` 保留为开发模式，保存设置后需要手动重启。外部进程环境变量优先于项目 `.env`，被环境变量锁定的字段会在设置页显示为只读。
+
+设置页可切换 `mock/ollama`、发现本机 Ollama 模型、管理授权目录和知识索引、启停文件打开、配置 ZipVoice 四音色及 Faster-Whisper 麦克风。API 密钥不会在页面返回或被页面覆盖；`.env` 原子更新前保留最近 5 份本地备份，新配置启动失败时自动恢复上一份。
+
+按键说话位于“通用任务”输入框：按住麦克风按钮录音，松开后本地转写；转写文本只回填输入框，不会自动提交。录音最长 30 秒，同一时刻只允许一条录音，PCM 在完成、取消、异常或超时后立即清空。语音输入默认关闭，启用前需在设置页指定外部 Faster-Whisper 模型目录。
 
 ## 演示知识库
 
@@ -67,7 +79,7 @@ python -m agent_platform.cli serve
 Invoke-RestMethod http://127.0.0.1:11434/api/tags
 ```
 
-使用 Ollama 运行 Agent：
+使用 Ollama 运行 Agent 可以直接在 `desktop` 设置页切换，也可用环境变量锁定：
 
 ```powershell
 Set-Location 'D:\my new work\cloud-flowing_0806'
@@ -75,15 +87,15 @@ $env:MODEL_PROVIDER = 'ollama'
 $env:MODEL_NAME = 'qwen2.5:3b'
 $env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
 $env:OLLAMA_THINKING_ENABLED = 'false'
-python -m agent_platform.cli serve
+python -m agent_platform.cli desktop
 ```
 
-当前已验证的本机模型标签包括 `qwen2.5:3b`、`qwen3:1.7b` 和 `lfm2.5-thinking:1.2b`。切换模型只需停止当前服务，修改 `MODEL_NAME`，再重新启动：
+当前已验证的本机模型标签包括 `qwen2.5:3b`、`qwen3:1.7b` 和 `lfm2.5-thinking:1.2b`。设置页切换模型会自动重启；若使用外部环境变量，则需停止当前服务后修改并重启：
 
 ```powershell
 Ctrl+C
 $env:MODEL_NAME = 'qwen3:1.7b' # 或 lfm2.5-thinking:1.2b
-python -m agent_platform.cli serve
+python -m agent_platform.cli desktop
 ```
 
 也可以把这些变量写入项目根目录的 `.env`，这样每次启动自动读取；不要把 API 密钥等敏感值提交到 Git。`MODEL_PROVIDER` 可选 `mock`、`ollama`、`llamacpp`、`cloud`、`rkllm`；后三者还需要对应的服务地址、认证或板端配置。

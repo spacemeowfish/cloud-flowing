@@ -1,0 +1,57 @@
+{
+  "switch": {
+    "restart": {
+      "state": "ready",
+      "supervised": true,
+      "requested_at": "2026-08-12T08:59:58.554366+00:00",
+      "completed_at": "2026-08-12T08:59:59.432884+00:00",
+      "message": "桌面服务已就绪",
+      "rollback_performed": false
+    },
+    "health_provider": "ollama",
+    "model_name": "qwen2.5:3b",
+    "ok": true
+  },
+  "knowledge": {
+    "roots": [
+      "<PROJECT_ROOT>\\demo_docs",
+      "<PROJECT_ROOT>\\data\\knowledge"
+    ],
+    "reindex": {
+      "scanned": 17,
+      "imported": 17,
+      "skipped": 0,
+      "failures": []
+    },
+    "task_state": "completed",
+    "answer": "根据《产品保修政策.txt》分块 1：产品保修政策（演示版）\n\n本文件用于 Agent Platform 本地知识库演示，不代表任何真实企业政策。标准产品自用户签收之日起享受两年有限保修，保修范围包括正常使用条件下发生的主板、显示模块、电源模块和随机适配器故障。用户应保留订单编号或交付凭证，以便服务人员核对产品型号、序列批次和保修起始日期。\n\n购买产品后的三十个自然日内，如经检测确认存在非人为制造缺陷，并且设备外观完整、主要附件齐全，可申请免费换新。进水、跌落、私自拆机、非授权改装、使用不匹配电源以及不可抗力造成的损坏不在免费保修范围内。服务中心仍可提供付费检测和维修报价，用户确认报价后才会开始维修。\n\n用户可在标准两年保修到期前购买延保服务。延保后总保障期最长为三年，不是额外增加三年。延保仅覆盖原有限保修中的硬件项目，不包含耗材、外观件或数据恢复。维修完成后，同一故障部件享受九十天维修保障；若原保修剩余时间更长，则按较长期间执行。申请服务时可在设备端提交报修单，或联系内部服务台分机 8000。",
+    "sources": [
+      {
+        "file": "产品保修政策.txt",
+        "section": "分块 1",
+        "snippet": "产品保修政策（演示版） 本文件用于 Agent Platform 本地知识库演示，不代表任何真实企业政策。标准产品自用户签收之日起享受两年有限保修，保修范围包括正常使用条件下发生的主板、显示模块、电源",
+        "updated_at": "2026-08-02T16:10:37+00:00",
+        "scope": "未声明"
+      }
+    ],
+    "ok": true
+  },
+  "restore": {
+    "restart": {
+      "state": "ready",
+      "supervised": true,
+      "requested_at": "2026-08-12T08:59:59.787998+00:00",
+      "completed_at": "2026-08-12T09:00:00.482970+00:00",
+      "message": "桌面服务已就绪",
+      "rollback_performed": false
+    },
+    "provider": "mock",
+    "knowledge_roots": [
+      "<PROJECT_ROOT>\\data\\knowledge",
+      "<PROJECT_ROOT>\\demo_docs"
+    ],
+    "ok": true
+  },
+  "pass_count": 3,
+  "check_count": 3
+}

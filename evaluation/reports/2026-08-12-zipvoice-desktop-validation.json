@@ -1,0 +1,52 @@
+{
+  "provider": "zipvoice",
+  "source_text": "1+1 = 2",
+  "results": [
+    {
+      "voice_id": "news-female1",
+      "voice_label": "news-female1",
+      "elapsed_seconds": 7.544,
+      "duration_seconds": 1.5302083333333334,
+      "sample_rate": 24000,
+      "channels": 1,
+      "sample_width_bytes": 2,
+      "wav_bytes": 73494,
+      "ok": true
+    },
+    {
+      "voice_id": "male1",
+      "voice_label": "male1",
+      "elapsed_seconds": 18.224,
+      "duration_seconds": 1.17425,
+      "sample_rate": 24000,
+      "channels": 1,
+      "sample_width_bytes": 2,
+      "wav_bytes": 56408,
+      "ok": true
+    },
+    {
+      "voice_id": "female1",
+      "voice_label": "female1",
+      "elapsed_seconds": 12.528,
+      "duration_seconds": 1.0080833333333334,
+      "sample_rate": 24000,
+      "channels": 1,
+      "sample_width_bytes": 2,
+      "wav_bytes": 48432,
+      "ok": true
+    },
+    {
+      "voice_id": "female2",
+      "voice_label": "female2",
+      "elapsed_seconds": 6.368,
+      "duration_seconds": 1.15825,
+      "sample_rate": 24000,
+      "channels": 1,
+      "sample_width_bytes": 2,
+      "wav_bytes": 55640,
+      "ok": true
+    }
+  ],
+  "pass_count": 4,
+  "voice_count": 4
+}

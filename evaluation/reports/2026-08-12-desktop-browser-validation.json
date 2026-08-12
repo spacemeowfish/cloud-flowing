@@ -1,0 +1,92 @@
+{
+  "browser": "Microsoft Edge system executable via CDP",
+  "desktop": {
+    "viewport": [
+      1440,
+      900
+    ],
+    "html": [
+      1425,
+      1425
+    ],
+    "body": [
+      1425,
+      1425
+    ],
+    "presetCount": 4,
+    "escapedControls": 0,
+    "save": {
+      "left": 252,
+      "right": 1053,
+      "bottom": 888
+    },
+    "sidebar": {
+      "left": 0,
+      "right": 230,
+      "width": 230
+    },
+    "inspector": {
+      "left": 1075,
+      "right": 1425,
+      "width": 350
+    },
+    "page": {
+      "left": 230,
+      "right": 1075,
+      "width": 845
+    },
+    "overflow": false
+  },
+  "mobile": {
+    "viewport": [
+      390,
+      844
+    ],
+    "html": [
+      390,
+      390
+    ],
+    "body": [
+      390,
+      390
+    ],
+    "presetCount": 4,
+    "escapedControls": 0,
+    "save": {
+      "left": 10,
+      "right": 380,
+      "bottom": 838
+    },
+    "sidebar": {
+      "left": -252,
+      "right": -12,
+      "width": 240
+    },
+    "inspector": {
+      "left": 407.9398498535156,
+      "right": 766.7366943359375,
+      "width": 358.7968444824219
+    },
+    "page": {
+      "left": 0,
+      "right": 390,
+      "width": 390
+    },
+    "overflow": false
+  },
+  "voice": {
+    "recording_state": "recording",
+    "cancelled_state": "idle",
+    "task_count_before": 50,
+    "task_count_after": 50,
+    "input_unchanged": true,
+    "error_message": "麦克风设备不可用",
+    "ok": true
+  },
+  "screenshots": [
+    "work\\browser-validation\\desktop-settings-1440x900.png",
+    "work\\browser-validation\\desktop-settings-390x844.png"
+  ],
+  "pass_count": 4,
+  "check_count": 4
+}

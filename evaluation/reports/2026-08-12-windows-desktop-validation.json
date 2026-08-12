@@ -1,0 +1,105 @@
+{
+  "notification": {
+    "sent": true,
+    "message": "云湃 Agent 桌面通知测试"
+  },
+  "unique_candidate": {
+    "state": "completed",
+    "receipt": {
+      "path": "<PROJECT_ROOT>\\demo_files\\冒烟测试报告_20260802.txt",
+      "file_name": "冒烟测试报告_20260802.txt",
+      "extension": ".txt",
+      "opened_at": "2026-08-12T08:34:57.135759+00:00",
+      "process_status": "shell_request_accepted",
+      "pid": null,
+      "visibility": "manual_confirmation_required",
+      "candidates": [
+        {
+          "name": "冒烟测试报告_20260802.txt",
+          "path": "<PROJECT_ROOT>\\demo_files\\冒烟测试报告_20260802.txt",
+          "path_summary": "冒烟测试报告_20260802.txt",
+          "modified_at": "2026-08-12T15:39:52.931964"
+        }
+      ],
+      "requires_confirmation": false
+    },
+    "ok": true
+  },
+  "multiple_candidates": {
+    "state": "awaiting_confirmation",
+    "candidate_count": 5,
+    "candidates": [
+      {
+        "name": "项目周报_20260804.txt",
+        "path": "<PROJECT_ROOT>\\demo_files\\项目周报_20260804.txt",
+        "path_summary": "项目周报_20260804.txt",
+        "modified_at": "2026-08-12T15:39:52.933954"
+      },
+      {
+        "name": "项目周报_20260728.txt",
+        "path": "<PROJECT_ROOT>\\demo_files\\项目周报_20260728.txt",
+        "path_summary": "项目周报_20260728.txt",
+        "modified_at": "2026-08-12T15:39:52.932967"
+      },
+      {
+        "name": "项目周报_20260714.txt",
+        "path": "<PROJECT_ROOT>\\demo_files\\项目周报_20260714.txt",
+        "path_summary": "项目周报_20260714.txt",
+        "modified_at": "2026-08-03T00:10:37"
+      },
+      {
+        "name": "项目周报_20260721.txt",
+        "path": "<PROJECT_ROOT>\\demo_files\\项目周报_20260721.txt",
+        "path_summary": "项目周报_20260721.txt",
+        "modified_at": "2026-08-03T00:10:37"
+      },
+      {
+        "name": "项目周报模板.txt",
+        "path": "<PROJECT_ROOT>\\demo_files\\项目周报模板.txt",
+        "path_summary": "项目周报模板.txt",
+        "modified_at": "2026-08-03T00:10:37"
+      }
+    ],
+    "ok": true
+  },
+  "unauthorized_selection": {
+    "state": "failed",
+    "error": "Tool file_open failed: PermissionDeniedError",
+    "ok": true
+  },
+  "confirmed_candidate": {
+    "state": "completed",
+    "selected_name": "项目周报_20260804.txt",
+    "receipt": {
+      "path": "<PROJECT_ROOT>\\demo_files\\项目周报_20260804.txt",
+      "file_name": "项目周报_20260804.txt",
+      "extension": ".txt",
+      "opened_at": "2026-08-12T08:34:57.468759+00:00",
+      "process_status": "shell_request_accepted",
+      "pid": null,
+      "visibility": "manual_confirmation_required"
+    },
+    "ok": true
+  },
+  "supervised_restart": {
+    "enabled_ready": {
+      "state": "ready",
+      "supervised": true,
+      "requested_at": "2026-08-12T08:34:55.951665+00:00",
+      "completed_at": "2026-08-12T08:34:56.637653+00:00",
+      "message": "桌面服务已就绪",
+      "rollback_performed": false
+    },
+    "restored_ready": {
+      "state": "ready",
+      "supervised": true,
+      "requested_at": "2026-08-12T08:34:57.494757+00:00",
+      "completed_at": "2026-08-12T08:34:58.134290+00:00",
+      "message": "桌面服务已就绪",
+      "rollback_performed": false
+    },
+    "file_open_restored": true
+  },
+  "pass_count": 4,
+  "check_count": 4
+}

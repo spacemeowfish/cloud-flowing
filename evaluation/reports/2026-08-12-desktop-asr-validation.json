@@ -1,0 +1,66 @@
+{
+  "model_dir": "<EXTERNAL_MODEL_DIR>\\faster-whisper-small",
+  "backend": "faster-whisper",
+  "device": "cpu",
+  "compute_type": "int8",
+  "fixture_source": "Windows SAPI Microsoft Huihui Desktop, 16 kHz mono PCM16",
+  "results": [
+    {
+      "id": "math",
+      "expected": "1+1等于多少",
+      "audio": "01-math.wav",
+      "audio_duration_seconds": 2.245,
+      "transcript": "1加1等于多少",
+      "missing_keyword_groups": [],
+      "elapsed_seconds": 6.548,
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "reminder",
+      "expected": "一分钟后提醒我检查服务",
+      "audio": "02-reminder.wav",
+      "audio_duration_seconds": 3.335,
+      "transcript": "一分钟后提醒我检查服务",
+      "missing_keyword_groups": [],
+      "elapsed_seconds": 1.779,
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "knowledge",
+      "expected": "查询产品保修期",
+      "audio": "03-knowledge.wav",
+      "audio_duration_seconds": 2.685,
+      "transcript": "查询产品保修期",
+      "missing_keyword_groups": [],
+      "elapsed_seconds": 1.73,
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "tone",
+      "expected": "调整为正式语气",
+      "audio": "04-tone.wav",
+      "audio_duration_seconds": 2.435,
+      "transcript": "调整为正式语气。",
+      "missing_keyword_groups": [],
+      "elapsed_seconds": 1.756,
+      "ok": true,
+      "error": null
+    },
+    {
+      "id": "schedule",
+      "expected": "创建明天下午两点项目例会",
+      "audio": "05-schedule.wav",
+      "audio_duration_seconds": 3.635,
+      "transcript": "创建明天下午两点项目例会",
+      "missing_keyword_groups": [],
+      "elapsed_seconds": 1.81,
+      "ok": true,
+      "error": null
+    }
+  ],
+  "pass_count": 5,
+  "case_count": 5
+}
