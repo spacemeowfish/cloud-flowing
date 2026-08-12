@@ -1,0 +1,77 @@
+# syntax=docker/dockerfile:1.7
+FROM --platform=$TARGETPLATFORM debian:bookworm-slim AS llama-builder
+
+ARG LLAMA_CPP_REF=69bf643
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential ca-certificates cmake git libgomp1 ninja-build \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git clone --filter=blob:none https://github.com/ggml-org/llama.cpp.git \
+    && cd llama.cpp \
+    && git checkout "${LLAMA_CPP_REF}" \
+    && cmake -S . -B build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=OFF \
+        -DGGML_NATIVE=OFF \
+        -DLLAMA_BUILD_SERVER=ON \
+        -DLLAMA_BUILD_TESTS=OFF \
+        -DLLAMA_BUILD_EXAMPLES=OFF \
+        -DLLAMA_CURL=OFF \
+    && cmake --build build --target llama-server --parallel 2
+
+FROM --platform=$TARGETPLATFORM python:3.11-slim-bookworm AS runtime
+
+ARG MODEL_FILE
+ARG MODEL_NAME
+ARG MODEL_SHA256
+LABEL org.opencontainers.image.title="Cloud Flowing RK3588 CPU PoC" \
+      org.opencontainers.image.description="Agent, Web workbench, llama.cpp, and one pinned Q4_K_M model" \
+      org.opencontainers.image.model.name="${MODEL_NAME}" \
+      org.opencontainers.image.model.sha256="${MODEL_SHA256}" \
+      org.opencontainers.image.llamacpp.commit="69bf643"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl libgomp1 tini \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --create-home --uid 10001 agent
+COPY --from=llama-builder /src/llama.cpp/build/bin/llama-server /usr/local/bin/llama-server
+
+WORKDIR /opt/app
+COPY pyproject.toml README.md ./
+COPY agent_platform ./agent_platform
+COPY static ./static
+RUN pip install --no-cache-dir .
+COPY deployment/rk3588/docker/entrypoint.sh /opt/poc/entrypoint.sh
+COPY deployment/rk3588/docker/healthcheck.py /opt/poc/healthcheck.py
+COPY deployment/rk3588/docker/benchmark_client.py /opt/poc/benchmark_client.py
+COPY models/${MODEL_FILE} /opt/models/model.gguf
+RUN printf '%s  %s\n' "${MODEL_SHA256}" /opt/models/model.gguf > /opt/models/model.sha256 \
+    && sha256sum -c /opt/models/model.sha256 \
+    && chmod 0755 /opt/poc/entrypoint.sh \
+    && mkdir -p /opt/app/data /opt/app/logs/audit /opt/app/data/authorized_files /opt/app/data/knowledge /opt/app/data/meeting_notes \
+    && chown -R agent:agent /opt/app/data /opt/app/logs
+
+ENV MODEL_PROVIDER=llamacpp \
+    LLAMACPP_SERVER_URL=http://127.0.0.1:8080/v1 \
+    LLAMACPP_MODEL_NAME=${MODEL_NAME} \
+    LLAMACPP_MODEL_DIGEST=${MODEL_SHA256} \
+    LLAMACPP_THREADS=4 \
+    LLAMACPP_CONTEXT_SIZE=2048 \
+    LLAMACPP_MAX_TOKENS=256 \
+    LLAMACPP_BATCH_SIZE=256 \
+    LLAMACPP_PARALLEL=1 \
+    AGENT_HOST=0.0.0.0 \
+    AGENT_PORT=8000 \
+    AGENT_FILE_OPEN_ENABLED=false \
+    AGENT_NETWORK_AVAILABLE=false \
+    AGENT_DATABASE_PATH=/opt/app/data/agent_platform.db \
+    AGENT_AUDIT_DIR=/opt/app/logs/audit \
+    AGENT_AUTHORIZED_FILE_ROOTS='["/opt/app/data/authorized_files"]' \
+    AGENT_KNOWLEDGE_ROOTS='["/opt/app/data/knowledge"]' \
+    AGENT_MEETING_OUTPUT_DIR=/opt/app/data/meeting_notes \
+    PYTHONUNBUFFERED=1
+
+USER agent
+EXPOSE 8000
+HEALTHCHECK --interval=20s --timeout=5s --start-period=180s --retries=3 CMD ["python", "/opt/poc/healthcheck.py"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/opt/poc/entrypoint.sh"]

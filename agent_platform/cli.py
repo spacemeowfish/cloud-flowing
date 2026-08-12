@@ -12,7 +12,6 @@ import uvicorn
 from agent_platform.api.container import ApplicationContainer
 from agent_platform.adapters.structured_response import INTENT_PROMPT_VERSION
 from agent_platform.config import get_settings
-from agent_platform.core.evaluation_service import EvaluationService
 from agent_platform.core.parameter_normalizer import normalize_arguments
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.models import EvaluationReport, TaskCreate
@@ -43,6 +42,8 @@ async def _evaluate(
     previous_raw_snapshot: Path | None = None,
     expected_total: int | None = None,
 ) -> None:
+    from agent_platform.core.evaluation_service import EvaluationService
+
     settings = get_settings()
     with tempfile.TemporaryDirectory(prefix="agent-platform-cli-evaluation-") as temporary_directory:
         root = Path(temporary_directory)
@@ -81,10 +82,20 @@ async def _evaluate(
             active_model = (
                 settings.rkllm_model_name
                 if settings.model_provider == "rkllm"
-                else ("mock-deterministic" if settings.model_provider == "mock" else settings.model_name)
+                else (
+                    settings.llamacpp_model_name
+                    if settings.model_provider == "llamacpp"
+                    else ("mock-deterministic" if settings.model_provider == "mock" else settings.model_name)
+                )
             )
             configured_digest = (
-                settings.rkllm_model_digest if settings.model_provider == "rkllm" else settings.model_digest
+                settings.rkllm_model_digest
+                if settings.model_provider == "rkllm"
+                else (
+                    settings.llamacpp_model_digest
+                    if settings.model_provider == "llamacpp"
+                    else settings.model_digest
+                )
             )
             report = await service.run(
                 cases,
@@ -155,7 +166,7 @@ def main() -> None:
     subparsers.add_parser("serve", help="Start the localhost FastAPI service")
     subparsers.add_parser("demo", help="Run one offline task")
     evaluate = subparsers.add_parser("evaluate", help="Run the fixed evaluation dataset")
-    evaluate.add_argument("--mode", choices=["mock", "cloud", "ollama", "rkllm"], default="mock")
+    evaluate.add_argument("--mode", choices=["mock", "cloud", "ollama", "rkllm", "llamacpp"], default="mock")
     evaluate.add_argument("--cases", type=Path, default=Path("evaluation/test_cases"))
     evaluate.add_argument("--output", type=Path, default=Path("evaluation/reports/latest.json"))
     evaluate.add_argument("--detailed", action="store_true", help="Enable raw, normalized, and isolated dry-run scoring")

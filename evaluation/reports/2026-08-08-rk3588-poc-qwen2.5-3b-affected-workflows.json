@@ -1,0 +1,3438 @@
+{
+  "model": "qwen2.5:3b",
+  "model_digest": "357c53fb659c09cb142fa2ce4e9a3349a78a9dfb976bbcb6cd2b44d5f2305a05",
+  "provider": "ollama",
+  "thinking_enabled": false,
+  "isolated": true,
+  "cases": [
+    {
+      "name": "knowledge_query",
+      "prompt": "查询知识库：产品保修期是多久？",
+      "initial": {
+        "id": "2f1ba17f-2fdd-4194-ba42-4cdd3c8462aa",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "knowledge_query",
+          "arguments": {
+            "query": "产品保修期是多久"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "knowledge_query.strip_knowledge_wrapper"
+          ],
+          "intent_route": "pre_route:knowledge_question:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "knowledge_query",
+          "actual_arguments": {
+            "query": "产品保修期是多久"
+          },
+          "started_at": "2026-08-08T16:08:28.762790Z",
+          "duration_ms": 5.7069999165833,
+          "success": true,
+          "output_summary": "根据《产品保修政策.txt》分块 1：产品保修政策\r\n本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+          "output": {
+            "answer": "根据《产品保修政策.txt》分块 1：产品保修政策\r\n本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+            "sources": [
+              {
+                "file": "产品保修政策.txt",
+                "section": "分块 1",
+                "snippet": "产品保修政策 本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+                "updated_at": "2026-08-08T16:08:28.310242+00:00",
+                "scope": "未声明"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "2f1ba17f-2fdd-4194-ba42-4cdd3c8462aa",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "knowledge_query",
+          "arguments": {
+            "query": "产品保修期是多久"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "knowledge_query.strip_knowledge_wrapper"
+          ],
+          "intent_route": "pre_route:knowledge_question:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "knowledge_query",
+          "actual_arguments": {
+            "query": "产品保修期是多久"
+          },
+          "started_at": "2026-08-08T16:08:28.762790Z",
+          "duration_ms": 5.7069999165833,
+          "success": true,
+          "output_summary": "根据《产品保修政策.txt》分块 1：产品保修政策\r\n本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+          "output": {
+            "answer": "根据《产品保修政策.txt》分块 1：产品保修政策\r\n本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+            "sources": [
+              {
+                "file": "产品保修政策.txt",
+                "section": "分块 1",
+                "snippet": "产品保修政策 本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+                "updated_at": "2026-08-08T16:08:28.310242+00:00",
+                "scope": "未声明"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "general_chat_math",
+      "prompt": "1+1等于多少？",
+      "initial": {
+        "id": "f0694523-942c-44d8-acd5-a7de08815da1",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "1+1等于多少？"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:deterministic_arithmetic:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "1+1等于多少？"
+          },
+          "started_at": "2026-08-08T16:08:28.765790Z",
+          "duration_ms": 0.1876999158412218,
+          "success": true,
+          "output_summary": "1+1 = 2",
+          "output": {
+            "answer": "1+1 = 2"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "f0694523-942c-44d8-acd5-a7de08815da1",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "1+1等于多少？"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:deterministic_arithmetic:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "1+1等于多少？"
+          },
+          "started_at": "2026-08-08T16:08:28.765790Z",
+          "duration_ms": 0.1876999158412218,
+          "success": true,
+          "output_summary": "1+1 = 2",
+          "output": {
+            "answer": "1+1 = 2"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "general_chat_common",
+      "prompt": "请用一句话说明局域网是什么？",
+      "initial": {
+        "id": "7501bf16-9107-4f31-8d02-d8e48c8fe59a",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "请用一句话说明局域网是什么？"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:general_question:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "请用一句话说明局域网是什么？"
+          },
+          "started_at": "2026-08-08T16:08:29.237905Z",
+          "duration_ms": 469.86400010064244,
+          "success": true,
+          "output_summary": "局域网是一种将地理位置上靠近的计算机和相关设备连接起来构成的小型网络系统。",
+          "output": {
+            "answer": "局域网是一种将地理位置上靠近的计算机和相关设备连接起来构成的小型网络系统。"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "7501bf16-9107-4f31-8d02-d8e48c8fe59a",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "请用一句话说明局域网是什么？"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:general_question:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "请用一句话说明局域网是什么？"
+          },
+          "started_at": "2026-08-08T16:08:29.237905Z",
+          "duration_ms": 469.86400010064244,
+          "success": true,
+          "output_summary": "局域网是一种将地理位置上靠近的计算机和相关设备连接起来构成的小型网络系统。",
+          "output": {
+            "answer": "局域网是一种将地理位置上靠近的计算机和相关设备连接起来构成的小型网络系统。"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "general_chat_translation",
+      "prompt": "把你好翻译成英文",
+      "initial": {
+        "id": "2ceb2d3c-aeba-467f-bada-eaa7a39590fd",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "把你好翻译成英文"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:translation_request:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "把你好翻译成英文"
+          },
+          "started_at": "2026-08-08T16:08:29.460651Z",
+          "duration_ms": 220.74100002646446,
+          "success": true,
+          "output_summary": "Hello",
+          "output": {
+            "answer": "Hello"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "2ceb2d3c-aeba-467f-bada-eaa7a39590fd",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R0",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "general_chat",
+          "arguments": {
+            "text": "把你好翻译成英文"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:translation_request:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "general_chat",
+          "actual_arguments": {
+            "text": "把你好翻译成英文"
+          },
+          "started_at": "2026-08-08T16:08:29.460651Z",
+          "duration_ms": 220.74100002646446,
+          "success": true,
+          "output_summary": "Hello",
+          "output": {
+            "answer": "Hello"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "file_search_candidates",
+      "prompt": "查找并打开文件：项目周报",
+      "initial": {
+        "id": "c65dda26-bf1c-46ab-b8c4-29110947e236",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "file_open",
+          "arguments": {
+            "query": "项目周报"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_file_action:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "candidate_confirmation",
+          "receipt": {
+            "tool_name": "file_open",
+            "actual_arguments": {
+              "query": "项目周报"
+            },
+            "started_at": "2026-08-08T16:08:29.463784Z",
+            "duration_ms": 1.199999824166298,
+            "success": true,
+            "output_summary": "找到 3 个候选文件，请确认",
+            "output": {
+              "candidates": [
+                {
+                  "name": "项目周报_归档.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_归档.txt",
+                  "path_summary": "项目周报_归档.txt",
+                  "modified_at": "2026-08-09T00:08:28.311241"
+                },
+                {
+                  "name": "项目周报_20260801.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260801.txt",
+                  "path_summary": "项目周报_20260801.txt",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                },
+                {
+                  "name": "项目周报_20260802.md",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260802.md",
+                  "path_summary": "项目周报_20260802.md",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                }
+              ],
+              "requires_confirmation": true
+            },
+            "next_actions": [
+              "选择 selected_path 后确认"
+            ],
+            "error_code": null
+          }
+        }
+      },
+      "final": {
+        "id": "c65dda26-bf1c-46ab-b8c4-29110947e236",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "file_open",
+          "arguments": {
+            "query": "项目周报"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_file_action:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "candidate_confirmation",
+          "receipt": {
+            "tool_name": "file_open",
+            "actual_arguments": {
+              "query": "项目周报"
+            },
+            "started_at": "2026-08-08T16:08:29.463784Z",
+            "duration_ms": 1.199999824166298,
+            "success": true,
+            "output_summary": "找到 3 个候选文件，请确认",
+            "output": {
+              "candidates": [
+                {
+                  "name": "项目周报_归档.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_归档.txt",
+                  "path_summary": "项目周报_归档.txt",
+                  "modified_at": "2026-08-09T00:08:28.311241"
+                },
+                {
+                  "name": "项目周报_20260801.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260801.txt",
+                  "path_summary": "项目周报_20260801.txt",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                },
+                {
+                  "name": "项目周报_20260802.md",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260802.md",
+                  "path_summary": "项目周报_20260802.md",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                }
+              ],
+              "requires_confirmation": true
+            },
+            "next_actions": [
+              "选择 selected_path 后确认"
+            ],
+            "error_code": null
+          }
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "file_candidate_confirmation",
+      "prompt": "确认打开项目周报候选",
+      "initial": {
+        "id": "c65dda26-bf1c-46ab-b8c4-29110947e236",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "file_open",
+          "arguments": {
+            "query": "项目周报"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_file_action:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "candidate_confirmation",
+          "receipt": {
+            "tool_name": "file_open",
+            "actual_arguments": {
+              "query": "项目周报"
+            },
+            "started_at": "2026-08-08T16:08:29.463784Z",
+            "duration_ms": 1.199999824166298,
+            "success": true,
+            "output_summary": "找到 3 个候选文件，请确认",
+            "output": {
+              "candidates": [
+                {
+                  "name": "项目周报_归档.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_归档.txt",
+                  "path_summary": "项目周报_归档.txt",
+                  "modified_at": "2026-08-09T00:08:28.311241"
+                },
+                {
+                  "name": "项目周报_20260801.txt",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260801.txt",
+                  "path_summary": "项目周报_20260801.txt",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                },
+                {
+                  "name": "项目周报_20260802.md",
+                  "path": "<isolated>\\authorized_files\\项目周报_20260802.md",
+                  "path_summary": "项目周报_20260802.md",
+                  "modified_at": "2026-08-09T00:08:28.310242"
+                }
+              ],
+              "requires_confirmation": true
+            },
+            "next_actions": [
+              "选择 selected_path 后确认"
+            ],
+            "error_code": null
+          }
+        }
+      },
+      "final": {
+        "id": "c65dda26-bf1c-46ab-b8c4-29110947e236",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "file_open",
+          "arguments": {
+            "query": "项目周报",
+            "selected_path": "<isolated>\\authorized_files\\项目周报_归档.txt"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_file_action:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false,
+          "confirmed": true
+        },
+        "result": {
+          "tool_name": "file_open",
+          "actual_arguments": {
+            "query": "项目周报",
+            "selected_path": "<isolated>\\authorized_files\\项目周报_归档.txt"
+          },
+          "started_at": "2026-08-08T16:08:29.466446Z",
+          "duration_ms": 1.1722000781446695,
+          "success": true,
+          "output_summary": "文件处理完成：项目周报_归档.txt",
+          "output": {
+            "path": "<isolated>\\authorized_files\\项目周报_归档.txt",
+            "opened_at": "2026-08-08T16:08:29.466446+00:00",
+            "process_status": "disabled_by_configuration"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_create_one",
+      "prompt": "提醒我明天上午九点提交三模型报告",
+      "initial": {
+        "id": "f84d03df-2425-480f-9559-acdc37cb6430",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "create",
+            "text": "三模型报告",
+            "when": "提醒我明天上午九点提交三模型报告"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.when_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "create",
+            "text": "三模型报告",
+            "when": "提醒我明天上午九点提交三模型报告"
+          },
+          "started_at": "2026-08-08T16:08:29.924539Z",
+          "duration_ms": 3.86420008726418,
+          "success": true,
+          "output_summary": "已创建提醒 1：三模型报告（2026-08-10T09:00:00+08:00）",
+          "output": {
+            "id": 1,
+            "item": {
+              "id": 1,
+              "text": "三模型报告",
+              "due_at": "2026-08-10T09:00:00+08:00",
+              "repeat_rule": null,
+              "status": "active",
+              "created_at": "2026-08-08T16:08:29.921419+00:00"
+            },
+            "due_at": "2026-08-10T09:00:00+08:00",
+            "repeat_rule": null,
+            "status": "active"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "f84d03df-2425-480f-9559-acdc37cb6430",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "create",
+            "text": "三模型报告",
+            "when": "提醒我明天上午九点提交三模型报告"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.when_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "create",
+            "text": "三模型报告",
+            "when": "提醒我明天上午九点提交三模型报告"
+          },
+          "started_at": "2026-08-08T16:08:29.924539Z",
+          "duration_ms": 3.86420008726418,
+          "success": true,
+          "output_summary": "已创建提醒 1：三模型报告（2026-08-10T09:00:00+08:00）",
+          "output": {
+            "id": 1,
+            "item": {
+              "id": 1,
+              "text": "三模型报告",
+              "due_at": "2026-08-10T09:00:00+08:00",
+              "repeat_rule": null,
+              "status": "active",
+              "created_at": "2026-08-08T16:08:29.921419+00:00"
+            },
+            "due_at": "2026-08-10T09:00:00+08:00",
+            "repeat_rule": null,
+            "status": "active"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_create_two",
+      "prompt": "后天下午两点提醒我复核回归结果",
+      "initial": {
+        "id": "5111ec62-cc18-4d56-bfba-3ddce316d30c",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "create",
+            "text": "复核回归结果",
+            "when": "后天下午两点提醒我复核回归结果"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.when_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "create",
+            "text": "复核回归结果",
+            "when": "后天下午两点提醒我复核回归结果"
+          },
+          "started_at": "2026-08-08T16:08:30.377239Z",
+          "duration_ms": 3.018799936398864,
+          "success": true,
+          "output_summary": "已创建提醒 2：复核回归结果（2026-08-11T14:00:00+08:00）",
+          "output": {
+            "id": 2,
+            "item": {
+              "id": 2,
+              "text": "复核回归结果",
+              "due_at": "2026-08-11T14:00:00+08:00",
+              "repeat_rule": null,
+              "status": "active",
+              "created_at": "2026-08-08T16:08:30.374239+00:00"
+            },
+            "due_at": "2026-08-11T14:00:00+08:00",
+            "repeat_rule": null,
+            "status": "active"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "5111ec62-cc18-4d56-bfba-3ddce316d30c",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "create",
+            "text": "复核回归结果",
+            "when": "后天下午两点提醒我复核回归结果"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.when_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "create",
+            "text": "复核回归结果",
+            "when": "后天下午两点提醒我复核回归结果"
+          },
+          "started_at": "2026-08-08T16:08:30.377239Z",
+          "duration_ms": 3.018799936398864,
+          "success": true,
+          "output_summary": "已创建提醒 2：复核回归结果（2026-08-11T14:00:00+08:00）",
+          "output": {
+            "id": 2,
+            "item": {
+              "id": 2,
+              "text": "复核回归结果",
+              "due_at": "2026-08-11T14:00:00+08:00",
+              "repeat_rule": null,
+              "status": "active",
+              "created_at": "2026-08-08T16:08:30.374239+00:00"
+            },
+            "due_at": "2026-08-11T14:00:00+08:00",
+            "repeat_rule": null,
+            "status": "active"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_query_multiple",
+      "prompt": "查看未来7天提醒",
+      "initial": {
+        "id": "3e8495d4-8954-48f7-8230-eb6aaee49dad",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "started_at": "2026-08-08T16:08:30.380240Z",
+          "duration_ms": 0.4906000103801489,
+          "success": true,
+          "output_summary": "查询到 2 条提醒",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "text": "三模型报告",
+                "due_at": "2026-08-10T09:00:00+08:00",
+                "repeat_rule": null,
+                "status": "active",
+                "created_at": "2026-08-08T16:08:29.921419+00:00"
+              },
+              {
+                "id": 2,
+                "text": "复核回归结果",
+                "due_at": "2026-08-11T14:00:00+08:00",
+                "repeat_rule": null,
+                "status": "active",
+                "created_at": "2026-08-08T16:08:30.374239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "3e8495d4-8954-48f7-8230-eb6aaee49dad",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "started_at": "2026-08-08T16:08:30.380240Z",
+          "duration_ms": 0.4906000103801489,
+          "success": true,
+          "output_summary": "查询到 2 条提醒",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "text": "三模型报告",
+                "due_at": "2026-08-10T09:00:00+08:00",
+                "repeat_rule": null,
+                "status": "active",
+                "created_at": "2026-08-08T16:08:29.921419+00:00"
+              },
+              {
+                "id": 2,
+                "text": "复核回归结果",
+                "due_at": "2026-08-11T14:00:00+08:00",
+                "repeat_rule": null,
+                "status": "active",
+                "created_at": "2026-08-08T16:08:30.374239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_complete_by_id",
+      "prompt": "完成提醒 ID 1",
+      "initial": {
+        "id": "00d6c600-48a6-4829-a7d3-9f571f8af3f3",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "complete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.complete_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "complete",
+            "id": 1
+          },
+          "started_at": "2026-08-08T16:08:30.386240Z",
+          "duration_ms": 3.036100184544921,
+          "success": true,
+          "output_summary": "提醒 1 已完成：三模型报告（2026-08-10T09:00:00+08:00）",
+          "output": {
+            "id": 1,
+            "status": "completed",
+            "updated": true,
+            "item": {
+              "id": 1,
+              "text": "三模型报告",
+              "due_at": "2026-08-10T09:00:00+08:00",
+              "repeat_rule": null,
+              "status": "completed",
+              "created_at": "2026-08-08T16:08:29.921419+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "00d6c600-48a6-4829-a7d3-9f571f8af3f3",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "complete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.complete_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "complete",
+            "id": 1
+          },
+          "started_at": "2026-08-08T16:08:30.386240Z",
+          "duration_ms": 3.036100184544921,
+          "success": true,
+          "output_summary": "提醒 1 已完成：三模型报告（2026-08-10T09:00:00+08:00）",
+          "output": {
+            "id": 1,
+            "status": "completed",
+            "updated": true,
+            "item": {
+              "id": 1,
+              "text": "三模型报告",
+              "due_at": "2026-08-10T09:00:00+08:00",
+              "repeat_rule": null,
+              "status": "completed",
+              "created_at": "2026-08-08T16:08:29.921419+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_cancel_by_id",
+      "prompt": "取消提醒 2",
+      "initial": {
+        "id": "538aced5-948c-43a5-84ac-cb31b4bfd663",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "cancel",
+            "id": 2
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "cancel",
+            "id": 2
+          },
+          "started_at": "2026-08-08T16:08:30.391239Z",
+          "duration_ms": 2.775799948722124,
+          "success": true,
+          "output_summary": "提醒 2 已取消：复核回归结果（2026-08-11T14:00:00+08:00）",
+          "output": {
+            "id": 2,
+            "status": "cancelled",
+            "updated": true,
+            "item": {
+              "id": 2,
+              "text": "复核回归结果",
+              "due_at": "2026-08-11T14:00:00+08:00",
+              "repeat_rule": null,
+              "status": "cancelled",
+              "created_at": "2026-08-08T16:08:30.374239+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "538aced5-948c-43a5-84ac-cb31b4bfd663",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "cancel",
+            "id": 2
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "cancel",
+            "id": 2
+          },
+          "started_at": "2026-08-08T16:08:30.391239Z",
+          "duration_ms": 2.775799948722124,
+          "success": true,
+          "output_summary": "提醒 2 已取消：复核回归结果（2026-08-11T14:00:00+08:00）",
+          "output": {
+            "id": 2,
+            "status": "cancelled",
+            "updated": true,
+            "item": {
+              "id": 2,
+              "text": "复核回归结果",
+              "due_at": "2026-08-11T14:00:00+08:00",
+              "repeat_rule": null,
+              "status": "cancelled",
+              "created_at": "2026-08-08T16:08:30.374239+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_delete_all_preview",
+      "prompt": "清空全部提醒",
+      "initial": {
+        "id": "57818dd7-1926-44e6-9a09-cde15fd13ed2",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R3",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "delete_all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.delete_all_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除全部提醒",
+            "target": "reminder_create",
+            "content": "即将删除全部提醒，此操作不可撤销。确认继续？",
+            "amount": null,
+            "impact": "所有本地提醒将被永久删除",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "57818dd7-1926-44e6-9a09-cde15fd13ed2",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R3",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "delete_all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.delete_all_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除全部提醒",
+            "target": "reminder_create",
+            "content": "即将删除全部提醒，此操作不可撤销。确认继续？",
+            "amount": null,
+            "impact": "所有本地提醒将被永久删除",
+            "reversible": false
+          }
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_delete_all_confirmed",
+      "prompt": "确认清空全部提醒",
+      "initial": {
+        "id": "57818dd7-1926-44e6-9a09-cde15fd13ed2",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R3",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "delete_all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.delete_all_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除全部提醒",
+            "target": "reminder_create",
+            "content": "即将删除全部提醒，此操作不可撤销。确认继续？",
+            "amount": null,
+            "impact": "所有本地提醒将被永久删除",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "57818dd7-1926-44e6-9a09-cde15fd13ed2",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R3",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "delete_all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "reminder_create.delete_all_from_request"
+          ],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false,
+          "confirmed": true
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "delete_all"
+          },
+          "started_at": "2026-08-08T16:08:30.397239Z",
+          "duration_ms": 2.917800098657608,
+          "success": true,
+          "output_summary": "已删除 2 条提醒：1 三模型报告；2 复核回归结果",
+          "output": {
+            "deleted_count": 2,
+            "deleted_items": [
+              {
+                "id": 1,
+                "text": "三模型报告",
+                "due_at": "2026-08-10T09:00:00+08:00",
+                "repeat_rule": null,
+                "status": "completed",
+                "created_at": "2026-08-08T16:08:29.921419+00:00"
+              },
+              {
+                "id": 2,
+                "text": "复核回归结果",
+                "due_at": "2026-08-11T14:00:00+08:00",
+                "repeat_rule": null,
+                "status": "cancelled",
+                "created_at": "2026-08-08T16:08:30.374239+00:00"
+              }
+            ],
+            "status": "deleted"
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "reminder_query_after_delete",
+      "prompt": "查看未来7天提醒",
+      "initial": {
+        "id": "7a33caa8-dff3-4403-9b51-37c1a760ab4e",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "started_at": "2026-08-08T16:08:30.400239Z",
+          "duration_ms": 0.3120000474154949,
+          "success": true,
+          "output_summary": "查询到 0 条提醒",
+          "output": {
+            "items": []
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "7a33caa8-dff3-4403-9b51-37c1a760ab4e",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "reminder_create",
+          "arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_reminder:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "reminder_create",
+          "actual_arguments": {
+            "action": "query",
+            "scope": "next_7_days"
+          },
+          "started_at": "2026-08-08T16:08:30.400239Z",
+          "duration_ms": 0.3120000474154949,
+          "success": true,
+          "output_summary": "查询到 0 条提醒",
+          "output": {
+            "items": []
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_create_one",
+      "prompt": "添加待办 提交三模型报告",
+      "initial": {
+        "id": "d492c8de-c39e-467e-8611-118c99df23c3",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "create",
+            "title": "提交三模型报告"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "提交三模型报告"
+          },
+          "started_at": "2026-08-08T16:08:30.404239Z",
+          "duration_ms": 1.375799998641014,
+          "success": true,
+          "output_summary": "已创建待办 1：提交三模型报告",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "提交三模型报告",
+              "description": "",
+              "priority": "medium",
+              "tags": [],
+              "status": "pending",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.403239+00:00",
+              "updated_at": "2026-08-08T16:08:30.403239+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "d492c8de-c39e-467e-8611-118c99df23c3",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "create",
+            "title": "提交三模型报告"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "提交三模型报告"
+          },
+          "started_at": "2026-08-08T16:08:30.404239Z",
+          "duration_ms": 1.375799998641014,
+          "success": true,
+          "output_summary": "已创建待办 1：提交三模型报告",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "提交三模型报告",
+              "description": "",
+              "priority": "medium",
+              "tags": [],
+              "status": "pending",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.403239+00:00",
+              "updated_at": "2026-08-08T16:08:30.403239+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_create_two",
+      "prompt": "添加待办 回归测试，高优先级",
+      "initial": {
+        "id": "a3b47fb4-20a3-4029-a1ba-4b52e0941bf2",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "create",
+            "title": "回归测试",
+            "priority": "high"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "回归测试",
+            "priority": "high"
+          },
+          "started_at": "2026-08-08T16:08:30.408239Z",
+          "duration_ms": 0.8376999758183956,
+          "success": true,
+          "output_summary": "已创建待办 2：回归测试",
+          "output": {
+            "item": {
+              "id": 2,
+              "title": "回归测试",
+              "description": "",
+              "priority": "high",
+              "tags": [],
+              "status": "pending",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.407242+00:00",
+              "updated_at": "2026-08-08T16:08:30.407242+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "a3b47fb4-20a3-4029-a1ba-4b52e0941bf2",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "create",
+            "title": "回归测试",
+            "priority": "high"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "回归测试",
+            "priority": "high"
+          },
+          "started_at": "2026-08-08T16:08:30.408239Z",
+          "duration_ms": 0.8376999758183956,
+          "success": true,
+          "output_summary": "已创建待办 2：回归测试",
+          "output": {
+            "item": {
+              "id": 2,
+              "title": "回归测试",
+              "description": "",
+              "priority": "high",
+              "tags": [],
+              "status": "pending",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.407242+00:00",
+              "updated_at": "2026-08-08T16:08:30.407242+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_query_all",
+      "prompt": "查看全部待办",
+      "initial": {
+        "id": "b9ab3714-5471-4780-b14b-0ce90f8405dd",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "started_at": "2026-08-08T16:08:30.411239Z",
+          "duration_ms": 0.4056000616401434,
+          "success": true,
+          "output_summary": "查询到 2 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "title": "提交三模型报告",
+                "description": "",
+                "priority": "medium",
+                "tags": [],
+                "status": "pending",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.403239+00:00",
+                "updated_at": "2026-08-08T16:08:30.403239+00:00",
+                "completed_at": null
+              },
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "pending",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.407242+00:00",
+                "completed_at": null
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "b9ab3714-5471-4780-b14b-0ce90f8405dd",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "started_at": "2026-08-08T16:08:30.411239Z",
+          "duration_ms": 0.4056000616401434,
+          "success": true,
+          "output_summary": "查询到 2 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "title": "提交三模型报告",
+                "description": "",
+                "priority": "medium",
+                "tags": [],
+                "status": "pending",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.403239+00:00",
+                "updated_at": "2026-08-08T16:08:30.403239+00:00",
+                "completed_at": null
+              },
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "pending",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.407242+00:00",
+                "completed_at": null
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_update_status",
+      "prompt": "更新待办 ID 1 为进行中",
+      "initial": {
+        "id": "a47c566e-07d0-49f6-9e6d-a419e50f34e1",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "update",
+            "id": 1,
+            "status": "in_progress"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "todo_manage.update_status_from_request"
+          ],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "update",
+            "id": 1,
+            "status": "in_progress"
+          },
+          "started_at": "2026-08-08T16:08:30.416239Z",
+          "duration_ms": 0.9802000131458044,
+          "success": true,
+          "output_summary": "已更新待办 1：提交三模型报告（in_progress）",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "提交三模型报告",
+              "description": "",
+              "priority": "medium",
+              "tags": [],
+              "status": "in_progress",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.403239+00:00",
+              "updated_at": "2026-08-08T16:08:30.416239+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "a47c566e-07d0-49f6-9e6d-a419e50f34e1",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "update",
+            "id": 1,
+            "status": "in_progress"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "todo_manage.update_status_from_request"
+          ],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "update",
+            "id": 1,
+            "status": "in_progress"
+          },
+          "started_at": "2026-08-08T16:08:30.416239Z",
+          "duration_ms": 0.9802000131458044,
+          "success": true,
+          "output_summary": "已更新待办 1：提交三模型报告（in_progress）",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "提交三模型报告",
+              "description": "",
+              "priority": "medium",
+              "tags": [],
+              "status": "in_progress",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.403239+00:00",
+              "updated_at": "2026-08-08T16:08:30.416239+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_complete_by_id",
+      "prompt": "完成待办 ID 2",
+      "initial": {
+        "id": "e5655f39-5ab8-4265-b43c-0a4323aac770",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "complete",
+            "id": 2
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "complete",
+            "id": 2
+          },
+          "started_at": "2026-08-08T16:08:30.420238Z",
+          "duration_ms": 0.9491001255810261,
+          "success": true,
+          "output_summary": "待办 2 已完成：回归测试",
+          "output": {
+            "item": {
+              "id": 2,
+              "title": "回归测试",
+              "description": "",
+              "priority": "high",
+              "tags": [],
+              "status": "completed",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.407242+00:00",
+              "updated_at": "2026-08-08T16:08:30.419239+00:00",
+              "completed_at": "2026-08-08T16:08:30.419239+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "e5655f39-5ab8-4265-b43c-0a4323aac770",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "complete",
+            "id": 2
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "complete",
+            "id": 2
+          },
+          "started_at": "2026-08-08T16:08:30.420238Z",
+          "duration_ms": 0.9491001255810261,
+          "success": true,
+          "output_summary": "待办 2 已完成：回归测试",
+          "output": {
+            "item": {
+              "id": 2,
+              "title": "回归测试",
+              "description": "",
+              "priority": "high",
+              "tags": [],
+              "status": "completed",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.407242+00:00",
+              "updated_at": "2026-08-08T16:08:30.419239+00:00",
+              "completed_at": "2026-08-08T16:08:30.419239+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_query_in_progress",
+      "prompt": "查看进行中的待办",
+      "initial": {
+        "id": "fd1ab484-7811-4ef4-b4a1-727d1bea57d0",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "in_progress"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "in_progress"
+          },
+          "started_at": "2026-08-08T16:08:30.422239Z",
+          "duration_ms": 0.3043999895453453,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "title": "提交三模型报告",
+                "description": "",
+                "priority": "medium",
+                "tags": [],
+                "status": "in_progress",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.403239+00:00",
+                "updated_at": "2026-08-08T16:08:30.416239+00:00",
+                "completed_at": null
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "fd1ab484-7811-4ef4-b4a1-727d1bea57d0",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "in_progress"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "in_progress"
+          },
+          "started_at": "2026-08-08T16:08:30.422239Z",
+          "duration_ms": 0.3043999895453453,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 1,
+                "title": "提交三模型报告",
+                "description": "",
+                "priority": "medium",
+                "tags": [],
+                "status": "in_progress",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.403239+00:00",
+                "updated_at": "2026-08-08T16:08:30.416239+00:00",
+                "completed_at": null
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_query_completed",
+      "prompt": "查看已完成待办",
+      "initial": {
+        "id": "89b19527-c494-411e-bc7b-0d4dafa2d43d",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "completed"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "completed"
+          },
+          "started_at": "2026-08-08T16:08:30.426239Z",
+          "duration_ms": 0.26670005172491074,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "completed",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.419239+00:00",
+                "completed_at": "2026-08-08T16:08:30.419239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "89b19527-c494-411e-bc7b-0d4dafa2d43d",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "completed"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "completed"
+          },
+          "started_at": "2026-08-08T16:08:30.426239Z",
+          "duration_ms": 0.26670005172491074,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "completed",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.419239+00:00",
+                "completed_at": "2026-08-08T16:08:30.419239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_delete_preview",
+      "prompt": "删除待办 1",
+      "initial": {
+        "id": "a6aa571f-1d88-46f2-8a00-53f6a345fece",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "delete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除待办",
+            "target": "todo_manage",
+            "content": "即将永久删除待办 ID 1。确认继续？\n待办：提交三模型报告\n状态：in_progress",
+            "amount": null,
+            "impact": "待办 ID 1 将被永久删除，且不可撤销。",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "a6aa571f-1d88-46f2-8a00-53f6a345fece",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "delete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除待办",
+            "target": "todo_manage",
+            "content": "即将永久删除待办 ID 1。确认继续？\n待办：提交三模型报告\n状态：in_progress",
+            "amount": null,
+            "impact": "待办 ID 1 将被永久删除，且不可撤销。",
+            "reversible": false
+          }
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_delete_confirmed",
+      "prompt": "确认删除待办",
+      "initial": {
+        "id": "a6aa571f-1d88-46f2-8a00-53f6a345fece",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "delete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认删除待办",
+            "target": "todo_manage",
+            "content": "即将永久删除待办 ID 1。确认继续？\n待办：提交三模型报告\n状态：in_progress",
+            "amount": null,
+            "impact": "待办 ID 1 将被永久删除，且不可撤销。",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "a6aa571f-1d88-46f2-8a00-53f6a345fece",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "delete",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false,
+          "confirmed": true
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "delete",
+            "id": 1
+          },
+          "started_at": "2026-08-08T16:08:30.430238Z",
+          "duration_ms": 0.9912000969052315,
+          "success": true,
+          "output_summary": "已删除待办 1：提交三模型报告",
+          "output": {
+            "deleted": {
+              "id": 1,
+              "title": "提交三模型报告",
+              "description": "",
+              "priority": "medium",
+              "tags": [],
+              "status": "in_progress",
+              "due_at": null,
+              "created_at": "2026-08-08T16:08:30.403239+00:00",
+              "updated_at": "2026-08-08T16:08:30.416239+00:00",
+              "completed_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "todo_query_after_delete",
+      "prompt": "查看全部待办",
+      "initial": {
+        "id": "62da19bb-2206-41cc-868a-698111b85a04",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "started_at": "2026-08-08T16:08:30.433238Z",
+          "duration_ms": 0.25949999690055847,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "completed",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.419239+00:00",
+                "completed_at": "2026-08-08T16:08:30.419239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "62da19bb-2206-41cc-868a-698111b85a04",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "todo_manage",
+          "arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_todo:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "todo_manage",
+          "actual_arguments": {
+            "action": "query",
+            "status": "all"
+          },
+          "started_at": "2026-08-08T16:08:30.433238Z",
+          "duration_ms": 0.25949999690055847,
+          "success": true,
+          "output_summary": "查询到 1 条待办",
+          "output": {
+            "items": [
+              {
+                "id": 2,
+                "title": "回归测试",
+                "description": "",
+                "priority": "high",
+                "tags": [],
+                "status": "completed",
+                "due_at": null,
+                "created_at": "2026-08-08T16:08:30.407242+00:00",
+                "updated_at": "2026-08-08T16:08:30.419239+00:00",
+                "completed_at": "2026-08-08T16:08:30.419239+00:00"
+              }
+            ]
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "schedule_create_uppercase_numerals",
+      "prompt": "创建日程 二〇二六年八月八日上午九点到上午十点 产品评审",
+      "initial": {
+        "id": "45420539-70af-4423-b5b0-525c1957e19d",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "create",
+            "title": "产品评审",
+            "start_text": "二〇二六年八月八日上午九点",
+            "end_text": "二〇二六年八月八日上午十点"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.range_end_to_end_text"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "schedule_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "产品评审",
+            "start_text": "二〇二六年八月八日上午九点",
+            "end_text": "二〇二六年八月八日上午十点"
+          },
+          "started_at": "2026-08-08T16:08:31.173755Z",
+          "duration_ms": 4.8328000120818615,
+          "success": true,
+          "output_summary": "已创建日程 1：产品评审",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "产品评审",
+              "location": "",
+              "start_at": "2026-08-08T09:00:00+08:00",
+              "end_at": "2026-08-08T10:00:00+08:00",
+              "recurrence": "none",
+              "weekdays": [],
+              "recurrence_until_at": null,
+              "status": "active",
+              "notify_before_minutes": 15,
+              "created_at": "2026-08-08T16:08:31.169507+00:00",
+              "cancelled_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "45420539-70af-4423-b5b0-525c1957e19d",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "create",
+            "title": "产品评审",
+            "start_text": "二〇二六年八月八日上午九点",
+            "end_text": "二〇二六年八月八日上午十点"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.range_end_to_end_text"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "schedule_manage",
+          "actual_arguments": {
+            "action": "create",
+            "title": "产品评审",
+            "start_text": "二〇二六年八月八日上午九点",
+            "end_text": "二〇二六年八月八日上午十点"
+          },
+          "started_at": "2026-08-08T16:08:31.173755Z",
+          "duration_ms": 4.8328000120818615,
+          "success": true,
+          "output_summary": "已创建日程 1：产品评审",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "产品评审",
+              "location": "",
+              "start_at": "2026-08-08T09:00:00+08:00",
+              "end_at": "2026-08-08T10:00:00+08:00",
+              "recurrence": "none",
+              "weekdays": [],
+              "recurrence_until_at": null,
+              "status": "active",
+              "notify_before_minutes": 15,
+              "created_at": "2026-08-08T16:08:31.169507+00:00",
+              "cancelled_at": null
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "schedule_query_by_title",
+      "prompt": "查询日程 产品评审",
+      "initial": {
+        "id": "c62903ab-fc34-42d1-a523-b64af919e440",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "query",
+            "title_query": "产品评审"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_schedule:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "schedule_manage",
+          "actual_arguments": {
+            "action": "query",
+            "title_query": "产品评审"
+          },
+          "started_at": "2026-08-08T16:08:31.177680Z",
+          "duration_ms": 0.4599001258611679,
+          "success": true,
+          "output_summary": "查询到 1 个日程实例",
+          "output": {
+            "items": [
+              {
+                "schedule_id": 1,
+                "title": "产品评审",
+                "location": "",
+                "start_at": "2026-08-08T09:00:00+08:00",
+                "end_at": "2026-08-08T10:00:00+08:00",
+                "recurrence": "none",
+                "notify_before_minutes": 15
+              }
+            ],
+            "range_start": "2026-08-03T00:00:00+08:00",
+            "range_end": "2026-08-10T00:00:00+08:00",
+            "truncated": false,
+            "candidate_mode": true
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "c62903ab-fc34-42d1-a523-b64af919e440",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "query",
+            "title_query": "产品评审"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:explicit_schedule:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "schedule_manage",
+          "actual_arguments": {
+            "action": "query",
+            "title_query": "产品评审"
+          },
+          "started_at": "2026-08-08T16:08:31.177680Z",
+          "duration_ms": 0.4599001258611679,
+          "success": true,
+          "output_summary": "查询到 1 个日程实例",
+          "output": {
+            "items": [
+              {
+                "schedule_id": 1,
+                "title": "产品评审",
+                "location": "",
+                "start_at": "2026-08-08T09:00:00+08:00",
+                "end_at": "2026-08-08T10:00:00+08:00",
+                "recurrence": "none",
+                "notify_before_minutes": 15
+              }
+            ],
+            "range_start": "2026-08-03T00:00:00+08:00",
+            "range_end": "2026-08-10T00:00:00+08:00",
+            "truncated": false,
+            "candidate_mode": true
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "schedule_cancel_preview",
+      "prompt": "取消日程 1",
+      "initial": {
+        "id": "b7b6f0d9-270f-43e8-8830-d8509d5a949e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "cancel",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认取消日程",
+            "target": "schedule_manage",
+            "content": "即将取消日程 ID 1。确认继续？\n日程：产品评审；开始：2026-08-08T09:00:00+08:00",
+            "amount": null,
+            "impact": "日程 ID 1 将被标记为已取消，不会再触发通知。",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "b7b6f0d9-270f-43e8-8830-d8509d5a949e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "cancel",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认取消日程",
+            "target": "schedule_manage",
+            "content": "即将取消日程 ID 1。确认继续？\n日程：产品评审；开始：2026-08-08T09:00:00+08:00",
+            "amount": null,
+            "impact": "日程 ID 1 将被标记为已取消，不会再触发通知。",
+            "reversible": false
+          }
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "schedule_cancel_confirmed",
+      "prompt": "确认取消日程",
+      "initial": {
+        "id": "b7b6f0d9-270f-43e8-8830-d8509d5a949e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "cancel",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认取消日程",
+            "target": "schedule_manage",
+            "content": "即将取消日程 ID 1。确认继续？\n日程：产品评审；开始：2026-08-08T09:00:00+08:00",
+            "amount": null,
+            "impact": "日程 ID 1 将被标记为已取消，不会再触发通知。",
+            "reversible": false
+          }
+        }
+      },
+      "final": {
+        "id": "b7b6f0d9-270f-43e8-8830-d8509d5a949e",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "schedule_manage",
+          "arguments": {
+            "action": "cancel",
+            "id": 1
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "schedule_manage.cancel_with_id_from_request"
+          ],
+          "intent_route": "pre_route:explicit_schedule",
+          "model_calls": 1,
+          "schema_repaired": false,
+          "confirmed": true
+        },
+        "result": {
+          "tool_name": "schedule_manage",
+          "actual_arguments": {
+            "action": "cancel",
+            "id": 1
+          },
+          "started_at": "2026-08-08T16:08:31.558111Z",
+          "duration_ms": 1.025900011882186,
+          "success": true,
+          "output_summary": "已取消日程 1",
+          "output": {
+            "item": {
+              "id": 1,
+              "title": "产品评审",
+              "location": "",
+              "start_at": "2026-08-08T09:00:00+08:00",
+              "end_at": "2026-08-08T10:00:00+08:00",
+              "recurrence": "none",
+              "weekdays": [],
+              "recurrence_until_at": null,
+              "status": "cancelled",
+              "notify_before_minutes": 15,
+              "created_at": "2026-08-08T16:08:31.169507+00:00",
+              "cancelled_at": "2026-08-08T16:08:31.557111+00:00"
+            }
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "text_polish_facts",
+      "prompt": "润色：预算为300万元，联系电话是13800138000",
+      "initial": {
+        "id": "37968e22-31f0-459a-8747-af704619086a",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "polish",
+            "text": "预算为300万元，联系电话是13800138000"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.restore_local_payload"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "polish",
+            "text": "预算为300万元，联系电话是13800138000"
+          },
+          "started_at": "2026-08-08T16:08:31.911751Z",
+          "duration_ms": 349.8976998962462,
+          "success": true,
+          "output_summary": "预算为300万元，联系电话是13800138000",
+          "output": {
+            "text": "预算为300万元，联系电话是13800138000",
+            "status": "draft",
+            "facts_preserved": [
+              "300万元",
+              "13800138000"
+            ]
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "37968e22-31f0-459a-8747-af704619086a",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "polish",
+            "text": "预算为300万元，联系电话是13800138000"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.restore_local_payload"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "polish",
+            "text": "预算为300万元，联系电话是13800138000"
+          },
+          "started_at": "2026-08-08T16:08:31.911751Z",
+          "duration_ms": 349.8976998962462,
+          "success": true,
+          "output_summary": "预算为300万元，联系电话是13800138000",
+          "output": {
+            "text": "预算为300万元，联系电话是13800138000",
+            "status": "draft",
+            "facts_preserved": [
+              "300万元",
+              "13800138000"
+            ]
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "text_summarize",
+      "prompt": "总结这段：本季度完成了三个项目，预算为300万元",
+      "initial": {
+        "id": "d234fa69-4b2c-4a1f-8bba-d2842962aed2",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "summarize",
+            "text": "本季度完成了三个项目，预算为300万元"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "summarize",
+            "text": "本季度完成了三个项目，预算为300万元"
+          },
+          "started_at": "2026-08-08T16:08:32.245016Z",
+          "duration_ms": 330.85349993780255,
+          "success": true,
+          "output_summary": "本季度完成了三个项目，预算为300万元",
+          "output": {
+            "text": "本季度完成了三个项目，预算为300万元",
+            "status": "draft",
+            "facts_preserved": [
+              "300万元"
+            ]
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "d234fa69-4b2c-4a1f-8bba-d2842962aed2",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "summarize",
+            "text": "本季度完成了三个项目，预算为300万元"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "summarize",
+            "text": "本季度完成了三个项目，预算为300万元"
+          },
+          "started_at": "2026-08-08T16:08:32.245016Z",
+          "duration_ms": 330.85349993780255,
+          "success": true,
+          "output_summary": "本季度完成了三个项目，预算为300万元",
+          "output": {
+            "text": "本季度完成了三个项目，预算为300万元",
+            "status": "draft",
+            "facts_preserved": [
+              "300万元"
+            ]
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "text_tone_formal",
+      "prompt": "调整为正式语气：麻烦大家记得下午一点开会",
+      "initial": {
+        "id": "7edee316-20d2-4472-9623-0b772b17f109",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "麻烦大家记得下午一点开会",
+            "tone": "formal"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.tone_adjust_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "tone_adjust",
+            "text": "麻烦大家记得下午一点开会",
+            "tone": "formal"
+          },
+          "started_at": "2026-08-08T16:08:32.657470Z",
+          "duration_ms": 409.2704001814127,
+          "success": true,
+          "output_summary": "敬请各位同事注意，下午1点有会议。",
+          "output": {
+            "text": "敬请各位同事注意，下午1点有会议。",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "7edee316-20d2-4472-9623-0b772b17f109",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "麻烦大家记得下午一点开会",
+            "tone": "formal"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.tone_adjust_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "tone_adjust",
+            "text": "麻烦大家记得下午一点开会",
+            "tone": "formal"
+          },
+          "started_at": "2026-08-08T16:08:32.657470Z",
+          "duration_ms": 409.2704001814127,
+          "success": true,
+          "output_summary": "敬请各位同事注意，下午1点有会议。",
+          "output": {
+            "text": "敬请各位同事注意，下午1点有会议。",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "text_tone_casual",
+      "prompt": "调整为轻松语气：请尽快提交材料。",
+      "initial": {
+        "id": "4d0543c9-def8-47fa-80e0-af1fff7eb7d4",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "请尽快提交材料。",
+            "tone": "casual"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.tone_adjust_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "tone_adjust",
+            "text": "请尽快提交材料。",
+            "tone": "casual"
+          },
+          "started_at": "2026-08-08T16:08:33.012092Z",
+          "duration_ms": 350.80899996683,
+          "success": true,
+          "output_summary": "快点把材料交了啊",
+          "output": {
+            "text": "快点把材料交了啊",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "4d0543c9-def8-47fa-80e0-af1fff7eb7d4",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "tone_adjust",
+            "text": "请尽快提交材料。",
+            "tone": "casual"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.tone_adjust_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "tone_adjust",
+            "text": "请尽快提交材料。",
+            "tone": "casual"
+          },
+          "started_at": "2026-08-08T16:08:33.012092Z",
+          "duration_ms": 350.80899996683,
+          "success": true,
+          "output_summary": "快点把材料交了啊",
+          "output": {
+            "text": "快点把材料交了啊",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "text_draft",
+      "prompt": "草拟：请尽快提交材料。",
+      "initial": {
+        "id": "466ece22-2305-4abe-a471-b36a2d8c7335",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "draft",
+            "text": "请尽快提交材料。"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.draft_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "draft",
+            "text": "请尽快提交材料。"
+          },
+          "started_at": "2026-08-08T16:08:33.375742Z",
+          "duration_ms": 361.47530004382133,
+          "success": true,
+          "output_summary": "请尽快提交材料。谢谢。",
+          "output": {
+            "text": "请尽快提交材料。谢谢。",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "final": {
+        "id": "466ece22-2305-4abe-a471-b36a2d8c7335",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R1",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "text_polish",
+          "arguments": {
+            "operation": "draft",
+            "text": "请尽快提交材料。"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [
+            "text_polish.draft_from_request"
+          ],
+          "intent_route": "pre_route:text_operation_prefix:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "tool_name": "text_polish",
+          "actual_arguments": {
+            "operation": "draft",
+            "text": "请尽快提交材料。"
+          },
+          "started_at": "2026-08-08T16:08:33.375742Z",
+          "duration_ms": 361.47530004382133,
+          "success": true,
+          "output_summary": "请尽快提交材料。谢谢。",
+          "output": {
+            "text": "请尽快提交材料。谢谢。",
+            "status": "draft",
+            "facts_preserved": []
+          },
+          "next_actions": [
+            "确认内容后再发送"
+          ],
+          "error_code": null
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "meeting_process_preview",
+      "prompt": "整理会议纪要 <TEMP>\agent-platform-three-model\authorized_files\项目评审会议.txt",
+      "initial": {
+        "id": "bf935c40-d02a-4d7e-9fd9-44d779117a9e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "meeting_process",
+          "arguments": {
+            "source_path": "<isolated>\\authorized_files\\项目评审会议.txt"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:meeting_text_path:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认执行高风险操作",
+            "target": "meeting_process",
+            "content": "将执行 meeting_process",
+            "amount": null,
+            "impact": "风险等级 R2",
+            "reversible": true
+          }
+        }
+      },
+      "final": {
+        "id": "bf935c40-d02a-4d7e-9fd9-44d779117a9e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "meeting_process",
+          "arguments": {
+            "source_path": "<isolated>\\authorized_files\\项目评审会议.txt"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:meeting_text_path:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认执行高风险操作",
+            "target": "meeting_process",
+            "content": "将执行 meeting_process",
+            "amount": null,
+            "impact": "风险等级 R2",
+            "reversible": true
+          }
+        }
+      },
+      "exception": null
+    },
+    {
+      "name": "meeting_process_confirmed",
+      "prompt": "确认生成会议纪要",
+      "initial": {
+        "id": "bf935c40-d02a-4d7e-9fd9-44d779117a9e",
+        "state": "awaiting_confirmation",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "meeting_process",
+          "arguments": {
+            "source_path": "<isolated>\\authorized_files\\项目评审会议.txt"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:meeting_text_path:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false
+        },
+        "result": {
+          "type": "risk_confirmation",
+          "confirmation": {
+            "title": "确认执行高风险操作",
+            "target": "meeting_process",
+            "content": "将执行 meeting_process",
+            "amount": null,
+            "impact": "风险等级 R2",
+            "reversible": true
+          }
+        }
+      },
+      "final": {
+        "id": "bf935c40-d02a-4d7e-9fd9-44d779117a9e",
+        "state": "completed",
+        "error": null,
+        "risk_level": "R2",
+        "context": {
+          "role": "user",
+          "data_domain": "personal",
+          "intent": "meeting_process",
+          "arguments": {
+            "source_path": "<isolated>\\authorized_files\\项目评审会议.txt"
+          },
+          "missing_fields": [],
+          "confidence": 1.0,
+          "normalization_rules": [],
+          "intent_route": "pre_route:meeting_text_path:deterministic_arguments",
+          "model_calls": 0,
+          "schema_repaired": false,
+          "confirmed": true
+        },
+        "result": {
+          "tool_name": "meeting_process",
+          "actual_arguments": {
+            "source_path": "<isolated>\\authorized_files\\项目评审会议.txt"
+          },
+          "started_at": "2026-08-08T16:08:33.379919Z",
+          "duration_ms": 1.9691998604685068,
+          "success": true,
+          "output_summary": "会议纪要已生成：项目评审会议-会议纪要.md",
+          "output": {
+            "output_path": "<isolated>\\meeting_notes\\项目评审会议-会议纪要.md",
+            "topic": "项目评审会议",
+            "segments": 2,
+            "conclusions": 1,
+            "disagreements": 0,
+            "actions": 1,
+            "traceable": true
+          },
+          "next_actions": [],
+          "error_code": null
+        }
+      },
+      "exception": null
+    }
+  ],
+  "summary": {
+    "knowledge_query": {
+      "ok": true,
+      "sources": [
+        {
+          "file": "产品保修政策.txt",
+          "section": "分块 1",
+          "snippet": "产品保修政策 本产品整机保修期为两年，售后联系电话为 400-123-4567。",
+          "updated_at": "2026-08-08T16:08:28.310242+00:00",
+          "scope": "未声明"
+        }
+      ],
+      "answer": "根据《产品保修政策.txt》分块 1：产品保修政策\r\n本产品整机保修期为两年，售后联系电话为 400-123-4567。"
+    },
+    "general_chat": {
+      "ok": true,
+      "answers": [
+        "1+1 = 2",
+        "局域网是一种将地理位置上靠近的计算机和相关设备连接起来构成的小型网络系统。",
+        "Hello"
+      ]
+    },
+    "file_open": {
+      "ok": true,
+      "candidate_count": 3,
+      "file_open_enabled": false
+    },
+    "reminder_create_query_mutation": {
+      "ok": true,
+      "query_count_before_mutation": 2,
+      "texts": [
+        "三模型报告",
+        "复核回归结果"
+      ]
+    },
+    "todo_crud_status_update": {
+      "ok": true,
+      "query_count_before_mutation": 2
+    },
+    "schedule_create_query_cancel": {
+      "ok": true,
+      "item": {
+        "id": 1,
+        "title": "产品评审",
+        "location": "",
+        "start_at": "2026-08-08T09:00:00+08:00",
+        "end_at": "2026-08-08T10:00:00+08:00",
+        "recurrence": "none",
+        "weekdays": [],
+        "recurrence_until_at": null,
+        "status": "active",
+        "notify_before_minutes": 15,
+        "created_at": "2026-08-08T16:08:31.169507+00:00",
+        "cancelled_at": null
+      }
+    },
+    "text_processing": {
+      "ok": true,
+      "fact_check": true
+    },
+    "meeting_process": {
+      "ok": true,
+      "output_count": 1
+    }
+  },
+  "controls": {
+    "schedule_uppercase_parser": {
+      "ok": true,
+      "start_at": "2026-08-08T09:00:00+08:00",
+      "end_at": "2026-08-08T10:00:00+08:00"
+    },
+    "reminder_clear_alias": {
+      "ok": true
+    }
+  },
+  "pass_count": 8,
+  "function_count": 8
+}

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from jsonschema import Draft202012Validator
 from pydantic import JsonValue
 
-from agent_platform.adapters import CloudModelAdapter, MockModelAdapter, OllamaModelAdapter, RKLLMModelAdapter
+from agent_platform.adapters import CloudModelAdapter, LlamaCppModelAdapter, MockModelAdapter, OllamaModelAdapter, RKLLMModelAdapter
 from agent_platform.config import Settings
 from agent_platform.core.errors import ConfigurationError, ModelError, ModelSchemaError
 from agent_platform.core.interfaces import ModelAdapter
@@ -83,10 +83,19 @@ class ModelGateway:
                 max_concurrency=settings.rkllm_max_concurrency,
                 max_new_tokens=settings.rkllm_max_new_tokens,
             )
+        elif provider == "llamacpp":
+            adapter = LlamaCppModelAdapter(
+                base_url=settings.llamacpp_server_url,
+                model=settings.llamacpp_model_name,
+                timeout_seconds=settings.llamacpp_timeout_seconds,
+                queue_timeout_seconds=settings.llamacpp_queue_timeout_seconds,
+                max_concurrency=settings.llamacpp_parallel,
+                max_new_tokens=settings.llamacpp_max_tokens,
+            )
         else:
             raise ConfigurationError(f"Unsupported MODEL_PROVIDER: {settings.model_provider}")
         fallback: ModelAdapter | None = None
-        if provider == "rkllm" and settings.model_fallback_enabled:
+        if provider in {"rkllm", "llamacpp"} and settings.model_fallback_enabled:
             fallback = CloudModelAdapter(
                 base_url=settings.model_fallback_base_url,
                 model=settings.model_fallback_name,

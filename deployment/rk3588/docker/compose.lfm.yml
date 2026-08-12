@@ -1,0 +1,16 @@
+services:
+  agent:
+    image: cloud-flowing-lfm2.5-1.2b:rk3588-cpu-poc
+    container_name: cloud-flowing-poc
+    restart: unless-stopped
+    env_file:
+      - ${POC_ENV_FILE:-./profiles/startup.env}
+    ports:
+      - "8000:8000"
+    volumes:
+      - agent-data:/opt/app/data
+      - agent-logs:/opt/app/logs
+
+volumes:
+  agent-data:
+  agent-logs:

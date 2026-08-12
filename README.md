@@ -1,6 +1,6 @@
 # Agent Platform MVP
 
-本项目实现 `开发内容/prompts` 中 F1-F8、T1-T5、I1-I3 定义的本地优先后端：统一任务状态、模型网关、工具执行、权限与数据分级、端云路由、离线队列、连接器、审计、七个业务工具、FastAPI/SSE 和自动化评测。当前还包含 RKLLM 上板前的协议、Adapter、模拟服务和部署准备物。
+本项目实现 `开发内容/prompts` 中 F1-F8、T1-T5、I1-I3 定义的本地优先后端：统一任务状态、模型网关、工具执行、权限与数据分级、端云路由、离线队列、连接器、审计、八个工具、FastAPI/SSE 和自动化评测。当前还包含 llama.cpp ARM64 CPU PoC 与 RKLLM 上板前的协议、Adapter、模拟服务和部署准备物。
 
 ## 安装
 
@@ -15,19 +15,30 @@ Windows 安装会同时安装 `winotify`，用于提醒和日程到期时的系�
 
 Linux/ARM64 使用 Python 3.11 或更高版本执行同样的 `pip install -e ".[dev]"`。默认不下载 Embedding 模型、不调用外部 API、不打开桌面文件，只监听 `127.0.0.1`。
 
-## 启动
+需要 ZipVoice TTS 时额外安装可选依赖；模型不会被复制到本项目或 Qwen/LFM 镜像：
 
 ```powershell
-agent-platform serve
+python -m pip install -e ".[dev,tts]"
+```
+
+## 启动
+
+以下命令均建议在本 checkout 根目录执行。为避免调用其他目录里旧版本的全局命令，使用模块入口最稳妥：
+
+```powershell
+Set-Location 'D:\my new work\cloud-flowing_0806'
+python -m agent_platform.cli serve
 ```
 
 打开 `http://127.0.0.1:8000/` 使用 Web 功能操作台；`http://127.0.0.1:8000/docs` 是 API 文档。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。运行演示和评测：
 
 ```powershell
-agent-platform demo
-agent-platform evaluate --mode mock
+python -m agent_platform.cli demo
+python -m agent_platform.cli evaluate --mode mock
 pytest
 ```
+
+服务进程启动时读取一次环境变量和 `.env`。修改模型或其他配置后，请先按 `Ctrl+C` 停止服务，再重新启动；已经运行的服务不会自动切换模型。
 
 ## 演示知识库
 
@@ -40,7 +51,84 @@ agent-platform import-docs demo_docs --force
 
 导入器支持 UTF-8、UTF-8 BOM、GB18030 的 `.txt`/`.md` 和 `.docx`，按文件修改时间跳过未变化内容；失败文件会单独列出，不影响其他文档。可尝试“产品保修期多久”“年假有几天”“出差住宿标准”等查询，无相关依据时固定返回“未找到相关信息”。
 
-## 模型对比评测
+## 使用本地模型运行 Agent
+
+不启动大模型时，默认使用 `mock`，适合验证操作台、工具、权限、确认流程和本地数据读写：
+
+```powershell
+Set-Location 'D:\my new work\cloud-flowing_0806'
+$env:MODEL_PROVIDER = 'mock'
+python -m agent_platform.cli serve
+```
+
+接入本机 Ollama 前，先确认 Ollama 服务已启动并且模型已经下载：
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:11434/api/tags
+```
+
+使用 Ollama 运行 Agent：
+
+```powershell
+Set-Location 'D:\my new work\cloud-flowing_0806'
+$env:MODEL_PROVIDER = 'ollama'
+$env:MODEL_NAME = 'qwen2.5:3b'
+$env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+$env:OLLAMA_THINKING_ENABLED = 'false'
+python -m agent_platform.cli serve
+```
+
+当前已验证的本机模型标签包括 `qwen2.5:3b`、`qwen3:1.7b` 和 `lfm2.5-thinking:1.2b`。切换模型只需停止当前服务，修改 `MODEL_NAME`，再重新启动：
+
+```powershell
+Ctrl+C
+$env:MODEL_NAME = 'qwen3:1.7b' # 或 lfm2.5-thinking:1.2b
+python -m agent_platform.cli serve
+```
+
+也可以把这些变量写入项目根目录的 `.env`，这样每次启动自动读取；不要把 API 密钥等敏感值提交到 Git。`MODEL_PROVIDER` 可选 `mock`、`ollama`、`llamacpp`、`cloud`、`rkllm`；后三者还需要对应的服务地址、认证或板端配置。
+
+`general_chat` 负责数学、常识、闲聊和翻译等不属于业务工具的请求。简单算术由本地确定性解析器直接计算；其他通用问题交给当前模型，不落业务库，也不伪造知识库来源。明确查询本地文档、公司制度或要求来源时，知识库无命中仍返回“未找到相关信息”；只有误分到知识库的普通问题才会受控回退一次到通用问答。
+
+## ZipVoice TTS
+
+ZipVoice 是任务完成后的输出适配器，不属于第九个 Agent 工具，也不改变大模型选择。知识问答、通用问答和文本处理等任务只要产生可见文本，操作台结果区就会显示播放、停止和重新生成按钮。首次点击播放时按需生成 WAV；重新生成会创建新的音频版本。
+
+模型、vocoder 和参考音频存放在项目之外，通过 `.env` 引用：
+
+```dotenv
+TTS_PROVIDER=zipvoice
+TTS_OUTPUT_DIR=./data/tts
+ZIPVOICE_MODEL_DIR=D:/models/sherpa-onnx-zipvoice-distill-int8-zh-en-emilia
+ZIPVOICE_VOCODER_PATH=D:/models/vocos_24khz.onnx
+ZIPVOICE_REFERENCE_AUDIO_PATH=D:/models/reference.wav
+ZIPVOICE_REFERENCE_TEXT=参考音频中实际说出的完整文本
+ZIPVOICE_VOICES=[{"id":"news-female1","label":"news-female1","reference_audio_path":"D:/models/news-female.wav","reference_text":"参考音频中实际说出的完整文本"},{"id":"male1","label":"male1","reference_audio_path":"D:/models/male1.wav","reference_text":"参考音频中实际说出的完整文本"},{"id":"female1","label":"female1","reference_audio_path":"D:/models/female1.wav","reference_text":"参考音频中实际说出的完整文本"},{"id":"female2","label":"female2","reference_audio_path":"D:/models/female2.wav","reference_text":"参考音频中实际说出的完整文本"}]
+ZIPVOICE_DEFAULT_VOICE_ID=news-female1
+ZIPVOICE_NUM_THREADS=4
+ZIPVOICE_SPEED=1.0
+ZIPVOICE_NUM_STEPS=4
+```
+
+`ZIPVOICE_VOICES` 是一行 JSON 音色列表；每项包含稳定 `id`、操作台名称、参考 WAV 和逐字文本。`ZIPVOICE_DEFAULT_VOICE_ID` 决定操作台默认选择。旧的单个 `ZIPVOICE_REFERENCE_*` 配置仍兼容，但只显示“默认音色”。参考 WAV 支持单声道 PCM16 或 PCM24，并将原采样率交给 ZipVoice；参考文本必须与参考音频逐字匹配，否则音色和清晰度会明显下降。修改配置后重启 Agent，然后在 `/health` 中确认 `tts.ready=true`。交换机没有声卡时，仍可由浏览器播放服务返回的 WAV；RK3588 上的速度和内存需另做 ARM64 真机验收。
+
+## RK3588 llama.cpp CPU PoC
+
+两个 ARM64 镜像分别包含 Qwen2.5-3B-Instruct Q4_K_M 或 LFM2.5-1.2B-Instruct Q4_K_M，不同时加载。线程、上下文、输出上限、批大小和并发均由环境变量控制，修改配置不需要重建镜像：
+
+```text
+LLAMACPP_THREADS
+LLAMACPP_CONTEXT_SIZE
+LLAMACPP_MAX_TOKENS
+LLAMACPP_BATCH_SIZE
+LLAMACPP_PARALLEL
+```
+
+模型准备、双镜像构建、真机安装、4/6/8 线程自动对比、8192 压力档和结果文件说明见 [`deployment/rk3588/docker/README.md`](deployment/rk3588/docker/README.md)。2048/256 只是首次启动档；4096 稳定时使用真机自动选出的性能档。没有目标交换机生成的 `benchmark-report.json` 时，不得宣称已通过 RK3588 性能验收。
+
+PC 侧实现范围、本机代理模型结果、已验证项与尚未执行的板端边界见 [`docs/releases/2026-08-08-rk3588-dual-model-cpu-poc.md`](docs/releases/2026-08-08-rk3588-dual-model-cpu-poc.md)。
+
+## 模型评测
 
 本机 Ollama 模型优先使用原生 Provider。它会关闭 thinking、强制 JSON 输出，并自动绕过本机系统代理：
 
@@ -49,10 +137,10 @@ $env:MODEL_PROVIDER="ollama"
 $env:MODEL_NAME="qwen2.5:3b"
 $env:OLLAMA_BASE_URL="http://127.0.0.1:11434"
 $env:OLLAMA_THINKING_ENABLED="false"
-agent-platform evaluate --mode ollama --detailed --expected-total 60
+python -m agent_platform.cli evaluate --mode ollama --detailed --cases evaluation/test_cases --expected-total 60
 ```
 
-验证其他 Ollama 模型时只需替换 `MODEL_NAME`。协议可用不代表 Agent 质量达标，仍需比较固定评测集中的 Schema、意图、参数和端到端指标。
+验证其他 Ollama 模型时只需替换 `MODEL_NAME` 后重跑。这里真正决定 Provider 的是 `MODEL_PROVIDER=ollama`；`--mode ollama` 仅用于提示/检查两者是否一致。协议可用不代表 Agent 质量达标，仍需比较固定评测集中的 Schema、意图、参数和端到端指标。三模型专项结果见 [`docs/releases/2026-08-07-three-model-affected-functional-validation.md`](docs/releases/2026-08-07-three-model-affected-functional-validation.md)。
 
 准备好 `.env.deepseek`、`.env.qwen`，并确保 Ollama 已在 `127.0.0.1:11434` 加载 `qwen2.5:3b` 后执行：
 
@@ -129,7 +217,7 @@ Web 端会按任务状态实时更新，并在执行前展示对应确认控件�
 
 ## 验证
 
-开发前基线为 230 项自动化测试和 60 条固定中文评测用例；当前实际数量以 `pytest --collect-only -q` 为准。覆盖状态恢复、乐观锁、取消、幂等、数据脱敏、权限矩阵、六类路由、离线 FIFO、七工具、动态确认、完整审计、REST、SSE、RKLLM 线协议与响应式 Web 界面。
+开发前基线为 230 项自动化测试和 60 条固定中文评测用例；当前实际数量以 `pytest --collect-only -q` 为准。覆盖状态恢复、乐观锁、取消、幂等、数据脱敏、权限矩阵、六类路由、离线 FIFO、八工具、动态确认、完整审计、REST、SSE、本地模型协议与响应式 Web 界面。
 
 ## 安全默认值
 
