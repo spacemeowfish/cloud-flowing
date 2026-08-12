@@ -126,21 +126,19 @@ def remove_tree_with_retry(path: Path, *, attempts: int = 12) -> None:
 
 
 def resolve_source_commit(repository_root: Path, requested: str) -> str:
-    if requested:
-        candidate = requested.strip().lower()
-    else:
-        completed = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repository_root,
-            text=True,
-            capture_output=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-        if completed.returncode:
-            raise BuildError(f"Cannot resolve source commit: {completed.stderr.strip()}")
-        candidate = completed.stdout.strip().lower()
+    completed = subprocess.run(
+        ["git", "rev-parse", "HEAD"],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if completed.returncode:
+        raise BuildError(f"Cannot resolve source commit: {completed.stderr.strip()}")
+    head = completed.stdout.strip().lower()
+    candidate = requested.strip().lower() if requested else head
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
         raise BuildError("--source-commit must be a complete 40-character Git object id")
     verified = subprocess.run(
@@ -154,6 +152,33 @@ def resolve_source_commit(repository_root: Path, requested: str) -> str:
     )
     if verified.returncode:
         raise BuildError(f"--source-commit is not a commit in the selected repository: {candidate}")
+    if candidate != head:
+        raise BuildError(f"--source-commit must match repository HEAD: expected {head}, got {candidate}")
+    status = subprocess.run(
+        [
+            "git",
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+            "--",
+            "agent_platform",
+            "demo_docs",
+            "demo_files",
+            "packaging/windows_offline",
+            "pyproject.toml",
+            "README.md",
+        ],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if status.returncode:
+        raise BuildError(f"Cannot inspect build input status: {status.stderr.strip()}")
+    if status.stdout.strip():
+        raise BuildError("Runtime bundle inputs have uncommitted changes; commit them before building")
     return candidate
 
 

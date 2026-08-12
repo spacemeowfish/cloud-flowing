@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -144,13 +145,38 @@ def test_private_scan_allows_source_api_key_references_but_rejects_config_values
         scan_metadata_for_private_paths(tmp_path)
 
 
-def test_source_commit_requires_full_object_id() -> None:
-    expected = resolve_source_commit(Path.cwd(), "")
-    assert resolve_source_commit(Path.cwd(), expected.upper()) == expected
+def test_source_commit_requires_clean_matching_head(tmp_path: Path) -> None:
+    repository = tmp_path / "repository"
+    repository.mkdir()
+    subprocess.run(["git", "init"], cwd=repository, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.name", "Bundle Test"], cwd=repository, check=True)
+    subprocess.run(["git", "config", "user.email", "bundle@example.invalid"], cwd=repository, check=True)
+    readme = repository / "README.md"
+    readme.write_text("first\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True)
+    subprocess.run(["git", "commit", "-m", "first"], cwd=repository, check=True, capture_output=True)
+    parent = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repository, text=True, capture_output=True, check=True
+    ).stdout.strip()
+    readme.write_text("second\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=repository, check=True)
+    subprocess.run(["git", "commit", "-m", "second"], cwd=repository, check=True, capture_output=True)
+    expected = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repository, text=True, capture_output=True, check=True
+    ).stdout.strip()
+
+    assert resolve_source_commit(repository, "") == expected
+    assert resolve_source_commit(repository, expected.upper()) == expected
     with pytest.raises(BuildError, match="40-character"):
-        resolve_source_commit(Path.cwd(), "1053a53")
+        resolve_source_commit(repository, "1053a53")
     with pytest.raises(BuildError, match="not a commit"):
-        resolve_source_commit(Path.cwd(), "a" * 40)
+        resolve_source_commit(repository, "a" * 40)
+    with pytest.raises(BuildError, match="must match repository HEAD"):
+        resolve_source_commit(repository, parent)
+
+    readme.write_text("dirty\n", encoding="utf-8")
+    with pytest.raises(BuildError, match="uncommitted changes"):
+        resolve_source_commit(repository, expected)
 
 
 def test_runtime_serializes_path_lists_as_json_arrays() -> None:
