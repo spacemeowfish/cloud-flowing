@@ -17,15 +17,15 @@ Windows x64 CPU 上的“模型 + Agent + ASR + TTS”完整本机链路已通�
 | 项目 | 记录 |
 |---|---|
 | 目录名 | `cloud-flowing-windows-x64-offline-local-validation` |
-| 运行时源码提交 | `a08a51a17a6015daa6812d172b0ef6ea4ab9d52b`（之后的提交仅含测试夹具与本报告，不改变包内运行代码） |
+| 运行时源码提交 | `15113c43b2bbd27b06aaacc0a127b4f703b37a10` |
 | 平台 | Windows x64 CPU |
 | 运行方式 | 便携 Python 3.12 + llama.cpp，本地 `127.0.0.1` 服务 |
 | 模型策略 | Qwen2.5 与 LFM 串行加载，不同时驻留 |
-| 干净构建目录 | `4,699` files / `3,851,008,890` bytes |
-| 初始负载清单 | `4,696` files / `3,849,540,929` bytes |
+| 干净构建目录 | `4,699` files / `3,851,010,582` bytes |
+| 初始负载清单 | `4,696` files / `3,849,542,620` bytes |
 | 最终 ZIP 文件名 | `cloud-flowing-windows-x64-offline-local-validation.zip` |
-| 最终 ZIP 字节数 | `3,636,131,116` |
-| 最终 ZIP SHA256 | `d72d50291efacc1ffb86709de7367e06bce10ab9d160cc8aa372e05da6f8b92e` |
+| 最终 ZIP 字节数 | `3,636,131,543` |
+| 最终 ZIP SHA256 | `422fa4517257884a2a7253ef19a22f6cb29ccfeefa18dc7231cefd81c46cf07d` |
 | 包状态 | `NON_DISTRIBUTABLE_LOCAL_VALIDATION` |
 
 以上归档三项来自实际生成和复核，不是预估值。该哈希只用于本机验证产物识别，不改变不可分发状态。
@@ -36,7 +36,7 @@ Windows x64 CPU 上的“模型 + Agent + ASR + TTS”完整本机链路已通�
 
 | 阶段 | 通过/总数 | 结果 |
 |---|---:|---|
-| Self-Check | 22/22 | 0 失败；1 条预期不可分发警告 |
+| Self-Check | 23/23 | 0 失败；1 条预期不可分发警告 |
 | Qwen 模型与 Agent | 4/4 | 真实请求通过 |
 | LFM 模型与 Agent | 4/4 | 真实请求通过 |
 | Faster-Whisper ASR | 3/3 | 真实转写通过 |
@@ -44,11 +44,13 @@ Windows x64 CPU 上的“模型 + Agent + ASR + TTS”完整本机链路已通�
 | 停止清理 | 1/1 | 相关监听端口为 0 |
 | ZIP 完整性 | 4,699/4,699 | 无损坏条目 |
 | 解压后内容哈希 | 4,694/4,694 | `SHA256SUMS` 0 错误 |
-| 解压后 Self-Check | 22/22 | 0 失败；1 条预期不可分发警告 |
+| 解压后 Self-Check | 23/23 | 0 失败；1 条预期不可分发警告 |
 
-模型加载日志记录 Qwen `1.680s`、LFM `0.626s`（ASR/TTS 阶段第二次 LFM 加载为 `0.622s`）。真实请求与生成耗时：Qwen 直接模型 `1.720s`、Agent `2.196s`；LFM 直接模型 `0.902s`、Agent `1.198s`；Faster-Whisper CPU INT8 转写 `3.630s`。ZipVoice 四音色分别为 `4.503s`、`12.684s`、`9.064s`、`5.426s`，均生成 24 kHz、单声道、16-bit PCM WAV。
+模型加载日志记录 Qwen `1.801s`、LFM `0.651s`（ASR/TTS 阶段第二次 LFM 加载为 `0.648s`）。真实请求与生成耗时：Qwen 直接模型 `1.766s`、Agent `2.196s`；LFM 直接模型 `1.000s`、Agent `1.179s`；Faster-Whisper CPU INT8 转写 `3.508s`。ZipVoice 四音色分别为 `4.709s`、`12.977s`、`9.418s`、`5.921s`，均生成 24 kHz、单声道、16-bit PCM WAV。
 
 依赖安装在包内 `runtime/packages`，构建器将最长相对路径限制为 120 字符；本次最长为 108 字符，最终深路径解压后的最长完整路径为 235 字符。真实冒烟和归档自检后均未生成 `.pyc`，防止只读运行资源被启动过程修改。
+
+额外路径门禁验证使用最长完整路径 245 字符的隔离副本，Self-Check 为 `22 pass / 0 fail / 2 expected warnings`。新增警告明确建议迁移到 `C:\CloudFlowing` 等短目录；该分支不启动服务，也不改变上表的最终归档验收结果。
 
 ## 复核命令与证据索引
 
@@ -94,7 +96,7 @@ Mock 没有被当作真实模型成功。该结果仅覆盖 Windows x64 CPU 链�
 - 源码、脚本、测试和文档可以进入同一 PR。
 - 模型二进制、参考 WAV、运行时、日志、生成音频和归档不得进入普通 Git 历史。
 - 当前完整本机验证包不得上传 GitHub Release，也不得发给同事。
-- GitHub 当前要求每个 Release 资产小于 2 GiB；本 ZIP 为 `3,636,131,116` bytes，未来即使许可闭环也需分卷或改用其他受控分发渠道。
+- GitHub 当前要求每个 Release 资产小于 2 GiB；本 ZIP 为 `3,636,131,543` bytes，未来即使许可闭环也需分卷或改用其他受控分发渠道。
 - 许可闭环后仍需重新构建、重新生成文件清单和 SHA256，并再次执行隔离安装冒烟，才能形成可分发候选包。
 
 ## 未解决风险

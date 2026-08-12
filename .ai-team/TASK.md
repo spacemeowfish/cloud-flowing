@@ -21,7 +21,7 @@
 - [x] 模板配置不含密钥、本机用户名或绝对路径；首次启动使用包内相对位置。
 - [x] 中文 `INSTALL.md` 覆盖系统要求、解压、自检、启动、访问、模型切换、麦克风、四音色、核心测试、停止、重装、日志和常见故障。
 - [x] 本机构建生成 `SHA256SUMS`、文件清单、总大小和资产许可证清单；普通 Git 历史不包含模型、音频、运行时、`.env`、数据库、日志或 ZIP。
-- [x] 从最终源码提交构建，并在全新独立安装目录完成真实运行验证：Self-Check 22 项通过、0 项失败、1 项预期的不可分发警告；Qwen 与 LFM 各 4/4；Faster-Whisper 3/3；ZipVoice 6/6；停止后相关监听端口为 0。
+- [x] 从最终源码提交构建，并在全新独立安装目录完成真实运行验证：Self-Check 23 项通过、0 项失败、1 项预期的不可分发警告；Qwen 与 LFM 各 4/4；Faster-Whisper 3/3；ZipVoice 6/6；停止后相关监听端口为 0。
 - [ ] GitHub Release 资产上传。因许可证和参考音频授权阻塞，本机验证包不得分享，也不得上传 Release。
 
 ## Invariants
@@ -42,7 +42,7 @@
 - 工作分支已正式 rebase 到 PR #1 的远程 merge commit `cf0f0c35c9cf0ce98ec58b2382e11ffb03816d3c`；当前首个实现提交为 `daab8a4`，不再采用临时父提交方案。
 - 完整本机构建只能标记为 `NON_DISTRIBUTABLE_LOCAL_VALIDATION`。它仅用于当前所有者本机验证，不得发送给同事或上传 GitHub Release。
 - GitHub Release 是条件交付：任何许可证不明或单资产超过平台限制时，不上传不合规资产。
-- GitHub 当前要求每个 Release 资产小于 2 GiB；本机验证 ZIP 为 `3,636,131,116` bytes，因此即使未来许可闭环，也必须分卷或改用其他受控分发渠道，不能原样上传为单个资产。
+- GitHub 当前要求每个 Release 资产小于 2 GiB；本机验证 ZIP 为 `3,636,131,543` bytes，因此即使未来许可闭环，也必须分卷或改用其他受控分发渠道，不能原样上传为单个资产。
 
 ## Completed
 
@@ -51,10 +51,11 @@
 - 已在独立 worktree 和独立 dist 中实施；共享 checkout 未被修改。
 - 已实现便携运行时、相对配置、启动、停止、自检、模型切换、资产导入和真实冒烟脚本。
 - 已完成资产来源、版本、SHA256 和许可证审查，并将阻塞项写入包状态与发布报告。
-- 已从源码提交 `a08a51a17a6015daa6812d172b0ef6ea4ab9d52b` 构建完整本机验证目录：`4,699` 个文件、`3,851,008,890` bytes；初始负载清单为 `4,696` 个文件、`3,849,540,929` bytes。依赖位于较短的 `runtime/packages`，最长相对路径为 108 字符，运行后未生成 `.pyc`。该目录不具备再分发资格。
-- 已在全新独立安装目录完成最终源码构建的真实验收：Self-Check `22 pass / 0 fail / 1 expected warning`；Qwen `4/4`；LFM `4/4`；ASR `3/3`；TTS `6/6`；停止后 `8000/8080` 监听端口均为 `0`。
-- 已生成 Zip64 本机验证归档 `cloud-flowing-windows-x64-offline-local-validation.zip`，大小 `3,636,131,116` bytes，SHA256 `d72d50291efacc1ffb86709de7367e06bce10ab9d160cc8aa372e05da6f8b92e`；ZIP 完整性检查 `4,699` 个条目、0 个损坏项。
-- 已将归档解压到另一个全新深路径目录复核：包内 `SHA256SUMS` 共 `4,694` 条、0 错误，自检仍为 `22 pass / 0 fail / 1 expected warning`，最长完整路径 235 字符。
+- 已从源码提交 `15113c43b2bbd27b06aaacc0a127b4f703b37a10` 构建完整本机验证目录：`4,699` 个文件、`3,851,010,582` bytes；初始负载清单为 `4,696` 个文件、`3,849,542,620` bytes。依赖位于较短的 `runtime/packages`，最长相对路径为 108 字符，运行后未生成 `.pyc`。该目录不具备再分发资格。
+- 已在全新独立安装目录完成最终源码构建的真实验收：Self-Check `23 pass / 0 fail / 1 expected warning`；Qwen `4/4`；LFM `4/4`；ASR `3/3`；TTS `6/6`；停止后 `8000/8080` 监听端口均为 `0`。
+- 已生成 Zip64 本机验证归档 `cloud-flowing-windows-x64-offline-local-validation.zip`，大小 `3,636,131,543` bytes，SHA256 `422fa4517257884a2a7253ef19a22f6cb29ccfeefa18dc7231cefd81c46cf07d`；ZIP 完整性检查 `4,699` 个条目、0 个损坏项。
+- 已将归档解压到另一个全新深路径目录复核：包内 `SHA256SUMS` 共 `4,694` 条、0 错误，自检仍为 `23 pass / 0 fail / 1 expected warning`，最长完整路径 235 字符。
+- 已在最长完整路径 245 字符的额外隔离副本验证路径预警分支：`22 pass / 0 fail / 2 expected warnings`，其中新增警告明确要求迁移到 `C:\CloudFlowing` 等短目录。
 
 ## Pending
 
@@ -78,13 +79,13 @@
 - [x] `git diff --check`
 - [x] `node .ai-team/check.mjs --base origin/main`
 - [x] 构建产物隐私、路径、密钥和 Git 大文件扫描
-- [x] 最终独立安装目录 `Self-Check.ps1`：22 项通过、0 项失败、1 项预期不可分发警告
+- [x] 最终独立安装目录 `Self-Check.ps1`：23 项通过、0 项失败、1 项预期不可分发警告
 - [x] Qwen 模型/Agent 冒烟：4/4
 - [x] LFM 模型/Agent 冒烟：4/4
 - [x] Faster-Whisper 真实推理：3/3
 - [x] ZipVoice 四音色真实生成及音频校验：6/6
 - [x] 停止服务后相关监听端口：0
-- [x] 最终 ZIP 完整性及解压后 `SHA256SUMS` 复核：4,699 个 ZIP 条目无损坏，4,694 条内容哈希 0 错误，自检 22/22
+- [x] 最终 ZIP 完整性及解压后 `SHA256SUMS` 复核：4,699 个 ZIP 条目无损坏，4,694 条内容哈希 0 错误，自检 23/23
 
 ## Handoff note
 
