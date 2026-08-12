@@ -14,4 +14,3 @@ runtime\python\python.exe scripts\smoke\smoke.py all --bundle-root . --model-id 
 - `tts` 基于同一会话的已完成任务依次生成四个音色，并把校验过的 WAV 保存到 `logs/smoke/tts`。
 - 每个检查独立记录成功、耗时、结果或错误；任一检查失败时进程退出码为 `1`。
 - JSON 证据会清理本机绝对路径，但保留实际模型回答、转写文本和包内相对产物路径。
-

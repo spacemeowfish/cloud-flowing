@@ -19,4 +19,3 @@ Direct file/path decoding through `faster_whisper.decode_audio` requires PyAV
 and is outside the offline bundle contract. `MANIFEST.json` records the hash of
 the patched file. Import and NumPy-entry validation is not evidence of a real
 model transcription; the latter is recorded separately by the smoke test.
-
