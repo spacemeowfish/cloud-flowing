@@ -143,6 +143,17 @@ def resolve_source_commit(repository_root: Path, requested: str) -> str:
         candidate = completed.stdout.strip().lower()
     if not re.fullmatch(r"[0-9a-f]{40}", candidate):
         raise BuildError("--source-commit must be a complete 40-character Git object id")
+    verified = subprocess.run(
+        ["git", "cat-file", "-e", f"{candidate}^{{commit}}"],
+        cwd=repository_root,
+        text=True,
+        capture_output=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if verified.returncode:
+        raise BuildError(f"--source-commit is not a commit in the selected repository: {candidate}")
     return candidate
 
 
@@ -554,7 +565,9 @@ def scan_metadata_for_private_paths(root: Path) -> None:
         text = path.read_text(encoding="utf-8", errors="replace")
         if PRIVATE_WINDOWS_PATH_RE.search(text):
             raise BuildError(f"Generated metadata contains a local absolute path: {path.relative_to(root)}")
-        if re.search(r"(?im)^\s*(?:MODEL_)?API_KEY\s*=\s*\S+", text):
+        relative = path.relative_to(root)
+        is_generated_configuration = len(relative.parts) == 1 or relative.parts[0].lower() == "config"
+        if is_generated_configuration and re.search(r"(?im)^\s*(?:MODEL_)?API_KEY\s*=\s*\S+", text):
             raise BuildError(f"Generated metadata contains an API key value: {path.relative_to(root)}")
 
 

@@ -130,11 +130,27 @@ def test_package_status_and_private_path_scan(tmp_path: Path) -> None:
         scan_metadata_for_private_paths(tmp_path)
 
 
+def test_private_scan_allows_source_api_key_references_but_rejects_config_values(tmp_path: Path) -> None:
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "gateway.py").write_text(
+        "api_key=settings.model_api_key,\n", encoding="utf-8"
+    )
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "default.env").write_text("MODEL_API_KEY=\n", encoding="utf-8")
+    scan_metadata_for_private_paths(tmp_path)
+
+    (tmp_path / "config" / "default.env").write_text("MODEL_API_KEY=secret-value\n", encoding="utf-8")
+    with pytest.raises(BuildError, match="API key"):
+        scan_metadata_for_private_paths(tmp_path)
+
+
 def test_source_commit_requires_full_object_id() -> None:
-    expected = "a" * 40
+    expected = resolve_source_commit(Path.cwd(), "")
     assert resolve_source_commit(Path.cwd(), expected.upper()) == expected
     with pytest.raises(BuildError, match="40-character"):
         resolve_source_commit(Path.cwd(), "1053a53")
+    with pytest.raises(BuildError, match="not a commit"):
+        resolve_source_commit(Path.cwd(), "a" * 40)
 
 
 def test_runtime_serializes_path_lists_as_json_arrays() -> None:
