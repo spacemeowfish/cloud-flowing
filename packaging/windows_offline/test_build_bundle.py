@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -13,7 +14,9 @@ from build_bundle import (  # noqa: E402
     BuildError,
     as_relative_bundle_path,
     bundle_configuration,
+    build_parser,
     copy_tree_filtered,
+    directory_tree_record,
     ensure_wheelhouse,
     models_configuration,
     package_status,
@@ -106,13 +109,55 @@ def test_smoke_runtime_copy_can_exclude_unit_tests(tmp_path: Path) -> None:
 
 
 def test_wheelhouse_matches_normalized_distribution_names(tmp_path: Path) -> None:
-    (tmp_path / "annotated_doc-0.0.4-py3-none-any.whl").touch()
-    (tmp_path / "python_dotenv-1.2.2-py3-none-any.whl").touch()
-    ensure_wheelhouse(tmp_path, ["annotated-doc==0.0.4", "python-dotenv==1.2.2"])
+    first = tmp_path / "annotated_doc-0.0.4-py3-none-any.whl"
+    second = tmp_path / "python_dotenv-1.2.2-py3-none-any.whl"
+    first.write_bytes(b"wheel-one")
+    second.write_bytes(b"wheel-two")
+    lock = {
+        "wheels": [
+            {
+                "filename": path.name,
+                "size": path.stat().st_size,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+            }
+            for path in (first, second)
+        ]
+    }
+    ensure_wheelhouse(tmp_path, ["annotated-doc==0.0.4", "python-dotenv==1.2.2"], lock)
+
+    second.write_bytes(b"tampered")
+    with pytest.raises(BuildError, match="hash mismatch"):
+        ensure_wheelhouse(tmp_path, ["annotated-doc==0.0.4", "python-dotenv==1.2.2"], lock)
+    second.write_bytes(b"wheel-two")
 
     (tmp_path / "av-18.0.0-cp311-abi3-win_amd64.whl").touch()
-    with pytest.raises(BuildError, match="prohibited PyAV"):
-        ensure_wheelhouse(tmp_path, ["annotated-doc==0.0.4"])
+    with pytest.raises(BuildError, match="file set"):
+        ensure_wheelhouse(tmp_path, ["annotated-doc==0.0.4"], lock)
+
+
+def test_directory_tree_record_detects_file_set_and_content_changes(tmp_path: Path) -> None:
+    root = tmp_path / "model"
+    (root / "nested").mkdir(parents=True)
+    (root / "config.json").write_text("{}\n", encoding="utf-8")
+    (root / "nested" / "model.bin").write_bytes(b"weights")
+    expected = directory_tree_record(root)
+    assert expected["file_count"] == 2
+
+    (root / "nested" / "model.bin").write_bytes(b"changed")
+    assert directory_tree_record(root) != expected
+    (root / "nested" / "model.bin").write_bytes(b"weights")
+    (root / "extra.txt").write_text("extra", encoding="utf-8")
+    assert directory_tree_record(root) != expected
+
+
+def test_cli_does_not_allow_canonical_lock_overrides() -> None:
+    option_strings = {
+        option
+        for action in build_parser()._actions
+        for option in action.option_strings
+    }
+    assert "--assets-lock" not in option_strings
+    assert "--requirements-lock" not in option_strings
 
 
 def test_package_status_and_private_path_scan(tmp_path: Path) -> None:

@@ -24,6 +24,11 @@ dist/
 *.zip
 *.tar
 *.tar.bz2
+*.7z
+*.bin
+*.dll
+*.exe
+*.pyd
 build/
 *.db
 *.db-*

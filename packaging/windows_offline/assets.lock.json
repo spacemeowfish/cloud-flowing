@@ -45,6 +45,9 @@
       "revision": "536b0662742c02347bc0e980a01041f333bce120",
       "required_file": "model.bin",
       "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+      "file_count": 4,
+      "total_size": 486212372,
+      "tree_sha256": "4e924b13871cadaa18f24bf888a6388e45d15da56e06b0b90141dc27d96e951f",
       "source": "https://huggingface.co/Systran/faster-whisper-small/tree/536b0662742c02347bc0e980a01041f333bce120",
       "license": "MIT",
       "redistribution": {"status": "allowed", "reason": "Model repository declares MIT."}
@@ -53,6 +56,9 @@
       "kind": "model_directory",
       "required_file": "decoder.int8.onnx",
       "sha256": "3cc2e08a96610d7ea1b227398e97cdbbe0414499741d3aec0b8113db2a2ab251",
+      "file_count": 359,
+      "total_size": 149948679,
+      "tree_sha256": "9d255a4e40f715d8c6a6df013724085f0944a8dbb3abd08f9f46a3c4adff9fba",
       "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-zipvoice-distill-int8-zh-en-emilia.tar.bz2",
       "license": "mixed-and-incomplete",
       "redistribution": {"status": "blocked", "reason": "The complete archive includes eSpeak data without a pinned source/COPYING bundle and has unresolved Emilia training-data restrictions."}
@@ -68,6 +74,12 @@
     "voice_references": {
       "kind": "voice_reference_set",
       "required_ids": ["news-female1", "male1", "female1", "female2"],
+      "sha256_by_id": {
+        "news-female1": "bb712833cd31d8df805cd29eee112a7db70dbf08ab51e4e2ec7b8106752d97ec",
+        "male1": "2c98af8c81e36a3d13343a6caf49d02ee0ca9af893c82581dbeda054fa93ae6e",
+        "female1": "20fec1486a2f821683e8185f1edd683fde73ca5d89425e85c2a209470f9f5731",
+        "female2": "11bb1ce05ece5a291cdff392257a986849f902725170da5b9f299cccfdc9992c"
+      },
       "license": "unverified",
       "redistribution": {"status": "blocked", "reason": "No source archive proves identity, recording, or redistribution rights for the local WAV files."}
     }

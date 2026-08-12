@@ -27,6 +27,7 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 REPOSITORY_ROOT = PACKAGE_DIR.parents[1]
 ASSET_LOCK_PATH = PACKAGE_DIR / "assets.lock.json"
 REQUIREMENTS_LOCK_PATH = PACKAGE_DIR / "requirements.lock.txt"
+WHEELHOUSE_LOCK_PATH = PACKAGE_DIR / "wheelhouse.lock.json"
 TEMPLATES_DIR = PACKAGE_DIR / "templates"
 LICENSES_DIR = PACKAGE_DIR / "licenses"
 RUNTIME_DIR = PACKAGE_DIR / "runtime"
@@ -206,6 +207,53 @@ def verify_locked_file(path: Path, asset: Mapping[str, Any], description: str) -
     return actual
 
 
+def directory_tree_record(root: Path, *, ignored_names: Sequence[str] = ()) -> dict[str, Any]:
+    """Hash a directory's complete relative file set, sizes, and contents."""
+
+    if not root.is_dir():
+        raise BuildError(f"Required directory does not exist: {root}")
+    ignored = set(ignored_names)
+    digest = hashlib.sha256()
+    file_count = 0
+    total_size = 0
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root)
+        if ignored.intersection(relative.parts):
+            continue
+        if path.is_symlink():
+            raise BuildError(f"Asset directory cannot contain symbolic links: {relative.as_posix()}")
+        if not path.is_file():
+            continue
+        size = path.stat().st_size
+        file_hash = sha256_file(path)
+        digest.update(f"{relative.as_posix()}\0{size}\0{file_hash}\n".encode("utf-8"))
+        file_count += 1
+        total_size += size
+    return {"file_count": file_count, "total_size": total_size, "sha256": digest.hexdigest()}
+
+
+def verify_locked_directory(
+    root: Path,
+    asset: Mapping[str, Any],
+    description: str,
+    *,
+    ignored_names: Sequence[str] = (),
+) -> str:
+    expected = {
+        "file_count": asset.get("file_count"),
+        "total_size": asset.get("total_size"),
+        "sha256": str(asset.get("tree_sha256", "")).lower(),
+    }
+    if not isinstance(expected["file_count"], int) or not isinstance(expected["total_size"], int):
+        raise BuildError(f"assets.lock.json has no valid tree counts for {description}")
+    if not re.fullmatch(r"[0-9a-f]{64}", expected["sha256"]):
+        raise BuildError(f"assets.lock.json has no valid tree SHA256 for {description}")
+    actual = directory_tree_record(root, ignored_names=ignored_names)
+    if actual != expected:
+        raise BuildError(f"{description} directory tree mismatch: expected {expected}, got {actual}")
+    return actual["sha256"]
+
+
 def redistribution_decision(
     assets: Mapping[str, Mapping[str, Any]],
     asset_ids: Iterable[str],
@@ -314,13 +362,44 @@ def read_requirements(path: Path) -> list[str]:
     return requirements
 
 
-def ensure_wheelhouse(wheelhouse: Path, requirements: Sequence[str]) -> None:
+def ensure_wheelhouse(
+    wheelhouse: Path,
+    requirements: Sequence[str],
+    wheelhouse_lock: Mapping[str, Any],
+) -> None:
     if not wheelhouse.is_dir():
         raise BuildError(f"Wheelhouse does not exist: {wheelhouse}")
     normalize_name = lambda value: re.sub(r"[-_.]+", "_", value).lower()
-    wheel_names = {
-        normalize_name(path.name.split("-", 1)[0]) for path in wheelhouse.glob("*.whl")
-    }
+    paths = {path.name: path for path in wheelhouse.glob("*.whl") if path.is_file()}
+    entries = wheelhouse_lock.get("wheels")
+    if not isinstance(entries, list):
+        raise BuildError("wheelhouse.lock.json must contain a wheels array")
+    expected: dict[str, Mapping[str, Any]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise BuildError("wheelhouse.lock.json contains an invalid wheel entry")
+        filename = str(entry.get("filename", ""))
+        if not filename or Path(filename).name != filename or filename in expected:
+            raise BuildError(f"wheelhouse.lock.json contains an invalid wheel filename: {filename!r}")
+        expected[filename] = entry
+    if set(paths) != set(expected):
+        missing = sorted(set(expected) - set(paths))
+        extra = sorted(set(paths) - set(expected))
+        raise BuildError(f"Wheelhouse file set does not match lock; missing={missing}, extra={extra}")
+    for filename, path in sorted(paths.items()):
+        entry = expected[filename]
+        expected_size = entry.get("size")
+        expected_hash = str(entry.get("sha256", "")).lower()
+        if not isinstance(expected_size, int) or not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
+            raise BuildError(f"wheelhouse.lock.json has invalid metadata for {filename}")
+        actual_size = path.stat().st_size
+        actual_hash = sha256_file(path)
+        if actual_size != expected_size or actual_hash != expected_hash:
+            raise BuildError(
+                f"Wheelhouse hash mismatch for {filename}: "
+                f"expected {expected_size}/{expected_hash}, got {actual_size}/{actual_hash}"
+            )
+    wheel_names = {normalize_name(filename.split("-", 1)[0]) for filename in paths}
     missing = []
     for requirement in requirements:
         name = normalize_name(requirement.split("==", 1)[0])
@@ -451,7 +530,11 @@ def read_voice_manifest(source: Path) -> dict[str, Any]:
     return {"schema_version": 1, "default_voice_id": "news-female1", "voices": voices}
 
 
-def stage_local_voices(source: Path, bundle_root: Path) -> list[dict[str, Any]]:
+def stage_local_voices(
+    source: Path,
+    bundle_root: Path,
+    expected_hashes: Mapping[str, Any],
+) -> list[dict[str, Any]]:
     manifest = read_voice_manifest(source)
     configured = {str(entry.get("id")): entry for entry in manifest.get("voices", []) if isinstance(entry, dict)}
     if set(configured) != set(REQUIRED_VOICE_IDS):
@@ -471,6 +554,12 @@ def stage_local_voices(source: Path, bundle_root: Path) -> list[dict[str, Any]]:
             raise BuildError(f"Local voice path leaves source directory: {voice_id}") from exc
         if not source_path.is_file():
             raise BuildError(f"Missing local voice WAV for {voice_id}: {filename}")
+        actual_hash = sha256_file(source_path)
+        expected_hash = str(expected_hashes.get(voice_id, "")).lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", expected_hash):
+            raise BuildError(f"assets.lock.json has no valid SHA256 for voice {voice_id}")
+        if actual_hash != expected_hash:
+            raise BuildError(f"Voice reference SHA256 mismatch for {voice_id}")
         text = str(entry.get("reference_text") or entry.get("transcript") or "").strip()
         if not text:
             raise BuildError(f"Local voice transcript is missing: {voice_id}")
@@ -482,7 +571,7 @@ def stage_local_voices(source: Path, bundle_root: Path) -> list[dict[str, Any]]:
                 "label": str(entry.get("label") or VOICE_LABELS[voice_id]),
                 "reference_audio_path": f"models/zipvoice/voices/{voice_id}.wav",
                 "reference_text": text,
-                "sha256": sha256_file(target),
+                "sha256": actual_hash,
             }
         )
     return entries
@@ -638,8 +727,11 @@ def create_archive(bundle_root: Path, archive_path: Path) -> None:
 
 def build(args: argparse.Namespace) -> Path:
     repository_root = args.repository_root.resolve()
+    expected_package_dir = repository_root / "packaging" / "windows_offline"
+    if PACKAGE_DIR.resolve() != expected_package_dir.resolve():
+        raise BuildError("Builder and canonical locks must come from the selected repository")
     source_commit = resolve_source_commit(repository_root, args.source_commit)
-    lock = load_json(args.assets_lock)
+    lock = load_json(ASSET_LOCK_PATH)
     assets = lock.get("assets")
     if not isinstance(assets, dict):
         raise BuildError("assets.lock.json must contain an assets object")
@@ -670,8 +762,17 @@ def build(args: argparse.Namespace) -> Path:
         "zipvoice_vocoder": args.zipvoice_vocoder,
     }
     input_hashes = {asset_id: verify_locked_file(path, assets[asset_id], asset_id) for asset_id, path in inputs.items()}
-    requirements = read_requirements(args.requirements_lock)
-    ensure_wheelhouse(args.wheelhouse, requirements)
+    input_hashes["faster_whisper_small"] = verify_locked_directory(
+        args.whisper_model, assets["faster_whisper_small"], "faster_whisper_small"
+    )
+    input_hashes["zipvoice"] = verify_locked_directory(
+        args.zipvoice_model,
+        assets["zipvoice"],
+        "zipvoice",
+        ignored_names=("test_wavs",),
+    )
+    requirements = read_requirements(REQUIREMENTS_LOCK_PATH)
+    ensure_wheelhouse(args.wheelhouse, requirements, load_json(WHEELHOUSE_LOCK_PATH))
 
     output_root = args.output.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
@@ -701,7 +802,7 @@ def build(args: argparse.Namespace) -> Path:
             archive.extractall(llama_root)
         patch_embedded_python(python_root)
         site_packages = python_root / "Lib" / "site-packages"
-        install_wheels(args.host_python, args.wheelhouse, args.requirements_lock, site_packages)
+        install_wheels(args.host_python, args.wheelhouse, REQUIREMENTS_LOCK_PATH, site_packages)
         patch_path = patch_faster_whisper_audio(site_packages)
 
         copy_tree_filtered(args.whisper_model, stage_root / "models" / "faster-whisper-small")
@@ -746,7 +847,10 @@ def build(args: argparse.Namespace) -> Path:
         voice_entries: list[dict[str, Any]] = []
         local_voice_validation = bool(args.local_voice_smoke_source)
         if args.local_voice_smoke_source:
-            voice_entries = stage_local_voices(args.local_voice_smoke_source, stage_root)
+            voice_hashes = assets["voice_references"].get("sha256_by_id", {})
+            if not isinstance(voice_hashes, dict):
+                raise BuildError("assets.lock.json voice_references.sha256_by_id must be an object")
+            voice_entries = stage_local_voices(args.local_voice_smoke_source, stage_root, voice_hashes)
         voices = {
             "schema_version": 1,
             "redistribution_authorized": False,
@@ -758,8 +862,9 @@ def build(args: argparse.Namespace) -> Path:
             "voices": voice_entries,
         }
         write_json(config_root / "voices.json", voices)
-        shutil.copy2(args.assets_lock, config_root / "assets.lock.json")
-        shutil.copy2(args.requirements_lock, config_root / "requirements.lock.txt")
+        shutil.copy2(ASSET_LOCK_PATH, config_root / "assets.lock.json")
+        shutil.copy2(REQUIREMENTS_LOCK_PATH, config_root / "requirements.lock.txt")
+        shutil.copy2(WHEELHOUSE_LOCK_PATH, config_root / "wheelhouse.lock.json")
 
         status_reasons = reasons or ["No redistribution blockers recorded by assets.lock.json"]
         status = package_status(args.mode, status_reasons if args.mode == "local-validation" else [])
@@ -833,8 +938,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--wheelhouse", type=Path, required=True, help="Pre-downloaded win_amd64 CPython 3.12 wheels")
     parser.add_argument("--local-voice-smoke-source", type=Path, help="Local-only four-WAV source; forbidden for distribution")
     parser.add_argument("--rights-assertions", type=Path, help="Company-written JSON assertions for conditional assets")
-    parser.add_argument("--assets-lock", type=Path, default=ASSET_LOCK_PATH)
-    parser.add_argument("--requirements-lock", type=Path, default=REQUIREMENTS_LOCK_PATH)
     parser.add_argument("--host-python", type=Path, default=Path(sys.executable))
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--bundle-name", default="cloud-flowing-windows-x64-offline")
