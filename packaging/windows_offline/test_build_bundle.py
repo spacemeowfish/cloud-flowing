@@ -201,7 +201,7 @@ def test_package_status_and_private_path_scan(tmp_path: Path) -> None:
     scan_metadata_for_private_paths(tmp_path)
     (tmp_path / "app").mkdir()
     (tmp_path / "app" / "README.md").write_text(
-        "Set-Location 'D:\\my new work\\cloud-flowing_0806'", encoding="utf-8"
+        "Set-Location 'C:\\Users\\example\\private-checkout'", encoding="utf-8"
     )
     with pytest.raises(BuildError, match="absolute path"):
         scan_metadata_for_private_paths(tmp_path)
