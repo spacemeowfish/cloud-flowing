@@ -2,6 +2,16 @@
 
 本项目实现 `开发内容/prompts` 中 F1-F8、T1-T5、I1-I3 定义的本地优先后端：统一任务状态、模型网关、工具执行、权限与数据分级、端云路由、离线队列、连接器、审计、八个工具、FastAPI/SSE 和自动化评测。当前还包含 llama.cpp ARM64 CPU PoC 与 RKLLM 上板前的协议、Adapter、模拟服务和部署准备物。
 
+## 团队开发入口
+
+本仓库使用 VibeCollab 管理跨开发者和 AI 工具的共享上下文。开始开发前先阅读 `AGENTS.md`、`.ai-team/PROJECT.md`、`.ai-team/TASK.md` 和 `.ai-team/SKILL.md`；代码与任务进度必须放在同一个分支和 Pull Request 中。提交前执行：
+
+```powershell
+node .ai-team/check.mjs --base origin/main
+```
+
+当前活动任务是第一轮 PC 内部测试，测试记录位于 [`docs/testing/PC-INTERNAL-TEST-001.md`](docs/testing/PC-INTERNAL-TEST-001.md)。安装包、托盘、开机自启、唤醒词、常驻监听、会议录音、流式 TTS 和真实外部连接器暂不进入本轮内测。
+
 ## 安装
 
 ```powershell
