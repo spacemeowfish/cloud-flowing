@@ -30,3 +30,8 @@ Python wheel 自带的 `*.dist-info/LICENSE*` / `licenses/` 文件保留在
 `runtime/python/Lib/site-packages`。Faster-Whisper 的包内补丁见
 `PATCHES.md`，PyAV 不在本包中。
 
+包内 `licenses/` 目录提供 Qwen Research License、LFM Open License 1.0、
+llama.cpp MIT、Faster-Whisper MIT 和 OpenAI Whisper MIT 的固定离线快照；
+`licenses/SOURCE-MANIFEST.md` 记录精确来源与修订，
+`licenses/BLOCKED-NOTICE.md` 记录这些许可文本尚未解决的分发缺口。
+离线快照的存在不代表 Qwen、ZipVoice、vocoder 或参考 WAV 已获得分发授权。

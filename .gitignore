@@ -17,7 +17,13 @@ reasonix.toml
 data/
 logs/
 dist/
-models/*.gguf
+*.gguf
+*.onnx
+*.wav
+*.whl
+*.zip
+*.tar
+*.tar.bz2
 build/
 *.db
 *.db-*

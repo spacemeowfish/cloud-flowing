@@ -23,7 +23,10 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\Self-Check.ps1
 ```
 
-先阅读 `THIRD_PARTY_LICENSES.md` 及其中链接的固定上游许可证。
+先阅读 `THIRD_PARTY_LICENSES.md`、`licenses/SOURCE-MANIFEST.md`、
+`licenses/BLOCKED-NOTICE.md` 以及 `licenses/` 内适用于 Qwen、LFM、
+llama.cpp 和 Whisper 的离线许可证原文。在线链接用于核对固定上游来源，
+不应替代包内许可材料。
 `Accept-Licenses.ps1` 会逐个要求输入 `I ACCEPT`，只记录当前用户的本机
 使用确认，不会授予或扩大再分发权。随后自检核对系统架构、运行时、模型、
 配置与 SHA256。未获得音色权利证明时不要导入参考 WAV。

@@ -41,10 +41,11 @@ Faster-Whisper 和 ZipVoice 模型仍放在仓库外，通过设置页或项目 
 
 ## 启动
 
-以下命令均建议在本 checkout 根目录执行。为避免调用其他目录里旧版本的全局命令，使用模块入口最稳妥：
+以下命令均建议在本 checkout 根目录执行。若 PowerShell 已经位于项目根目录，可以跳过
+`Set-Location`；否则先切换到实际项目目录。为避免调用其他目录里旧版本的全局命令，使用模块入口最稳妥：
 
 ```powershell
-Set-Location 'D:\my new work\cloud-flowing_0806'
+Set-Location '<项目目录>'
 python -m agent_platform.cli desktop
 ```
 
@@ -78,7 +79,7 @@ agent-platform import-docs demo_docs --force
 不启动大模型时，默认使用 `mock`，适合验证操作台、工具、权限、确认流程和本地数据读写：
 
 ```powershell
-Set-Location 'D:\my new work\cloud-flowing_0806'
+Set-Location '<项目目录>'
 $env:MODEL_PROVIDER = 'mock'
 python -m agent_platform.cli serve
 ```
@@ -92,7 +93,7 @@ Invoke-RestMethod http://127.0.0.1:11434/api/tags
 使用 Ollama 运行 Agent 可以直接在 `desktop` 设置页切换，也可用环境变量锁定：
 
 ```powershell
-Set-Location 'D:\my new work\cloud-flowing_0806'
+Set-Location '<项目目录>'
 $env:MODEL_PROVIDER = 'ollama'
 $env:MODEL_NAME = 'qwen2.5:3b'
 $env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'

@@ -28,6 +28,7 @@ REPOSITORY_ROOT = PACKAGE_DIR.parents[1]
 ASSET_LOCK_PATH = PACKAGE_DIR / "assets.lock.json"
 REQUIREMENTS_LOCK_PATH = PACKAGE_DIR / "requirements.lock.txt"
 TEMPLATES_DIR = PACKAGE_DIR / "templates"
+LICENSES_DIR = PACKAGE_DIR / "licenses"
 RUNTIME_DIR = PACKAGE_DIR / "runtime"
 SMOKE_DIR = PACKAGE_DIR / "smoke"
 REQUIRED_VOICE_IDS = ("news-female1", "male1", "female1", "female2")
@@ -66,6 +67,10 @@ EXCLUDED_NAMES = {
 EXCLUDED_SUFFIXES = {".db", ".log", ".gguf", ".rkllm", ".pyc", ".pyo"}
 SECRET_NAME_RE = re.compile(r"(^|[._-])(secret|token|password|credential|api[_-]?key)([._-]|$)", re.I)
 WINDOWS_ABSOLUTE_RE = re.compile(r"(?i)(?<![a-z])(?:[a-z]:[\\/]|\\\\[^\\/]+[\\/])")
+PRIVATE_WINDOWS_PATH_RE = re.compile(
+    r"(?i)(?:[a-z]:[\\/](?:users|my new work)[\\/]|\\\\[^\\/]+[\\/](?:users|my new work)[\\/])"
+)
+PRIVATE_SCAN_SUFFIXES = {".cmd", ".env", ".json", ".md", ".ps1", ".py", ".toml", ".txt", ".yaml", ".yml"}
 
 
 class BuildError(RuntimeError):
@@ -219,7 +224,7 @@ def copy_application(repository_root: Path, destination: Path) -> list[str]:
     """Copy the runtime application surface without local/build state."""
 
     copied: list[str] = []
-    for top_level in ("agent_platform", "evaluation"):
+    for top_level in ("agent_platform",):
         source_root = repository_root / top_level
         if not source_root.is_dir():
             raise BuildError(f"Application source directory is missing: {top_level}")
@@ -538,16 +543,16 @@ def manifest_records(root: Path) -> list[FileRecord]:
 
 
 def scan_metadata_for_private_paths(root: Path) -> None:
-    candidates = [
-        *root.glob("*.md"),
-        *root.glob("*.json"),
-        *root.glob("*.txt"),
-        *root.glob("*.env"),
-        *(root / "config").glob("*.json"),
-    ]
+    candidates = (
+        path
+        for path in root.rglob("*")
+        if path.is_file()
+        and path.suffix.lower() in PRIVATE_SCAN_SUFFIXES
+        and "site-packages" not in {part.lower() for part in path.parts}
+    )
     for path in candidates:
         text = path.read_text(encoding="utf-8", errors="replace")
-        if WINDOWS_ABSOLUTE_RE.search(text) or "C:\\Users\\" in text:
+        if PRIVATE_WINDOWS_PATH_RE.search(text):
             raise BuildError(f"Generated metadata contains a local absolute path: {path.relative_to(root)}")
         if re.search(r"(?im)^\s*(?:MODEL_)?API_KEY\s*=\s*\S+", text):
             raise BuildError(f"Generated metadata contains an API key value: {path.relative_to(root)}")
@@ -686,7 +691,13 @@ def build(args: argparse.Namespace) -> Path:
                 else:
                     shutil.copy2(path, target)
         if SMOKE_DIR.is_dir():
-            copy_tree_filtered(SMOKE_DIR, stage_root / "scripts" / "smoke")
+            copy_tree_filtered(
+                SMOKE_DIR,
+                stage_root / "scripts" / "smoke",
+                ignored_names=("test_smoke.py", "__init__.py"),
+            )
+        if LICENSES_DIR.is_dir():
+            copy_tree_filtered(LICENSES_DIR, stage_root / "licenses")
 
         config_root = stage_root / "config"
         write_json(config_root / "bundle.json", bundle_configuration())

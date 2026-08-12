@@ -91,6 +91,19 @@ def test_zipvoice_runtime_copy_excludes_reference_examples(tmp_path: Path) -> No
     assert not (destination / "test_wavs").exists()
 
 
+def test_smoke_runtime_copy_can_exclude_unit_tests(tmp_path: Path) -> None:
+    source = tmp_path / "smoke"
+    source.mkdir()
+    (source / "smoke.py").write_text("print('smoke')\n", encoding="utf-8")
+    (source / "test_smoke.py").write_text("LOCAL = r'C:\\Users\\tester'\n", encoding="utf-8")
+    destination = tmp_path / "bundle" / "scripts" / "smoke"
+
+    copy_tree_filtered(source, destination, ignored_names=("test_smoke.py",))
+
+    assert (destination / "smoke.py").is_file()
+    assert not (destination / "test_smoke.py").exists()
+
+
 def test_wheelhouse_matches_normalized_distribution_names(tmp_path: Path) -> None:
     (tmp_path / "annotated_doc-0.0.4-py3-none-any.whl").touch()
     (tmp_path / "python_dotenv-1.2.2-py3-none-any.whl").touch()
@@ -109,7 +122,10 @@ def test_package_status_and_private_path_scan(tmp_path: Path) -> None:
     (tmp_path / "config" / "bundle.json").write_text(json.dumps({"path": "models/a.gguf"}), encoding="utf-8")
     (tmp_path / "INSTALL.md").write_text("Open http://127.0.0.1:8000/", encoding="utf-8")
     scan_metadata_for_private_paths(tmp_path)
-    (tmp_path / "BUILD-METADATA.json").write_text('{"path":"C:\\\\Users\\\\tester"}', encoding="utf-8")
+    (tmp_path / "app").mkdir()
+    (tmp_path / "app" / "README.md").write_text(
+        "Set-Location 'D:\\my new work\\cloud-flowing_0806'", encoding="utf-8"
+    )
     with pytest.raises(BuildError, match="absolute path"):
         scan_metadata_for_private_paths(tmp_path)
 
@@ -125,3 +141,23 @@ def test_runtime_serializes_path_lists_as_json_arrays() -> None:
     common = (Path(__file__).parent / "runtime" / "Common.ps1").read_text(encoding="ascii")
     assert "ConvertTo-Json -InputObject $authorizedResolved -Compress" in common
     assert "ConvertTo-Json -InputObject $knowledgeResolved -Compress" in common
+
+
+def test_offline_license_snapshots_are_complete_and_pinned() -> None:
+    licenses = Path(__file__).parent / "licenses"
+    required = {
+        "QWEN-RESEARCH-LICENSE.txt",
+        "LFM-OPEN-LICENSE-1.0.txt",
+        "LLAMA-CPP-MIT.txt",
+        "FASTER-WHISPER-MIT.txt",
+        "OPENAI-WHISPER-MIT.txt",
+        "SOURCE-MANIFEST.md",
+        "BLOCKED-NOTICE.md",
+    }
+    assert required == {path.name for path in licenses.iterdir() if path.is_file()}
+    sources = (licenses / "SOURCE-MANIFEST.md").read_text(encoding="utf-8")
+    assert "cc1e68eea5f05f88f41a6de1fc73110178f23715" in sources
+    assert "012803cf70d6cdcf698f0c65fa8f9b7175128770" in sources
+    blocked = (licenses / "BLOCKED-NOTICE.md").read_text(encoding="utf-8")
+    assert "must not be given to colleagues" in blocked
+    assert "must not be uploaded to GitHub Releases" in blocked
