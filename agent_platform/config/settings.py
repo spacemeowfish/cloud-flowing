@@ -1,5 +1,6 @@
 """Typed configuration loaded once from environment and .env."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -30,15 +31,22 @@ class ZipVoicePreset(BaseModel):
 
 
 def _application_root() -> Path:
-    """Use the source checkout root for bundled local resources.
+    """Use an explicit portable root or the source checkout for local resources.
 
     The CLI is commonly launched from a shell shortcut or another working
     directory.  Relative defaults must still point at this checkout's
     ``demo_docs``/``demo_files`` and persistent ``data`` directory rather than
     creating empty sibling directories under the caller's current directory.
-    A regular wheel has no checkout marker, so it retains the current-directory
-    fallback for explicitly provisioned deployments.
+    Portable distributions set ``AGENT_APP_ROOT`` so installed code and its
+    relative configuration continue to follow the distribution after it moves.
     """
+
+    configured_root = os.getenv("AGENT_APP_ROOT", "").strip()
+    if configured_root:
+        candidate = Path(configured_root).expanduser().resolve()
+        if not candidate.is_dir():
+            raise ValueError(f"AGENT_APP_ROOT must reference an existing directory: {candidate}")
+        return candidate
 
     package_root = Path(__file__).resolve().parents[2]
     if (package_root / "pyproject.toml").is_file() and (package_root / "agent_platform").is_dir():
@@ -54,11 +62,17 @@ class Settings(BaseSettings):
     """Application settings with safe local defaults."""
 
     model_config = SettingsConfigDict(
-        env_file=str(_application_root() / ".env"),
+        env_file=None,
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
     )
+
+    def __init__(self, **values: object) -> None:
+        # Resolve the default env file at instantiation time so a portable
+        # launcher can set AGENT_APP_ROOT after this module has been imported.
+        values.setdefault("_env_file", _application_root() / ".env")
+        super().__init__(**values)
 
     model_provider: str = Field(default="mock", validation_alias="MODEL_PROVIDER")
     model_base_url: str = Field(default="https://api.example.com/v1", validation_alias="MODEL_BASE_URL")

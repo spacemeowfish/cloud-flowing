@@ -79,15 +79,28 @@ class DesktopSettingsService:
     ) -> None:
         self._settings = settings
         self._restart = restart_controller
-        self._env_path = env_path or (_application_root() / ".env")
+        self._application_root = _application_root()
+        self._env_path = env_path or (self._application_root / ".env")
 
     @property
     def locked_fields(self) -> list[str]:
-        return sorted(field for field, env in FIELD_TO_ENV.items() if env in os.environ)
+        locked = {field for field, env in FIELD_TO_ENV.items() if env in os.environ}
+        if "LLAMACPP_MODEL_NAME" in os.environ:
+            locked.add("model_name")
+        return sorted(locked)
 
     async def view(self, *, include_models: bool = True) -> DesktopSettingsView:
         settings = self._settings
-        models = await self.discover_ollama_models() if include_models else []
+        models = (
+            await self.discover_ollama_models()
+            if include_models and settings.model_provider == "ollama"
+            else []
+        )
+        model_name = (
+            settings.llamacpp_model_name
+            if settings.model_provider == "llamacpp"
+            else settings.model_name
+        )
         documents = sum(
             1
             for root in settings.knowledge_roots
@@ -98,7 +111,7 @@ class DesktopSettingsService:
         index_path = settings.database_path.with_name("knowledge.db")
         return DesktopSettingsView(
             model_provider=settings.model_provider,
-            model_name=settings.model_name,
+            model_name=model_name,
             ollama_base_url=settings.ollama_base_url,
             file_open_enabled=settings.file_open_enabled,
             authorized_file_roots=list(settings.authorized_file_roots),
@@ -177,6 +190,13 @@ class DesktopSettingsService:
             models = await self.discover_ollama_models(payload.ollama_base_url)
             if payload.model_name not in models:
                 raise ConfigurationError(f"Ollama 模型未安装或服务不可用：{payload.model_name}")
+        if payload.model_provider == "llamacpp":
+            provider_locked = os.getenv("MODEL_PROVIDER", "").strip().lower() == "llamacpp"
+            model_locked = bool(os.getenv("LLAMACPP_MODEL_NAME", "").strip())
+            if not provider_locked or not model_locked:
+                raise ConfigurationError("llama.cpp 只能由离线包整栈启动脚本选择")
+            if payload.model_name != self._settings.llamacpp_model_name:
+                raise ConfigurationError("llama.cpp 模型名称由离线包整栈启动脚本锁定")
         if payload.tts_provider == "zipvoice":
             if not payload.zipvoice_model_dir.is_dir():
                 raise ConfigurationError(f"ZipVoice 模型目录不存在：{payload.zipvoice_model_dir}")
@@ -202,17 +222,26 @@ class DesktopSettingsService:
         except (wave.Error, EOFError) as exc:
             raise ConfigurationError(f"无法读取 WAV：{path}") from exc
 
-    @staticmethod
-    def _serialize(field: str, value: object) -> str:
+    def _portable_path(self, value: Path) -> str:
+        path = value.expanduser()
+        absolute = path if path.is_absolute() else self._application_root / path
+        absolute = absolute.resolve()
+        try:
+            relative = absolute.relative_to(self._application_root)
+        except ValueError:
+            return str(absolute)
+        return relative.as_posix() or "."
+
+    def _serialize(self, field: str, value: object) -> str:
         if field in {"authorized_file_roots", "knowledge_roots"}:
-            return json.dumps([str(path) for path in value], ensure_ascii=False)
+            return json.dumps([self._portable_path(path) for path in value], ensure_ascii=False)
         if field == "zipvoice_voices":
             return json.dumps(
                 [
                     {
                         "id": voice.id,
                         "label": voice.name,
-                        "reference_audio_path": str(voice.reference_wav),
+                        "reference_audio_path": self._portable_path(voice.reference_wav),
                         "reference_text": voice.reference_text,
                     }
                     for voice in value
@@ -222,6 +251,8 @@ class DesktopSettingsService:
             )
         if isinstance(value, bool):
             return str(value).lower()
+        if isinstance(value, Path):
+            return self._portable_path(value)
         return str(value)
 
     def _write_env(self, updates: dict[str, str]) -> Path | None:

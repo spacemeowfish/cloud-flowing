@@ -6,11 +6,13 @@ from pathlib import Path
 
 import httpx
 import pytest
+from pydantic import ValidationError
 
 from agent_platform.api.server import create_app
 from agent_platform.config import Settings
 from agent_platform.core.desktop_settings import DesktopSettingsService, PassiveRestartController
 from agent_platform.core.desktop_supervisor import DesktopRestartController
+from agent_platform.core.errors import ConfigurationError
 from agent_platform.models.admin import DesktopSettingsUpdate
 
 
@@ -157,3 +159,80 @@ def test_supervised_restart_controller_requests_exit_and_tracks_rollback(
     assert controller.status().state == "restarting"
     assert controller.rollback("startup failed") is True
     assert controller.status().rollback_performed is True
+
+
+def test_admin_schema_represents_llamacpp_but_rejects_unknown_providers(tmp_path: Path) -> None:
+    payload = _payload(tmp_path, _settings(tmp_path))
+    payload.model_provider = "llamacpp"
+
+    assert DesktopSettingsUpdate.model_validate(payload.model_dump()).model_provider == "llamacpp"
+    invalid = payload.model_dump()
+    invalid["model_provider"] = "external"
+    with pytest.raises(ValidationError):
+        DesktopSettingsUpdate.model_validate(invalid)
+
+
+@pytest.mark.asyncio
+async def test_llamacpp_cannot_be_selected_without_bundle_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = _settings(tmp_path)
+    payload = _payload(tmp_path, settings)
+    payload.model_provider = "llamacpp"
+    payload.model_name = "qwen-bundle"
+    service = DesktopSettingsService(
+        settings,
+        PassiveRestartController(),
+        env_path=tmp_path / ".env",
+    )
+
+    with pytest.raises(ConfigurationError, match="整栈启动脚本"):
+        await service.update(payload)
+
+    monkeypatch.setenv("MODEL_PROVIDER", "llamacpp")
+    with pytest.raises(ConfigurationError, match="整栈启动脚本"):
+        await service.update(payload)
+
+
+@pytest.mark.asyncio
+async def test_llamacpp_bundle_environment_is_displayed_and_locked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("MODEL_PROVIDER", "llamacpp")
+    monkeypatch.setenv("LLAMACPP_MODEL_NAME", "qwen2.5-3b-bundle")
+    settings = Settings(
+        _env_file=None,
+        database_path=tmp_path / "agent.db",
+        audit_dir=tmp_path / "audit",
+        authorized_file_roots=[tmp_path / "files"],
+        knowledge_roots=[tmp_path / "knowledge"],
+        meeting_output_dir=tmp_path / "meeting",
+    )
+    settings.authorized_file_roots[0].mkdir()
+    settings.knowledge_roots[0].mkdir()
+    payload = _payload(tmp_path, settings)
+    payload.model_provider = "llamacpp"
+    payload.model_name = "qwen2.5-3b-bundle"
+    env_path = tmp_path / ".env"
+    service = DesktopSettingsService(settings, PassiveRestartController(), env_path=env_path)
+
+    view = await service.view(include_models=True)
+    updated = await service.update(payload)
+
+    assert view.model_provider == "llamacpp"
+    assert view.model_name == "qwen2.5-3b-bundle"
+    assert view.ollama_models == []
+    assert {"model_provider", "model_name"} <= set(view.locked_fields)
+    assert updated.model_name == "qwen2.5-3b-bundle"
+    content = env_path.read_text(encoding="utf-8")
+    assert "MODEL_PROVIDER=" not in content
+    assert "MODEL_NAME=" not in content
+
+
+def test_settings_page_labels_llamacpp_as_bundle_managed() -> None:
+    source = (Path(__file__).parents[1] / "agent_platform" / "static" / "app.js").read_text(
+        encoding="utf-8"
+    )
+
+    assert '"llamacpp","llama.cpp（离线包整栈脚本管理）"' in source
+    assert 's.model_provider!=="llamacpp"' in source

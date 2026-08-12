@@ -19,7 +19,7 @@ class DesktopSettingsUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    model_provider: str = Field(..., pattern=r"^(mock|ollama)$")
+    model_provider: str = Field(..., pattern=r"^(mock|ollama|llamacpp)$")
     model_name: str = Field(..., min_length=1, max_length=200)
     ollama_base_url: str = Field(..., min_length=1, max_length=500)
     file_open_enabled: bool
