@@ -72,6 +72,7 @@ PRIVATE_WINDOWS_PATH_RE = re.compile(
     r"(?i)(?:[a-z]:[\\/](?:users|my new work)[\\/]|\\\\[^\\/]+[\\/](?:users|my new work)[\\/])"
 )
 PRIVATE_SCAN_SUFFIXES = {".cmd", ".env", ".json", ".md", ".ps1", ".py", ".toml", ".txt", ".yaml", ".yml"}
+MAX_BUNDLE_RELATIVE_PATH_LENGTH = 120
 
 
 class BuildError(RuntimeError):
@@ -346,7 +347,7 @@ def patch_embedded_python(python_root: Path) -> Path:
     pth = candidates[0]
     zip_entries = [line.strip() for line in pth.read_text(encoding="utf-8").splitlines() if line.strip().endswith(".zip")]
     stdlib_zip = zip_entries[0] if zip_entries else "python312.zip"
-    lines = [stdlib_zip, ".", "Lib\\site-packages", "..\\..\\app", "import site"]
+    lines = [stdlib_zip, ".", "..\\packages", "..\\..\\app", "import site"]
     pth.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return pth
 
@@ -481,11 +482,14 @@ def validate_portable_python(python_exe: Path, app_root: Path) -> dict[str, str]
         str(python_exe),
         "-c",
         (
-            "import importlib.util,numpy,agent_platform,faster_whisper,sherpa_onnx,sounddevice;"
+            "import importlib.util,numpy,onnxruntime,agent_platform,faster_whisper,sherpa_onnx,sounddevice;"
             "from faster_whisper import WhisperModel;"
+            "from faster_whisper.vad import get_vad_model;"
             "assert importlib.util.find_spec('av') is None;"
             "assert not hasattr(numpy.zeros(16000,dtype=numpy.float32),'read');"
-            "print('portable-import-and-ndarray-entry-ok')"
+            "vad=get_vad_model();"
+            "assert vad.session.get_providers()==['CPUExecutionProvider'];"
+            "print('portable-import-vad-and-ndarray-entry-ok')"
         ),
     ]
     completed = subprocess.run(
@@ -500,7 +504,7 @@ def validate_portable_python(python_exe: Path, app_root: Path) -> dict[str, str]
     )
     if completed.returncode:
         raise BuildError(f"Portable Python validation failed:\n{completed.stdout}\n{completed.stderr}")
-    return {"result": completed.stdout.strip(), "scope": "import-and-ndarray-entry-only-not-real-transcription"}
+    return {"result": completed.stdout.strip(), "scope": "imports-vad-session-and-ndarray-entry-not-real-transcription"}
 
 
 def copy_tree_filtered(
@@ -691,7 +695,7 @@ def scan_metadata_for_private_paths(root: Path) -> None:
         for path in root.rglob("*")
         if path.is_file()
         and path.suffix.lower() in PRIVATE_SCAN_SUFFIXES
-        and "site-packages" not in {part.lower() for part in path.parts}
+        and tuple(part.lower() for part in path.relative_to(root).parts[:2]) != ("runtime", "packages")
     )
     for path in candidates:
         text = path.read_text(encoding="utf-8", errors="replace")
@@ -701,6 +705,30 @@ def scan_metadata_for_private_paths(root: Path) -> None:
         is_generated_configuration = len(relative.parts) == 1 or relative.parts[0].lower() == "config"
         if is_generated_configuration and re.search(r"(?im)^\s*(?:MODEL_)?API_KEY\s*=\s*\S+", text):
             raise BuildError(f"Generated metadata contains an API key value: {path.relative_to(root)}")
+
+
+def validate_bundle_relative_paths(
+    root: Path,
+    *,
+    maximum_length: int = MAX_BUNDLE_RELATIVE_PATH_LENGTH,
+) -> dict[str, Any]:
+    """Keep the portable tree usable by Windows PowerShell 5.1 file APIs."""
+
+    longest = ""
+    violations: list[str] = []
+    for path in root.rglob("*"):
+        relative = path.relative_to(root).as_posix()
+        if len(relative) > len(longest):
+            longest = relative
+        if len(relative) > maximum_length:
+            violations.append(relative)
+    if violations:
+        preview = ", ".join(sorted(violations, key=len, reverse=True)[:3])
+        raise BuildError(
+            f"Bundle contains paths longer than {maximum_length} characters; "
+            f"shorten or prune them before packaging: {preview}"
+        )
+    return {"maximum_allowed": maximum_length, "longest_relative_path": longest, "longest_length": len(longest)}
 
 
 def write_manifests(bundle_root: Path, metadata: dict[str, Any]) -> None:
@@ -819,7 +847,7 @@ def build(args: argparse.Namespace) -> Path:
         with zipfile.ZipFile(args.llama_archive) as archive:
             archive.extractall(llama_root)
         patch_embedded_python(python_root)
-        site_packages = python_root / "Lib" / "site-packages"
+        site_packages = stage_root / "runtime" / "packages"
         install_wheels(args.host_python, args.wheelhouse, REQUIREMENTS_LOCK_PATH, site_packages)
         pruned_runtime_trees = prune_offline_runtime(site_packages)
         patch_path = patch_faster_whisper_audio(site_packages)
@@ -905,6 +933,7 @@ def build(args: argparse.Namespace) -> Path:
             shutil.copy2(TEMPLATES_DIR / template_name, stage_root / template_name)
 
         portable_validation = validate_portable_python(python_root / "python.exe", stage_root / "app")
+        portable_path_validation = validate_bundle_relative_paths(stage_root)
         metadata = {
             "schema_version": 1,
             "generated_at": datetime.now(UTC).isoformat(),
@@ -923,6 +952,7 @@ def build(args: argparse.Namespace) -> Path:
                 }
             ],
             "portable_validation": portable_validation,
+            "portable_path_validation": portable_path_validation,
             "pruned_runtime_trees": pruned_runtime_trees,
             "not_validated_by_builder": ["real model inference", "real Faster-Whisper inference", "ZipVoice synthesis"],
         }

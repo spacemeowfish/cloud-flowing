@@ -27,7 +27,7 @@
 - CPython: https://www.python.org/downloads/release/python-31210/
 
 Python wheel 自带的 `*.dist-info/LICENSE*` / `licenses/` 文件保留在
-`runtime/python/Lib/site-packages`。Faster-Whisper 的包内补丁见
+`runtime/packages`。Faster-Whisper 的包内补丁见
 `PATCHES.md`，PyAV 不在本包中。
 
 包内 `licenses/` 目录提供 Qwen Research License、LFM Open License 1.0、

@@ -26,6 +26,7 @@ from build_bundle import (  # noqa: E402
     resolve_source_commit,
     scan_metadata_for_private_paths,
     should_copy_source,
+    validate_bundle_relative_paths,
 )
 
 
@@ -67,7 +68,8 @@ def test_embedded_python_path_includes_bundle_app(tmp_path: Path) -> None:
     pth.write_text("python312.zip\n.\n#import site\n", encoding="utf-8")
     patch_embedded_python(tmp_path)
     lines = pth.read_text(encoding="utf-8").splitlines()
-    assert "Lib\\site-packages" in lines
+    assert "..\\packages" in lines
+    assert "Lib\\site-packages" not in lines
     assert "..\\..\\app" in lines
     assert "import site" in lines
 
@@ -85,6 +87,19 @@ def test_offline_runtime_prunes_onnx_development_tools_only(tmp_path: Path) -> N
     assert runtime_module.read_bytes() == b"runtime"
     assert not (site_packages / "onnxruntime" / "tools").exists()
     assert prune_offline_runtime(site_packages) == []
+
+
+def test_portable_path_gate_rejects_legacy_windows_long_paths(tmp_path: Path) -> None:
+    safe = tmp_path / "runtime" / "packages" / "module.py"
+    safe.parent.mkdir(parents=True)
+    safe.write_text("pass\n", encoding="utf-8")
+    result = validate_bundle_relative_paths(tmp_path, maximum_length=40)
+    assert result["longest_relative_path"] == "runtime/packages/module.py"
+
+    too_long = tmp_path / "runtime" / "packages" / ("x" * 32 + ".py")
+    too_long.write_text("pass\n", encoding="utf-8")
+    with pytest.raises(BuildError, match="paths longer than 40"):
+        validate_bundle_relative_paths(tmp_path, maximum_length=40)
 
 
 def test_source_filter_excludes_private_and_build_state() -> None:
