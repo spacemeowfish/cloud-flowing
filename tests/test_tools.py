@@ -5,7 +5,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
-from agent_platform.core.errors import SchemaValidationError
+from agent_platform.core.errors import ModelError, ModelTimeoutError, SchemaValidationError
 from agent_platform.core.schema_validator import SchemaValidator
 from docx import Document
 
@@ -177,6 +177,37 @@ async def test_reminder_create_query_cancel_and_notify(tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_reminder_restart_restores_active_once_and_skips_cancelled(tmp_path):
+    database = tmp_path / "reminders.db"
+    due_at = datetime.now(ZoneInfo("Asia/Shanghai")) - timedelta(minutes=1)
+    created_at = datetime.now(UTC).isoformat()
+    original = ReminderTool(database)
+    first = original._connection.execute(
+        "INSERT INTO reminders(text,due_at,status,created_at) VALUES (?,?,?,?)",
+        ("检查服务", due_at.isoformat(), "active", created_at),
+    ).lastrowid
+    second = original._connection.execute(
+        "INSERT INTO reminders(text,due_at,status,created_at) VALUES (?,?,?,?)",
+        ("不应通知", due_at.isoformat(), "active", created_at),
+    ).lastrowid
+    original._connection.commit()
+    await original.execute({"action": "cancel", "id": second})
+    original.close()
+
+    notified = []
+
+    async def callback(item):
+        notified.append(item)
+
+    restored = ReminderTool(database, callback=callback)
+    assert await restored.poll_due() == 1
+    assert [item["id"] for item in notified] == [first]
+    assert [item["text"] for item in notified] == ["检查服务"]
+    assert await restored.poll_due() == 0
+    restored.close()
+
+
+@pytest.mark.asyncio
 async def test_todo_create_query_update_complete_and_persistence(tmp_path, monkeypatch):
     tool = TodoTool(tmp_path / "todos.db")
     fixed_due = datetime(2026, 8, 1, 9, 30, tzinfo=ZoneInfo("Asia/Shanghai"))
@@ -331,6 +362,23 @@ class _BadTextAdapter:
         return None
 
 
+class _FailingTextAdapter:
+    def __init__(self, error: ModelError, times: int = 99):
+        self.error = error
+        self.times = times
+        self.calls = 0
+
+    async def generate(self, messages, response_schema, max_tokens=512):
+        del messages, response_schema, max_tokens
+        self.calls += 1
+        if self.calls <= self.times:
+            raise self.error
+        return {"text": "通知：项目将在2026年8月1日上线，预算为300万元。"}
+
+    async def close(self):
+        return None
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bad_output", ["请尽快提交相关材料，以确保流程的", "<FACT_0>", "<占位符>请尽快提交资料"])
 async def test_text_processing_quality_gate_falls_back_without_leaking_markers(bad_output):
@@ -388,6 +436,54 @@ async def test_text_processing_casual_tone_has_a_deterministic_short_text_fallba
         {"operation": "tone_adjust", "tone": "casual", "text": "请尽快提交材料。"}
     )
     assert receipt.output["text"] == "麻烦尽快把材料交一下。"
+
+
+@pytest.mark.asyncio
+async def test_text_processing_protects_count_and_enumerated_business_entities():
+    model_output = "本季度完成了三项项目，覆盖知识库建设、工作流设计及接口的验证。"
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter(model_output)))
+    source = "本季度完成了三个项目，分别覆盖知识库、工作流和接口验证。"
+
+    receipt = await tool.execute({"operation": "polish", "text": source})
+
+    assert receipt.output["text"] == source
+    assert set(receipt.output["facts_preserved"]) >= {"三个项目", "知识库", "工作流", "接口验证"}
+
+
+@pytest.mark.asyncio
+async def test_text_processing_casual_fallback_changes_fact_statement_without_fact_drift():
+    source = "项目将在2026年8月1日上线，预算为300万元。"
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter(source)))
+
+    receipt = await tool.execute({"operation": "tone_adjust", "tone": "casual", "text": source})
+
+    assert receipt.output["text"] != source
+    assert "2026年8月1日" in receipt.output["text"]
+    assert "300万元" in receipt.output["text"]
+
+
+@pytest.mark.asyncio
+async def test_text_processing_retries_invalid_model_json_once_then_uses_safe_draft():
+    source = "项目将在2026年8月1日上线，预算为300万元。"
+    adapter = _FailingTextAdapter(ModelError("invalid JSON"))
+    tool = TextProcessingTool(ModelGateway(adapter))
+
+    receipt = await tool.execute({"operation": "draft", "text": source})
+
+    assert adapter.calls == 2
+    assert receipt.output["text"] == f"通知：{source}"
+    assert receipt.output["model_degraded"] is True
+
+
+@pytest.mark.asyncio
+async def test_text_processing_does_not_hide_retryable_model_outage():
+    adapter = _FailingTextAdapter(ModelTimeoutError("timeout"))
+    tool = TextProcessingTool(ModelGateway(adapter))
+
+    with pytest.raises(ModelTimeoutError):
+        await tool.execute({"operation": "polish", "text": "请尽快提交材料。"})
+
+    assert adapter.calls == 1
 
 
 @pytest.mark.asyncio

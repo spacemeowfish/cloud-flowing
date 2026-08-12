@@ -8,7 +8,14 @@ from fastapi.responses import JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from agent_platform.core.errors import AgentPlatformError, PermissionDeniedError, TaskNotFoundError
+from agent_platform.core.errors import (
+    AgentPlatformError,
+    NoMicrophoneError,
+    PermissionDeniedError,
+    TaskNotFoundError,
+    VoiceServiceBusyError,
+    VoiceTranscriptionTimeoutError,
+)
 from agent_platform.models import ErrorResponse
 
 
@@ -28,6 +35,12 @@ def register_error_handlers(app: FastAPI) -> None:
             status = 404
         elif isinstance(exc, PermissionDeniedError):
             status = 403
+        elif isinstance(exc, NoMicrophoneError):
+            status = 404
+        elif isinstance(exc, VoiceServiceBusyError):
+            status = 409
+        elif isinstance(exc, VoiceTranscriptionTimeoutError):
+            status = 504
         else:
             status = 409 if exc.retryable else 400
         payload = ErrorResponse(code=exc.code, message=exc.detail, retryable=exc.retryable)

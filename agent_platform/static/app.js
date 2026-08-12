@@ -17,13 +17,15 @@ const API = {
     return {body, status: response.status, elapsed: Math.round(performance.now() - started)};
   },
   async get(path) { return (await this.request(path)).body; },
-  async post(path, body) { return (await this.request(path, {method:"POST", body:JSON.stringify(body)})).body; }
+  async post(path, body) { return (await this.request(path, {method:"POST", body:JSON.stringify(body)})).body; },
+  async put(path, body) { return (await this.request(path, {method:"PUT", body:JSON.stringify(body)})).body; }
 };
 
 const state = {
   capabilities:null, openapi:null, health:null, history:[], currentTask:null,
   eventSources:new Map(), inspectorTab:"response", apiChecks:[],
-  speechByTask:new Map(), speechAudio:new Audio(), speechTaskId:null
+  speechByTask:new Map(), speechAudio:new Audio(), speechTaskId:null,
+  desktopSettings:null, voiceStatus:null, voiceDevices:[], voiceRecording:null, voicePoll:null, voiceAutoStop:null, voiceStartPromise:null, voiceStopRequested:false, voiceCancelRequested:false
 };
 
 const lifecycle = ["接收","理解","校验","权限","路由","执行","交付"];
@@ -37,7 +39,8 @@ const routeInfo = {
   overview:["OPERATIONS","总览"], console:["UNIVERSAL TASK","通用任务"], knowledge:["KNOWLEDGE · R0 / D2","知识库问答"],
   files:["FILES · R1 / D1","文件查找"], reminders:["REMINDERS · R1 / D1","提醒管理"], todos:["TODOS · R1 / D1","待办事项"],
   schedule:["SCHEDULE · R1 / D1","日程管理"], text:["TEXT · R1 / D1","文本处理"], meetings:["MEETING · R2 / D2","会议纪要"],
-  "api-lab":["CONTRACT LAB","接口测试中心"], tasks:["TASK LEDGER","任务历史"]
+  "api-lab":["CONTRACT LAB","接口测试中心"], tasks:["TASK LEDGER","任务历史"],
+  settings:["DESKTOP SETTINGS","设置"]
 };
 const toolLabels = {
   file_open:["文件查找","查找、候选选择、确认打开"], knowledge_query:["知识库问答","本地文档检索与来源引用"],
@@ -97,6 +100,21 @@ function bindTabs(container, callback) {
   });
 }
 
+function isLocked(name) { return state.desktopSettings?.locked_fields?.includes(name); }
+function lockHint(name) { return isLocked(name) ? `<small class="locked-hint">由外部环境变量锁定</small>` : ""; }
+function settingsInput(name,label,value,type="text",extra="") {
+  const locked=isLocked(name); return `<div class="field ${extra}"><label for="set-${name}">${esc(label)}</label><input class="input" id="set-${name}" data-setting="${name}" type="${type}" value="${esc(value ?? "")}" ${locked?"disabled":""}>${lockHint(name)}</div>`;
+}
+function settingsTextarea(name,label,value,extra="") {
+  const locked=isLocked(name); return `<div class="field ${extra}"><label for="set-${name}">${esc(label)}</label><textarea class="textarea compact-textarea" id="set-${name}" data-setting="${name}" ${locked?"disabled":""}>${esc(value ?? "")}</textarea>${lockHint(name)}</div>`;
+}
+function settingsToggle(name,label,checked) {
+  const locked=isLocked(name); return `<label class="toggle-row"><input id="set-${name}" data-setting="${name}" type="checkbox" ${checked?"checked":""} ${locked?"disabled":""}><span>${esc(label)}</span>${lockHint(name)}</label>`;
+}
+function settingsSelect(name,label,value,options,extra="") {
+  const locked=isLocked(name); return `<div class="field ${extra}"><label for="set-${name}">${esc(label)}</label><select class="select" id="set-${name}" data-setting="${name}" ${locked?"disabled":""}>${options.map(([id,text])=>`<option value="${esc(id)}" ${id===value?"selected":""}>${esc(text)}</option>`).join("")}</select>${lockHint(name)}</div>`;
+}
+
 async function loadRuntime() {
   const results = await Promise.allSettled([API.get("/health"), API.get("/meta/capabilities"), API.get("/openapi.json"), API.get("/tasks?limit=100")]);
   if (results[0].status === "fulfilled") state.health = results[0].value;
@@ -141,9 +159,46 @@ function featureShell(config) {
 
 function renderConsole() {
   pageRoot.innerHTML = header("UNIVERSAL TASK","通用任务","直接输入自然语言，观察 Agent 如何识别意图、校验参数、评估风险并路由工具。",`<a class="button" href="#tasks">查看历史</a>`)+
-  `<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>自然语言任务</h3><p>适合探索跨模块表达和路由边界</p></div></header><div class="panel-body"><form id="consoleForm">${field("consoleText","任务内容","textarea","例如：1+1等于多少？")}${presets(["1+1等于多少？","请用一句话说明局域网是什么？","把你好翻译成英文","查询产品保修政策并给出来源","查找项目周报","提醒我30分钟后检查服务","总结这段：本季度完成了三个项目"],"consoleText")}<div class="form-actions"><small>Enter 换行；点击按钮提交</small><button class="button primary">提交任务</button></div></form></div></section>${panel("路由说明","输入会经过意图识别与 Schema 校验",subfeatures([["意图识别","映射到 8 个已注册工具"],["参数补全","缺少关键字段时暂停确认"],["数据分级","按 D0–D3 识别敏感度"],["风险判定","按 R0–R3 决定是否确认"],["端云路由","根据数据与资源选择执行位置"],["审计记录","全过程留下可验证事件"]]))}<div id="liveTaskArea" class="span-2"></div></div>`;
-  bindPresets(); $("#consoleForm").onsubmit = async e => { e.preventDefault(); await submitTask($("#consoleText").value.trim()); };
+  `<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>自然语言任务</h3><p>适合探索跨模块表达和路由边界</p></div></header><div class="panel-body"><form id="consoleForm">${field("consoleText","任务内容","textarea","例如：1+1等于多少？")}<div class="voice-entry"><button id="voiceButton" class="voice-button" type="button" aria-label="按住说话" title="按住说话">●</button><div class="voice-feedback"><span id="voiceState">正在读取语音状态</span><div class="level-track"><i id="voiceLevel"></i></div></div><button id="voiceCancel" class="button small" type="button" hidden>取消录音</button></div>${presets(["1+1等于多少？","请用一句话说明局域网是什么？","把你好翻译成英文","查询产品保修政策并给出来源","查找项目周报","提醒我30分钟后检查服务","总结这段：本季度完成了三个项目"],"consoleText")}<div class="form-actions"><small>语音只回填输入框，确认内容后再提交</small><button class="button primary">提交任务</button></div></form></div></section>${panel("路由说明","输入会经过意图识别与 Schema 校验",subfeatures([["意图识别","映射到 8 个已注册工具"],["参数补全","缺少关键字段时暂停确认"],["数据分级","按 D0–D3 识别敏感度"],["风险判定","按 R0–R3 决定是否确认"],["端云路由","根据数据与资源选择执行位置"],["审计记录","全过程留下可验证事件"]]))}<div id="liveTaskArea" class="span-2"></div></div>`;
+  bindPresets(); bindVoiceEntry(); $("#consoleForm").onsubmit = async e => { e.preventDefault(); await submitTask($("#consoleText").value.trim()); };
   if (state.currentTask) renderLiveTask(state.currentTask);
+}
+
+const voiceErrors={no_microphone:"未检测到麦克风",voice_device_unavailable:"麦克风设备不可用",recording_too_short:"录音时间过短",silent_recording:"未检测到有效语音",voice_model_missing:"Faster-Whisper 模型缺失",voice_service_busy:"语音服务正忙",voice_transcription_timeout:"语音转写超时"};
+function updateVoiceUi(message,level=-90,recording=false) {
+  const text=$("#voiceState"),bar=$("#voiceLevel"),button=$("#voiceButton"),cancel=$("#voiceCancel"); if(!text)return;
+  text.textContent=message; const percent=Math.max(0,Math.min(100,(level+70)/60*100)); bar.style.width=`${percent}%`;
+  button.classList.toggle("recording",recording); button.setAttribute("aria-label",recording?"松开并转写":"按住说话"); cancel.hidden=!recording;
+}
+async function refreshVoiceStatus() {
+  try { state.voiceStatus=await API.get("/voice/status"); updateVoiceUi(state.voiceStatus.message,state.voiceStatus.level_dbfs,state.voiceStatus.state==="recording"); $("#voiceButton").disabled=!state.voiceStatus.available&&!state.voiceRecording; }
+  catch(error) { updateVoiceUi("语音服务不可用"); if($("#voiceButton"))$("#voiceButton").disabled=true; }
+}
+async function beginVoiceRecording() {
+  if(state.voiceRecording||state.voiceStartPromise)return; stopSpeech(); state.voiceStopRequested=false;state.voiceCancelRequested=false;
+  state.voiceStartPromise=API.post("/voice/recordings",{});
+  try { state.voiceRecording=await state.voiceStartPromise; updateVoiceUi("正在录音，松开后转写",state.voiceRecording.level_dbfs,true); state.voicePoll=setInterval(refreshVoiceStatus,150);state.voiceAutoStop=setTimeout(finishVoiceRecording,(state.voiceStatus?.max_recording_seconds||30)*1000);if(state.voiceCancelRequested)await cancelVoiceRecording();else if(state.voiceStopRequested)await finishVoiceRecording(); }
+  catch(error) { const code=error.body?.code; updateVoiceUi(voiceErrors[code]||error.message); toast(voiceErrors[code]||error.message,true); }
+  finally { state.voiceStartPromise=null; }
+}
+async function finishVoiceRecording() {
+  if(state.voiceStartPromise&&!state.voiceRecording){state.voiceStopRequested=true;return;} const recording=state.voiceRecording; if(!recording)return; state.voiceStopRequested=false; clearInterval(state.voicePoll);clearTimeout(state.voiceAutoStop);state.voicePoll=null;state.voiceAutoStop=null; updateVoiceUi("正在转写，请稍候",-90,false);
+  try { const result=await API.post(`/voice/recordings/${recording.id}/stop`,{}); $("#consoleText").value=result.transcript||""; $("#consoleText").focus(); updateVoiceUi(result.limit_reached?"已达到最长录音时限，已回填识别内容":"转写完成，可修改后提交"); }
+  catch(error) { const code=error.body?.code; updateVoiceUi(voiceErrors[code]||error.message); toast(voiceErrors[code]||error.message,true); }
+  finally { state.voiceRecording=null; }
+}
+async function cancelVoiceRecording() {
+  if(state.voiceStartPromise&&!state.voiceRecording){state.voiceCancelRequested=true;return;} const recording=state.voiceRecording; if(!recording)return; clearInterval(state.voicePoll);clearTimeout(state.voiceAutoStop); state.voicePoll=null;state.voiceAutoStop=null;
+  try { await API.post(`/voice/recordings/${recording.id}/cancel`,{}); updateVoiceUi("录音已取消"); } catch(error) { updateVoiceUi(error.message); }
+  finally { state.voiceRecording=null; }
+}
+function bindVoiceEntry() {
+  const button=$("#voiceButton"); let pointerActive=false;
+  button.onpointerdown=event=>{event.preventDefault();pointerActive=true;button.setPointerCapture?.(event.pointerId);beginVoiceRecording();};
+  button.onpointerup=event=>{event.preventDefault();if(pointerActive){pointerActive=false;finishVoiceRecording();}};
+  button.onpointercancel=()=>{pointerActive=false;cancelVoiceRecording();};
+  button.onclick=event=>{if(event.detail===0)(state.voiceRecording?finishVoiceRecording():beginVoiceRecording());};
+  $("#voiceCancel").onclick=cancelVoiceRecording; refreshVoiceStatus();
 }
 
 function renderKnowledge() { featureShell({eyebrow:"KNOWLEDGE · R0 / D2",title:"知识库问答",description:"对授权目录中的 TXT、Markdown、DOCX 文档建立本地索引，并返回带来源的答案。",tool:"knowledge_query",risk:"R0",data:"D2",formTitle:"发起知识检索",formSubtitle:"只读操作，无需人工确认",actions:[["query","问答"]],fields:()=>field("knowledgeQuery","问题","textarea","例如：产品保修期是多久？","full")+presets(["产品保修期是多久？","差旅报销标准是什么？","新员工入职需要做什么？","会议室使用有哪些规则？","设备使用有哪些注意事项？"],"knowledgeQuery"),prompt:()=>`查询知识库：${$("#knowledgeQuery").value.trim()}`,subs:[["多格式索引","TXT / MD / DOCX"],["增量同步","按修改时间更新索引"],["语义召回","本地向量与关键词匹配"],["来源引用","文件名与段落定位"],["范围控制","仅检索授权目录"],["敏感脱敏","索引前执行数据分类"]]}); }
@@ -153,6 +208,39 @@ function renderTodos() { featureShell({eyebrow:"TODOS · R1 / D1",title:"待办�
 function renderSchedule() { featureShell({eyebrow:"SCHEDULE · R1 / D1",title:"日程管理",description:"创建一次性或重复日程，按时间范围检索，并以稳定 ID 取消。",tool:"schedule_manage",risk:"R1",data:"D1",formTitle:"日程操作",formSubtitle:"重复日程支持每日、每周、每月",actions:[["create","创建"],["query","查询"],["cancel","取消"]],fields:a=>a==="create"?field("scheduleTitle","标题","text","项目例会")+field("scheduleStart","开始时间","text","明天下午2点")+field("scheduleEnd","结束时间","text","明天下午3点（可选）")+field("scheduleLocation","地点","text","A-301（可选）")+selectField("scheduleRepeat","重复",[["none","不重复"],["daily","每天"],["weekly","每周"],["monthly","每月"]])+field("scheduleNotice","提前提醒分钟","number","15"):a==="query"?selectField("scheduleRange","时间范围",[["today","今天"],["tomorrow","明天"],["this_week","本周"],["next_week","下周"]])+field("scheduleKeyword","标题关键词","text","可选"):field("scheduleId","日程 ID","number","例如：12","full"),prompt:a=>a==="create"?`创建日程 ${$("#scheduleStart").value.trim()}${$("#scheduleTitle").value.trim()}${$("#scheduleEnd").value.trim()?`，结束${$("#scheduleEnd").value.trim()}`:""}${$("#scheduleLocation").value.trim()?`，地点${$("#scheduleLocation").value.trim()}`:""}${$("#scheduleRepeat").value!=="none"?`，${$("#scheduleRepeat").selectedOptions[0].text}重复`:""}${$("#scheduleNotice").value?`，提前${$("#scheduleNotice").value}分钟提醒`:""}`:a==="query"?`${$("#scheduleRange").selectedOptions[0].text}有什么安排${$("#scheduleKeyword").value.trim()?`，标题包含${$("#scheduleKeyword").value.trim()}`:""}`:`取消日程 ${$("#scheduleId").value}`,subs:[["一次性日程","标题、起止时间、地点"],["周期规则","每日 / 每周 / 每月"],["星期组合","每周多工作日安排"],["提前通知","0–1440 分钟"],["范围查询","今天、明天、本周、下周、自定义"],["取消日程","按稳定 ID 风险确认"]]}); }
 function renderText() { featureShell({eyebrow:"TEXT · R1 / D1",title:"文本处理",description:"在不发送内容的前提下完成润色、总结、语气调整和草拟，并保护日期、金额、电话等事实。",tool:"text_polish",risk:"R1",data:"D1",formTitle:"处理文本",formSubtitle:"MVP 只生成文本，不连接外部发送器",actions:[["polish","润色"],["summarize","总结"],["tone_adjust","语气调整"],["draft","草拟"]],fields:a=>(a==="tone_adjust"?selectField("textTone","目标语气",[["formal","正式"],["casual","轻松"]],"full"):"")+field("textInput","原始内容","textarea","输入需要处理的文本","full")+presets(["项目将在2026年8月1日上线，预算为300万元。","本季度完成了三个项目，分别覆盖知识库、工作流和接口验证。","请尽快提交材料。"],"textInput"),prompt:a=>`${a==="polish"?"润色":a==="summarize"?"总结这段":a==="tone_adjust"?`调整为${$("#textTone").value==="formal"?"正式":"轻松"}语气`:"草拟"}：${$("#textInput").value.trim()}`,subs:[["专业润色","错字与语句流畅度"],["内容总结","长文本压缩"],["语气调整","正式 / 轻松"],["内容草拟","从要点生成短文"],["事实保护","日期、金额、电话原样保留"],["发送隔离","确认文本但不向外发送"]]}); }
 function renderMeetings() { const root=state.capabilities?.authorized_roots?.files?.[1]||state.capabilities?.authorized_roots?.files?.[0]||""; const sample=root?`${root}\\项目周报_20260721.txt`:""; featureShell({eyebrow:"MEETING · R2 / D2",title:"会议纪要",description:"读取授权 TXT / Markdown 文稿，生成可追溯 Markdown 纪要；处理前必须人工确认。",tool:"meeting_process",risk:"R2",data:"D2",formTitle:"生成会议纪要",formSubtitle:"源文件必须位于授权目录",actions:[["process","处理文稿"]],fields:()=>field("meetingPath","文稿完整路径","text","例如：F:\\data\\meeting.txt","full")+(sample?presets([sample],"meetingPath"):"")+`<div class="callout warn">R2 操作：确认页会展示影响范围，批准后才读取文稿并写入会议纪要目录。</div>`,prompt:()=>`整理会议纪要 ${$("#meetingPath").value.trim()}`,subs:[["格式校验","仅 TXT / MD"],["授权路径","拒绝目录外文件"],["内容脱敏","处理前识别敏感数据"],["结构提取","决策、行动项、责任人"],["可追溯输出","保留源文件元数据"],["Markdown 交付","写入独立纪要目录"]]}); }
+
+function voicePresetRow(voice={id:"",name:"",reference_wav:"",reference_text:""}) {
+  const disabled=isLocked("zipvoice_voices")?"disabled":"";
+  return `<div class="voice-preset"><div class="voice-preset-head"><b>音色预设</b><button class="icon-button remove-voice" type="button" title="删除音色" aria-label="删除音色" ${disabled}>×</button></div><div class="form-grid"><div class="field"><label>音色 ID</label><input class="input voice-id" value="${esc(voice.id)}" ${disabled}></div><div class="field"><label>名称</label><input class="input voice-name" value="${esc(voice.name)}" ${disabled}></div><div class="field full"><label>参考 WAV</label><input class="input voice-wav" value="${esc(voice.reference_wav)}" ${disabled}></div><div class="field full"><label>逐字文本</label><textarea class="textarea compact-textarea voice-text" ${disabled}>${esc(voice.reference_text)}</textarea></div></div></div>`;
+}
+function bindVoicePresets() {
+  const rows=$("#voicePresetRows");
+  const updateDefault=()=>{const current=$("#set-zipvoice_default_voice_id")?.value||"";const ids=$$(".voice-id",rows).map(input=>input.value.trim()).filter(Boolean);const select=$("#set-zipvoice_default_voice_id");if(!select)return;select.innerHTML=ids.map(id=>`<option value="${esc(id)}" ${id===current?"selected":""}>${esc(id)}</option>`).join("");};
+  $$(".remove-voice",rows).forEach(button=>button.onclick=()=>{button.closest(".voice-preset").remove();if(!rows.children.length)rows.insertAdjacentHTML("beforeend",voicePresetRow());bindVoicePresets();updateDefault();});
+  $$(".voice-id",rows).forEach(input=>input.oninput=updateDefault);
+  $("#addVoice").onclick=()=>{rows.insertAdjacentHTML("beforeend",voicePresetRow());bindVoicePresets();}; updateDefault();
+}
+function settingValue(name) { const node=$(`#set-${name}`); return node?.type==="checkbox"?node.checked:node?.value??""; }
+function collectDesktopSettings() {
+  const paths=name=>String(settingValue(name)).split(/\r?\n/).map(value=>value.trim()).filter(Boolean);
+  const voices=$$(".voice-preset").map(row=>({id:$(".voice-id",row).value.trim(),name:$(".voice-name",row).value.trim(),reference_wav:$(".voice-wav",row).value.trim(),reference_text:$(".voice-text",row).value.trim()}));
+  return {model_provider:settingValue("model_provider"),model_name:settingValue("model_name"),ollama_base_url:settingValue("ollama_base_url"),file_open_enabled:settingValue("file_open_enabled"),authorized_file_roots:paths("authorized_file_roots"),knowledge_roots:paths("knowledge_roots"),tts_provider:settingValue("tts_provider"),zipvoice_model_dir:settingValue("zipvoice_model_dir"),zipvoice_vocoder_path:settingValue("zipvoice_vocoder_path"),zipvoice_num_threads:Number(settingValue("zipvoice_num_threads")),zipvoice_speed:Number(settingValue("zipvoice_speed")),zipvoice_default_voice_id:settingValue("zipvoice_default_voice_id"),zipvoice_voices:voices,voice_enabled:settingValue("voice_enabled"),voice_input_device:settingValue("voice_input_device"),voice_model_dir:settingValue("voice_model_dir"),voice_cpu_threads:Number(settingValue("voice_cpu_threads")),voice_num_workers:Number(settingValue("voice_num_workers")),voice_beam_size:Number(settingValue("voice_beam_size")),voice_vad_enabled:settingValue("voice_vad_enabled"),voice_max_recording_seconds:Number(settingValue("voice_max_recording_seconds"))};
+}
+async function waitForDesktopRestart() {
+  const status=$("#settingsStatus"); const deadline=Date.now()+60000;
+  while(Date.now()<deadline){await new Promise(resolve=>setTimeout(resolve,700));try{const restart=await API.get("/admin/restart-status");status.textContent=restart.message||restart.state;if(restart.state==="ready"){await loadRuntime();toast(restart.rollback_performed?"新配置失败，已恢复上一份配置":"配置已生效，服务已恢复");await renderSettings();return;}if(restart.state==="failed"){toast(restart.message,true);return;}}catch(error){status.textContent="服务正在重启，等待恢复";}}
+  toast("服务重启等待超时，请检查终端日志",true);
+}
+async function renderSettings() {
+  try { const [settings,devices]=await Promise.all([API.get("/admin/settings"),API.get("/voice/devices").catch(()=>[])]);state.desktopSettings=settings;state.voiceDevices=devices; }
+  catch(error){pageRoot.innerHTML=header("DESKTOP SETTINGS","设置","管理本机模型、目录、语音和桌面能力。")+`<div class="callout bad">${esc(error.message)}</div>`;return;}
+  const s=state.desktopSettings; const modelOptions=[...new Set([s.model_name,...s.ollama_models])].filter(Boolean).map(name=>[name,name]); const deviceOptions=[["","系统默认"],...state.voiceDevices.map(device=>[device.id,`${device.name}${device.default?"（默认）":""}`])];
+  pageRoot.innerHTML=header("DESKTOP SETTINGS","设置","保存后由桌面监督模式自动重启；外部环境变量锁定的字段保持只读。",`<span id="settingsStatus" class="runtime-badge ${s.supervised?"ok":""}"><i></i>${s.supervised?"自动重启已启用":"serve 模式需手动重启"}</span>`)+`<form id="settingsForm" class="settings-stack"><div class="grid-2">${panel("模型","Mock 与本机 Ollama 切换",`<div class="form-grid">${settingsSelect("model_provider","模型提供方",s.model_provider,[["mock","Mock（离线确定性）"],["ollama","Ollama（真实模型）"]])}${settingsSelect("model_name","模型",s.model_name,modelOptions)}${settingsInput("ollama_base_url","Ollama 地址",s.ollama_base_url,"text","full")}</div>`)}${panel("Windows 与知识库",`${s.knowledge_index.document_count} 份文档 · ${s.knowledge_index.index_exists?"索引存在":"尚未索引"}`,`${settingsToggle("file_open_enabled","允许用 Windows 默认应用打开授权文件",s.file_open_enabled)}<div class="form-grid settings-space">${settingsTextarea("authorized_file_roots","授权文件目录（每行一个）",s.authorized_file_roots.join("\n"),"full")}${settingsTextarea("knowledge_roots","知识库目录（每行一个）",s.knowledge_roots.join("\n"),"full")}</div><div class="settings-actions"><button id="reindexKnowledge" class="button" type="button">重建知识索引</button><button id="testNotification" class="button" type="button">发送测试通知</button></div>`)}<section class="panel span-2"><header class="panel-head"><div><h3>ZipVoice 输出</h3><p>模型路径、推理参数和参考音色</p></div></header><div class="panel-body">${settingsSelect("tts_provider","TTS 状态",s.tts_provider,[["disabled","关闭"],["zipvoice","启用 ZipVoice"]])}<div class="form-grid settings-space">${settingsInput("zipvoice_model_dir","模型目录",s.zipvoice_model_dir,"text","full")}${settingsInput("zipvoice_vocoder_path","Vocoder 文件",s.zipvoice_vocoder_path,"text","full")}${settingsInput("zipvoice_num_threads","线程",s.zipvoice_num_threads,"number")}${settingsInput("zipvoice_speed","语速",s.zipvoice_speed,"number")}${settingsSelect("zipvoice_default_voice_id","默认音色",s.zipvoice_default_voice_id,s.zipvoice_voices.map(v=>[v.id,v.id]))}</div><div class="voice-preset-list" id="voicePresetRows">${s.zipvoice_voices.map(voicePresetRow).join("")||voicePresetRow()}</div><button id="addVoice" class="button small" type="button" ${isLocked("zipvoice_voices")?"disabled":""}>添加音色</button></div></section><section class="panel span-2"><header class="panel-head"><div><h3>麦克风与 Faster-Whisper</h3><p>CPU INT8 · 单工作线程 · PCM 仅驻留内存</p></div></header><div class="panel-body">${settingsToggle("voice_enabled","启用按键说话",s.voice_enabled)}<div class="form-grid settings-space">${settingsSelect("voice_input_device","输入设备",s.voice_input_device,deviceOptions)}${settingsInput("voice_model_dir","模型目录",s.voice_model_dir,"text")}${settingsInput("voice_cpu_threads","CPU 线程",s.voice_cpu_threads,"number")}${settingsInput("voice_num_workers","工作线程",s.voice_num_workers,"number")}${settingsInput("voice_beam_size","Beam size",s.voice_beam_size,"number")}${settingsInput("voice_max_recording_seconds","最长录音（秒）",s.voice_max_recording_seconds,"number")}</div>${settingsToggle("voice_vad_enabled","启用 VAD 语音活动检测",s.voice_vad_enabled)}</div></section></div><div class="settings-save"><span>API 密钥不会显示，也不会被本页覆盖。</span><button class="button primary" type="submit">保存并应用</button></div></form>`;
+  bindVoicePresets();
+  $("#reindexKnowledge").onclick=async()=>{try{const report=await API.post("/admin/knowledge/reindex",{});toast(`索引完成：扫描 ${report.scanned}，更新 ${report.imported}`);}catch(error){toast(error.message,true);}};
+  $("#testNotification").onclick=async()=>{try{await API.post("/admin/notifications/test",{});toast("测试通知已发送");}catch(error){toast(error.message,true);}};
+  $("#settingsForm").onsubmit=async event=>{event.preventDefault();const button=$("#settingsForm button[type=submit]");button.disabled=true;try{const updated=await API.put("/admin/settings",collectDesktopSettings());state.desktopSettings=updated;toast("配置已保存");if(updated.supervised)waitForDesktopRestart();else{$("#settingsStatus").textContent="配置已保存，请手动重启 serve";}}catch(error){toast(error.message,true);button.disabled=false;}};
+}
 
 async function submitTask(text) {
   if (!text || /[:：]\s*$/.test(text)) { toast("请先填写完整参数", true); return; }
@@ -347,7 +435,7 @@ function drawApiChecks(){const root=$("#apiChecks");if(!root)return;root.innerHT
 async function renderApiLab(){const operations=[];for(const [path,item] of Object.entries(state.openapi?.paths||{}))for(const method of Object.keys(item))if(["get","post","put","patch","delete"].includes(method))operations.push([method.toUpperCase(),path,item[method].summary||item[method].description||""]);pageRoot.innerHTML=header("CONTRACT LAB","接口测试中心","从实时 OpenAPI 发现接口，执行安全体检、查看工具契约，并可发送自定义 HTTP 请求。",`<a class="button" href="/docs" target="_blank">Swagger UI ↗</a><button class="button primary" id="runChecks">运行只读体检</button>`)+`<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>接口清单</h3><p>${operations.length} 个 HTTP 操作 · 来自 /openapi.json</p></div></header><div>${operations.map(([m,p,s])=>`<div class="api-row"><span class="method">${m}</span><span><b class="mono">${esc(p)}</b><small style="display:block;color:var(--muted)">${esc(s)}</small></span><span class="api-status">已发现</span></div>`).join("")}</div></section><section class="panel"><header class="panel-head"><div><h3>接口体检</h3><p>健康、能力、OpenAPI、任务列表</p></div></header><div id="apiChecks"></div></section><section class="panel"><header class="panel-head"><div><h3>自定义请求</h3><p>可测试任意已暴露路径</p></div></header><div class="panel-body"><form id="customRequest"><div class="form-grid">${selectField("customMethod","方法",[["GET","GET"],["POST","POST"]])}${field("customPath","路径","text","/health")} ${field("customBody","JSON 请求体","textarea",'{"text":"查询产品保修政策"}',"full")}</div><div class="form-actions"><small>POST 请求体必须为合法 JSON</small><button class="button primary">发送请求</button></div></form></div></section><section class="panel"><header class="panel-head"><div><h3>原始响应</h3><p>点击体检项或发送自定义请求</p></div></header><div class="panel-body"><pre id="customResponse" class="json-view">{}</pre></div></section><section class="panel span-2"><header class="panel-head"><div><h3>工具契约</h3><p>${state.capabilities?.tools?.length||0} 个工具 · 参数、枚举、风险与数据等级</p></div></header><div class="module-list">${capabilityRows()}</div></section></div>`;drawApiChecks();$("#runChecks").onclick=runApiChecks;$("#customMethod").onchange=()=>{$("#customBody").closest(".field").style.display=$("#customMethod").value==="GET"?"none":"grid";};$("#customRequest").onsubmit=async e=>{e.preventDefault();const method=$("#customMethod").value,path=$("#customPath").value.trim();let body;try{if(method!=="GET")body=JSON.stringify(JSON.parse($("#customBody").value||"{}"));const r=await API.request(path,{method,body});$("#customResponse").textContent=pretty(r);toast(`${method} ${path} 成功`);}catch(err){$("#customResponse").textContent=pretty({error:err.message,status:err.status,body:err.body});toast(err.message,true);}};}
 
 function currentRoute(){const route=location.hash.replace(/^#/,"")||"overview";return routeInfo[route]?route:"overview";}
-async function renderRoute(){const route=currentRoute(),info=routeInfo[route];$("#pageEyebrow").textContent=info[0];$("#pageTitle").textContent=info[1];$$('[data-route]').forEach(a=>a.classList.toggle("active",a.dataset.route===route));closeNavigation();const renderers={overview:renderOverview,console:renderConsole,knowledge:renderKnowledge,files:renderFiles,reminders:renderReminders,todos:renderTodos,schedule:renderSchedule,text:renderText,meetings:renderMeetings,"api-lab":renderApiLab,tasks:renderTasks};await renderers[route]();pageRoot.focus({preventScroll:true});window.scrollTo(0,0);}
+async function renderRoute(){const route=currentRoute(),info=routeInfo[route];$("#pageEyebrow").textContent=info[0];$("#pageTitle").textContent=info[1];$$('[data-route]').forEach(a=>a.classList.toggle("active",a.dataset.route===route));closeNavigation();const renderers={overview:renderOverview,console:renderConsole,knowledge:renderKnowledge,files:renderFiles,reminders:renderReminders,todos:renderTodos,schedule:renderSchedule,text:renderText,meetings:renderMeetings,"api-lab":renderApiLab,tasks:renderTasks,settings:renderSettings};await renderers[route]();pageRoot.focus({preventScroll:true});window.scrollTo(0,0);}
 function closeNavigation(){$("#sidebar").classList.remove("open");$("#navBackdrop").hidden=true;$("#menuButton").setAttribute("aria-expanded","false");}
 
 $("#menuButton").onclick=()=>{const open=$("#sidebar").classList.toggle("open");$("#navBackdrop").hidden=!open;$("#menuButton").setAttribute("aria-expanded",String(open));};

@@ -20,6 +20,7 @@ from agent_platform.core.speech_output import DisabledSpeechSynthesizer, SpeechO
 from agent_platform.core.task_api import TaskAPI
 from agent_platform.core.tool_executor import ToolExecutor
 from agent_platform.core.tool_registry import ToolRegistry
+from agent_platform.core.voice_input import VoiceInputService
 from agent_platform.tools import FileSearchTool, GeneralChatTool, KnowledgeBaseTool, MeetingNotesTool, ReminderTool, ScheduleTool, TextProcessingTool, TodoTool
 
 
@@ -39,6 +40,7 @@ class ApplicationContainer:
     todos: TodoTool
     schedules: ScheduleTool
     speech: SpeechOutputService
+    voice: VoiceInputService
     background_tasks: set[asyncio.Task[object]] = field(default_factory=set)
 
     @classmethod
@@ -121,7 +123,8 @@ class ApplicationContainer:
             max_chars=settings.tts_max_chars,
             keep_versions=settings.tts_keep_versions,
         )
-        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules, speech)
+        voice = VoiceInputService(settings)
+        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules, speech, voice)
 
     async def initialize(self) -> None:
         await self.tasks.initialize()
@@ -152,6 +155,7 @@ class ApplicationContainer:
         await self.connections.close()
         await self.gateway.close()
         await self.speech.close()
+        await self.voice.close()
         await self.store.close()
 
 

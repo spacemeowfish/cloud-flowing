@@ -6,14 +6,22 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from agent_platform.api.admin_routes import router as admin_router
 from agent_platform.api.container import ApplicationContainer
 from agent_platform.api.middleware import AuthenticationContextMiddleware, register_error_handlers
 from agent_platform.api.routes import router
+from agent_platform.api.voice_routes import router as voice_router
 from agent_platform.config import Settings, get_settings
+from agent_platform.core.desktop_settings import PassiveRestartController, RestartController
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    *,
+    restart_controller: RestartController | None = None,
+) -> FastAPI:
     application_settings = settings or get_settings()
+    controller = restart_controller or PassiveRestartController()
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -33,8 +41,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     app.add_middleware(AuthenticationContextMiddleware)
     register_error_handlers(app)
+    app.state.restart_controller = controller
     app.include_router(router)
-    static_directory = Path(__file__).parents[2] / "static"
+    app.include_router(admin_router)
+    app.include_router(voice_router)
+    static_directory = Path(__file__).parents[1] / "static"
     app.mount("/", StaticFiles(directory=static_directory, html=True), name="static")
     return app
 

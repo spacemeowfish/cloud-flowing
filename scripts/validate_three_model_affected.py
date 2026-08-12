@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -224,7 +225,7 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
         # Schedule parsing/query/cancellation, including financial Chinese numerals.
         schedule = await run_case(
             "schedule_create_uppercase_numerals",
-            "创建日程 二〇二六年八月八日上午九点到上午十点 产品评审",
+            "创建日程 二〇二六年八月十八日上午九点到上午十点 产品评审",
         )
         await run_case("schedule_query_by_title", "查询日程 产品评审")
         schedule_id = _item_id(schedule)
@@ -233,12 +234,45 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
             if can_approve(cancel_schedule):
                 await confirm_case("schedule_cancel_confirmed", cancel_schedule, "确认取消日程")
 
-        # Text generation must be useful output and preserve facts.
-        await run_case("text_polish_facts", "润色：预算为300万元，联系电话是13800138000")
-        await run_case("text_summarize", "总结这段：本季度完成了三个项目，预算为300万元")
-        await run_case("text_tone_formal", "调整为正式语气：麻烦大家记得下午一点开会")
-        await run_case("text_tone_casual", "调整为轻松语气：请尽快提交材料。")
-        await run_case("text_draft", "草拟：请尽快提交材料。")
+        # User-reported text fixtures: three inputs x five operations.
+        text_fixtures = {
+            "date_budget": "项目将在2026年8月1日上线，预算为300万元。",
+            "three_projects": "本季度完成了三个项目，分别覆盖知识库、工作流和接口验证。",
+            "submit_materials": "请尽快提交材料。",
+        }
+        operations = {
+            "polish": "润色",
+            "summarize": "总结这段",
+            "formal": "调整为正式语气",
+            "casual": "调整为轻松语气",
+            "draft": "草拟",
+        }
+        text_case_names: list[str] = []
+        for fixture, source_text in text_fixtures.items():
+            for operation, prefix in operations.items():
+                name = f"text_{fixture}_{operation}"
+                text_case_names.append(name)
+                await run_case(name, f"{prefix}：{source_text}")
+
+        # Ten serial mixed requests include repeated mutations so stability also
+        # proves the executor's idempotency cache prevents duplicate side effects.
+        stability_prompts = (
+            "1+1等于多少？",
+            "查询知识库：产品保修期是多久？",
+            "润色：请尽快提交材料。",
+            "查找并打开文件：项目周报",
+            "明天下午四点提醒我执行稳定性检查",
+            "明天下午四点提醒我执行稳定性检查",
+            "添加待办 稳定性检查",
+            "添加待办 稳定性检查",
+            "把你好翻译成英文",
+            "请用一句话说明局域网是什么？",
+        )
+        stability_names: list[str] = []
+        for index in range(10):
+            name = f"stability_{index + 1:02d}"
+            stability_names.append(name)
+            await run_case(name, stability_prompts[index])
 
         # Meeting permission boundary, confirmation, and Markdown artifact.
         meeting = await run_case("meeting_process_preview", f"整理会议纪要 {meeting_source}")
@@ -319,26 +353,53 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
         schedule_ok = (
             completed("schedule_create_uppercase_numerals")
             and isinstance(schedule_item, dict)
-            and str(schedule_item.get("start_at", "")).startswith("2026-08-08T09:00")
-            and str(schedule_item.get("end_at", "")).startswith("2026-08-08T10:00")
+            and str(schedule_item.get("start_at", "")).startswith("2026-08-18T09:00")
+            and str(schedule_item.get("end_at", "")).startswith("2026-08-18T10:00")
             and completed("schedule_query_by_title")
             and completed("schedule_cancel_confirmed")
         )
-        text_results = [
-            final_result("text_polish_facts"),
-            final_result("text_summarize"),
-            final_result("text_tone_formal"),
-            final_result("text_tone_casual"),
-            final_result("text_draft"),
+        text_results = {name: final_result(name) for name in text_case_names}
+        text_failures: list[dict[str, str]] = []
+        for name, result in text_results.items():
+            task_result = result.get("result") or {}
+            task_output = task_result.get("output") or {}
+            output = str(task_output.get("text", "")).strip()
+            fixture = next(key for key in text_fixtures if name.startswith(f"text_{key}_"))
+            operation = name.rsplit("_", 1)[-1]
+            reason = ""
+            if result.get("state") != "completed" or not output:
+                reason = f"terminal={result.get('state')}"
+            elif any(marker in output for marker in ("<FACT_", "FACT_", "占位符", "提示词", "【草稿】", "ext{FACT")):
+                reason = "internal_marker"
+            elif re.search(r"(?:确保|以便|从而|流程的|并且|同时)[，、 ]*$", output):
+                reason = "truncated_sentence"
+            elif re.search(r"[A-Za-z]{4,}\s+[A-Za-z]{4,}", output) and not re.search(r"[\u4e00-\u9fff]", output):
+                reason = "language_drift"
+            elif fixture == "date_budget" and ("2026年8月1日" not in output or "300万元" not in output):
+                reason = "lost_date_or_budget"
+            elif fixture == "three_projects" and not all(term in output for term in ("三个项目", "知识库", "工作流", "接口验证")):
+                reason = "lost_project_fact"
+            elif operation == "casual" and output == text_fixtures[fixture]:
+                reason = "tone_unchanged"
+            if reason:
+                text_failures.append({"case": name, "reason": reason, "output": output})
+        text_ok = not text_failures
+        stability_results = [final_result(name) for name in stability_names]
+        stability_failures = [
+            {"case": name, "state": result.get("state"), "error": result.get("error")}
+            for name, result in zip(stability_names, stability_results, strict=True)
+            if result.get("state") not in {"completed", "awaiting_confirmation"} or result.get("error")
         ]
-        text_ok = all(
-            result.get("state") == "completed"
-            and result.get("result", {}).get("output_summary")
-            and "<FACT_" not in json.dumps(result, ensure_ascii=False)
-            and "提示词" not in json.dumps(result, ensure_ascii=False)
-            and "占位符" not in json.dumps(result, ensure_ascii=False)
-            for result in text_results
-        )
+        stability_reminders = [
+            item for item in container.reminders.query("next_7_days")
+            if item.get("text") == "执行稳定性检查"
+        ]
+        stability_todos = (
+            await container.todos.execute(
+                {"action": "query", "status": "all", "title_query": "稳定性检查"}
+            )
+        ).output.get("items", [])
+        side_effects_ok = len(stability_reminders) == 1 and len(stability_todos) == 1
         meeting_ok = any(
             item["name"] == "meeting_process_confirmed"
             and item["final"]
@@ -352,14 +413,14 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
             {
                 "action": "create",
                 "title": "确定性结束时间控制",
-                "start_text": "贰零贰陆年捌月捌日上午玖点到十点",
+                "start_text": "贰零贰陆年捌月拾捌日上午玖点到十点",
             }
         )
         direct_item = direct_schedule.output.get("item", {})
         controls = {
             "schedule_uppercase_parser": {
-                "ok": str(direct_item.get("start_at", "")).startswith("2026-08-08T09:00")
-                and str(direct_item.get("end_at", "")).startswith("2026-08-08T10:00"),
+                "ok": str(direct_item.get("start_at", "")).startswith("2026-08-18T09:00")
+                and str(direct_item.get("end_at", "")).startswith("2026-08-18T10:00"),
                 "start_at": direct_item.get("start_at"),
                 "end_at": direct_item.get("end_at"),
             },
@@ -377,7 +438,7 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
             "reminder_create_query_mutation": {"ok": reminder_ok, "query_count_before_mutation": len(reminder_items), "texts": reminder_texts},
             "todo_crud_status_update": {"ok": todo_ok, "query_count_before_mutation": len(todo_items)},
             "schedule_create_query_cancel": {"ok": schedule_ok, "item": schedule_item},
-            "text_processing": {"ok": text_ok, "fact_check": "300万元" in json.dumps(text_results, ensure_ascii=False) and "13800138000" in json.dumps(text_results, ensure_ascii=False)},
+            "text_processing": {"ok": text_ok, "case_count": len(text_results), "failures": text_failures},
             "meeting_process": {"ok": meeting_ok, "output_count": len(list(meeting_output.glob("*-会议纪要.md")))},
         }
         await container.close()
@@ -390,6 +451,14 @@ async def run_model(model: str, digest: str, base_url: str) -> dict[str, Any]:
             "cases": cases,
             "summary": summary,
             "controls": controls,
+            "stability": {
+                "ok": not stability_failures and side_effects_ok,
+                "request_count": len(stability_results),
+                "failures": stability_failures,
+                "reminder_count": len(stability_reminders),
+                "todo_count": len(stability_todos),
+                "duplicate_side_effects": not side_effects_ok,
+            },
             "pass_count": sum(bool(item["ok"]) for item in summary.values()),
             "function_count": len(summary),
         }

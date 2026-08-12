@@ -164,6 +164,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(prog="agent-platform")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("serve", help="Start the localhost FastAPI service")
+    desktop = subparsers.add_parser("desktop", help="Start the supervised Windows desktop workbench")
+    desktop.add_argument("--no-browser", action="store_true", help="Do not open the workbench in a browser")
     subparsers.add_parser("demo", help="Run one offline task")
     evaluate = subparsers.add_parser("evaluate", help="Run the fixed evaluation dataset")
     evaluate.add_argument("--mode", choices=["mock", "cloud", "ollama", "rkllm", "llamacpp"], default="mock")
@@ -184,6 +186,10 @@ def main() -> None:
     settings = get_settings()
     if args.command == "serve":
         uvicorn.run("agent_platform.api:app", host=settings.host, port=settings.port, reload=False)
+    elif args.command == "desktop":
+        from agent_platform.core.desktop_supervisor import run_desktop
+
+        run_desktop(open_browser=not args.no_browser)
     elif args.command == "demo":
         asyncio.run(_demo())
     elif args.command == "import-docs":

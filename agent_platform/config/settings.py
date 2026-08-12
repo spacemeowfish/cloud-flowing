@@ -125,6 +125,27 @@ class Settings(BaseSettings):
     zipvoice_num_threads: int = Field(default=4, ge=1, le=32, validation_alias="ZIPVOICE_NUM_THREADS")
     zipvoice_speed: float = Field(default=1.0, ge=0.5, le=2.0, validation_alias="ZIPVOICE_SPEED")
     zipvoice_num_steps: int = Field(default=4, ge=1, le=16, validation_alias="ZIPVOICE_NUM_STEPS")
+    voice_enabled: bool = Field(default=False, validation_alias="VOICE_ENABLED")
+    voice_input_device: str = Field(default="", validation_alias="VOICE_INPUT_DEVICE")
+    voice_model_dir: Path = Field(
+        default=Path("models/faster-whisper-small"), validation_alias="VOICE_MODEL_DIR"
+    )
+    voice_cpu_threads: int = Field(default=8, ge=1, le=32, validation_alias="VOICE_CPU_THREADS")
+    voice_num_workers: int = Field(default=1, ge=1, le=4, validation_alias="VOICE_NUM_WORKERS")
+    voice_beam_size: int = Field(default=3, ge=1, le=10, validation_alias="VOICE_BEAM_SIZE")
+    voice_vad_enabled: bool = Field(default=True, validation_alias="VOICE_VAD_ENABLED")
+    voice_max_recording_seconds: float = Field(
+        default=30.0, ge=1.0, le=120.0, validation_alias="VOICE_MAX_RECORDING_SECONDS"
+    )
+    voice_min_recording_seconds: float = Field(
+        default=0.4, ge=0.1, le=5.0, validation_alias="VOICE_MIN_RECORDING_SECONDS"
+    )
+    voice_silence_dbfs: float = Field(
+        default=-50.0, ge=-90.0, le=-10.0, validation_alias="VOICE_SILENCE_DBFS"
+    )
+    voice_transcription_timeout_seconds: float = Field(
+        default=60.0, gt=0, le=300.0, validation_alias="VOICE_TRANSCRIPTION_TIMEOUT_SECONDS"
+    )
     timezone: str = Field(default="Asia/Shanghai", validation_alias="AGENT_TIMEZONE")
     network_available: bool = Field(default=True, validation_alias="AGENT_NETWORK_AVAILABLE")
     resource_mode: str = Field(default="normal", validation_alias="AGENT_RESOURCE_MODE")
@@ -147,6 +168,7 @@ class Settings(BaseSettings):
         self.zipvoice_model_dir = _resolve_local_path(self.zipvoice_model_dir, root)
         self.zipvoice_vocoder_path = _resolve_local_path(self.zipvoice_vocoder_path, root)
         self.zipvoice_reference_audio_path = _resolve_local_path(self.zipvoice_reference_audio_path, root)
+        self.voice_model_dir = _resolve_local_path(self.voice_model_dir, root)
         self.zipvoice_voices = [
             voice.model_copy(
                 update={"reference_audio_path": _resolve_local_path(voice.reference_audio_path, root)}

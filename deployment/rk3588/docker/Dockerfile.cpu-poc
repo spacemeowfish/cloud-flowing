@@ -39,7 +39,6 @@ COPY --from=llama-builder /src/llama.cpp/build/bin/llama-server /usr/local/bin/l
 WORKDIR /opt/app
 COPY pyproject.toml README.md ./
 COPY agent_platform ./agent_platform
-COPY static ./static
 RUN pip install --no-cache-dir .
 COPY deployment/rk3588/docker/entrypoint.sh /opt/poc/entrypoint.sh
 COPY deployment/rk3588/docker/healthcheck.py /opt/poc/healthcheck.py

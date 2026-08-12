@@ -97,9 +97,45 @@ class SpeechSynthesisError(AgentPlatformError):
     retryable = True
 
 
+class VoiceInputError(AgentPlatformError):
+    code = "voice_input_error"
+
+
+class NoMicrophoneError(VoiceInputError):
+    code = "no_microphone"
+
+
+class VoiceDeviceUnavailableError(VoiceInputError):
+    code = "voice_device_unavailable"
+
+
+class RecordingTooShortError(VoiceInputError):
+    code = "recording_too_short"
+
+
+class SilentRecordingError(VoiceInputError):
+    code = "silent_recording"
+
+
+class VoiceModelMissingError(VoiceInputError):
+    code = "voice_model_missing"
+
+
+class VoiceServiceBusyError(VoiceInputError):
+    code = "voice_service_busy"
+    retryable = True
+
+
+class VoiceTranscriptionTimeoutError(VoiceInputError):
+    code = "voice_transcription_timeout"
+    retryable = True
+
+
 __all__ = [
     "AgentPlatformError", "ConcurrencyConflictError", "ConfigurationError", "DatabaseInUseError",
     "InvalidTransitionError", "ModelBusyError", "ModelError", "ModelRateLimitError", "ModelSchemaError", "ModelTimeoutError",
     "PermissionDeniedError", "SchemaValidationError", "SensitiveDataError", "SpeechSynthesisError", "SpeechUnavailableError", "TaskNotFoundError",
-    "ToolExecutionError", "ToolNotFoundError", "ToolTimeoutError",
+    "ToolExecutionError", "ToolNotFoundError", "ToolTimeoutError", "NoMicrophoneError", "RecordingTooShortError",
+    "SilentRecordingError", "VoiceDeviceUnavailableError", "VoiceInputError", "VoiceModelMissingError",
+    "VoiceServiceBusyError", "VoiceTranscriptionTimeoutError",
 ]
