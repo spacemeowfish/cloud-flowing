@@ -436,6 +436,24 @@ def install_wheels(host_python: Path, wheelhouse: Path, requirements: Path, site
         raise BuildError(f"Offline wheel installation failed:\n{completed.stdout}\n{completed.stderr}")
 
 
+def prune_offline_runtime(site_packages: Path) -> list[str]:
+    """Remove installed development-only trees that are not used at runtime.
+
+    Besides reducing the bundle, this keeps extracted paths below the legacy
+    Windows MAX_PATH boundary.  The ONNX Runtime inference API does not import
+    its conversion, quantization, or model-inspection command-line tools.
+    """
+
+    relative_trees = (Path("onnxruntime") / "tools",)
+    removed: list[str] = []
+    for relative in relative_trees:
+        target = site_packages / relative
+        if target.is_dir():
+            shutil.rmtree(target)
+            removed.append(relative.as_posix())
+    return removed
+
+
 def patch_faster_whisper_audio(site_packages: Path) -> Path:
     path = site_packages / "faster_whisper" / "audio.py"
     if not path.is_file():
@@ -803,6 +821,7 @@ def build(args: argparse.Namespace) -> Path:
         patch_embedded_python(python_root)
         site_packages = python_root / "Lib" / "site-packages"
         install_wheels(args.host_python, args.wheelhouse, REQUIREMENTS_LOCK_PATH, site_packages)
+        pruned_runtime_trees = prune_offline_runtime(site_packages)
         patch_path = patch_faster_whisper_audio(site_packages)
 
         copy_tree_filtered(args.whisper_model, stage_root / "models" / "faster-whisper-small")
@@ -904,6 +923,7 @@ def build(args: argparse.Namespace) -> Path:
                 }
             ],
             "portable_validation": portable_validation,
+            "pruned_runtime_trees": pruned_runtime_trees,
             "not_validated_by_builder": ["real model inference", "real Faster-Whisper inference", "ZipVoice synthesis"],
         }
         scan_metadata_for_private_paths(stage_root)

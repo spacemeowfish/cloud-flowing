@@ -21,6 +21,7 @@ from build_bundle import (  # noqa: E402
     models_configuration,
     package_status,
     patch_embedded_python,
+    prune_offline_runtime,
     redistribution_decision,
     resolve_source_commit,
     scan_metadata_for_private_paths,
@@ -69,6 +70,21 @@ def test_embedded_python_path_includes_bundle_app(tmp_path: Path) -> None:
     assert "Lib\\site-packages" in lines
     assert "..\\..\\app" in lines
     assert "import site" in lines
+
+
+def test_offline_runtime_prunes_onnx_development_tools_only(tmp_path: Path) -> None:
+    site_packages = tmp_path / "site-packages"
+    runtime_module = site_packages / "onnxruntime" / "capi" / "onnxruntime_pybind_state.pyd"
+    tool_module = site_packages / "onnxruntime" / "tools" / "ort_format_model" / "very_long_generated_name.py"
+    runtime_module.parent.mkdir(parents=True)
+    tool_module.parent.mkdir(parents=True)
+    runtime_module.write_bytes(b"runtime")
+    tool_module.write_text("tool\n", encoding="utf-8")
+
+    assert prune_offline_runtime(site_packages) == ["onnxruntime/tools"]
+    assert runtime_module.read_bytes() == b"runtime"
+    assert not (site_packages / "onnxruntime" / "tools").exists()
+    assert prune_offline_runtime(site_packages) == []
 
 
 def test_source_filter_excludes_private_and_build_state() -> None:
