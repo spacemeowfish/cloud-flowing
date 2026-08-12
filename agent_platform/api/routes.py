@@ -5,10 +5,10 @@ import json
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 
 from agent_platform.api.container import ApplicationContainer
-from agent_platform.models import TERMINAL_STATES, AuditEvent, TaskCancel, TaskConfirmation, TaskCreate, TaskRecord
+from agent_platform.models import TERMINAL_STATES, AuditEvent, SpeechArtifact, SpeechCreate, TaskCancel, TaskConfirmation, TaskCreate, TaskRecord
 
 
 router = APIRouter()
@@ -89,6 +89,17 @@ async def task_audit(task_id: UUID, request: Request) -> list[AuditEvent]:
     return await _container(request).audit.by_task(task_id)
 
 
+@router.post("/tasks/{task_id}/speech", response_model=SpeechArtifact, status_code=201)
+async def create_task_speech(task_id: UUID, payload: SpeechCreate, request: Request) -> SpeechArtifact:
+    return await _container(request).speech.create(task_id, request.state.session_id, payload.voice_id)
+
+
+@router.get("/tasks/{task_id}/speech/{version_id}", response_class=FileResponse)
+async def get_task_speech(task_id: UUID, version_id: UUID, request: Request) -> FileResponse:
+    path = await _container(request).speech.path_for(task_id, version_id, request.state.session_id)
+    return FileResponse(path, media_type="audio/wav", filename=f"agent-{task_id}-{version_id}.wav")
+
+
 @router.get("/tasks/{task_id}/events")
 async def task_events(task_id: UUID, request: Request) -> StreamingResponse:
     container = _container(request)
@@ -119,6 +130,7 @@ async def health(request: Request) -> dict[str, object]:
         "status": "ok",
         "model_provider": _container(request).settings.model_provider,
         "connectors": await _container(request).connections.health(),
+        "tts": _container(request).speech.status(),
     }
 
 
@@ -128,6 +140,13 @@ async def capabilities(request: Request) -> dict[str, object]:
 
     container = _container(request)
     settings = container.settings
+    active_model_name = (
+        settings.rkllm_model_name
+        if settings.model_provider == "rkllm"
+        else settings.llamacpp_model_name
+        if settings.model_provider == "llamacpp"
+        else settings.model_name
+    )
     tools = [
         container.registry.get(name).metadata.model_dump(mode="json")
         for name in container.registry.names()
@@ -137,7 +156,7 @@ async def capabilities(request: Request) -> dict[str, object]:
             "name": "Agent Platform MVP",
             "version": "0.1.0",
             "model_provider": settings.model_provider,
-            "model_name": settings.model_name,
+            "model_name": active_model_name,
             "resource_mode": settings.resource_mode,
             "timezone": settings.timezone,
             "network_available": settings.network_available,
@@ -157,6 +176,7 @@ async def capabilities(request: Request) -> dict[str, object]:
             "confirmation_levels": ["R2", "R3"],
             "secret_values_exposed": False,
         },
+        "tts": container.speech.status(),
     }
 
 

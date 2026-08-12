@@ -4,7 +4,7 @@ import asyncio
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 
-from agent_platform.adapters import DisabledFileOpener, MockWeatherConnector, SystemFileOpener
+from agent_platform.adapters import DisabledFileOpener, MockWeatherConnector, SystemFileOpener, ZipVoiceReference, ZipVoiceSpeechSynthesizer
 from agent_platform.adapters.notifications import windows_toast
 from agent_platform.config import Settings
 from agent_platform.core.agent_core import AgentCore
@@ -16,6 +16,7 @@ from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.core.policy_engine import PolicyEngine
 from agent_platform.core.resource_monitor import ResourceMonitor
 from agent_platform.core.session_manager import SessionManager
+from agent_platform.core.speech_output import DisabledSpeechSynthesizer, SpeechOutputService
 from agent_platform.core.task_api import TaskAPI
 from agent_platform.core.tool_executor import ToolExecutor
 from agent_platform.core.tool_registry import ToolRegistry
@@ -37,6 +38,7 @@ class ApplicationContainer:
     reminders: ReminderTool
     todos: TodoTool
     schedules: ScheduleTool
+    speech: SpeechOutputService
     background_tasks: set[asyncio.Task[object]] = field(default_factory=set)
 
     @classmethod
@@ -90,7 +92,36 @@ class ApplicationContainer:
         connections = ConnectionManager(classifier)
         connections.register(MockWeatherConnector())
         connections.freeze()
-        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules)
+        if settings.tts_provider == "zipvoice":
+            synthesizer = ZipVoiceSpeechSynthesizer(
+                model_dir=settings.zipvoice_model_dir,
+                vocoder_path=settings.zipvoice_vocoder_path,
+                reference_audio_path=settings.zipvoice_reference_audio_path,
+                reference_text=settings.zipvoice_reference_text,
+                voices=tuple(
+                    ZipVoiceReference(
+                        id=voice.id,
+                        label=voice.label,
+                        audio_path=voice.reference_audio_path,
+                        text=voice.reference_text,
+                    )
+                    for voice in settings.zipvoice_voices
+                ),
+                default_voice_id=settings.zipvoice_default_voice_id,
+                num_threads=settings.zipvoice_num_threads,
+                speed=settings.zipvoice_speed,
+                num_steps=settings.zipvoice_num_steps,
+            )
+        else:
+            synthesizer = DisabledSpeechSynthesizer()
+        speech = SpeechOutputService(
+            tasks=tasks,
+            synthesizer=synthesizer,
+            output_dir=settings.tts_output_dir,
+            max_chars=settings.tts_max_chars,
+            keep_versions=settings.tts_keep_versions,
+        )
+        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules, speech)
 
     async def initialize(self) -> None:
         await self.tasks.initialize()
@@ -120,6 +151,7 @@ class ApplicationContainer:
         await self.audit.flush()
         await self.connections.close()
         await self.gateway.close()
+        await self.speech.close()
         await self.store.close()
 
 

@@ -7,8 +7,9 @@ from agent_platform.adapters.ollama_adapter import OllamaModelAdapter
 from agent_platform.adapters.platform import DisabledFileOpener, SystemFileOpener
 from agent_platform.adapters.rkllm_adapter import RKLLMModelAdapter
 from agent_platform.adapters.weather_connector import MockWeatherConnector
+from agent_platform.adapters.zipvoice_tts import ZipVoiceReference, ZipVoiceSpeechSynthesizer
 
 __all__ = [
     "CloudModelAdapter", "DisabledFileOpener", "LlamaCppModelAdapter", "MockModelAdapter", "MockWeatherConnector", "OllamaModelAdapter",
-    "RKLLMModelAdapter", "SystemFileOpener",
+    "RKLLMModelAdapter", "SystemFileOpener", "ZipVoiceReference", "ZipVoiceSpeechSynthesizer",
 ]

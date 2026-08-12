@@ -22,7 +22,8 @@ const API = {
 
 const state = {
   capabilities:null, openapi:null, health:null, history:[], currentTask:null,
-  eventSources:new Map(), inspectorTab:"response", apiChecks:[]
+  eventSources:new Map(), inspectorTab:"response", apiChecks:[],
+  speechByTask:new Map(), speechAudio:new Audio(), speechTaskId:null
 };
 
 const lifecycle = ["接收","理解","校验","权限","路由","执行","交付"];
@@ -40,6 +41,7 @@ const routeInfo = {
 };
 const toolLabels = {
   file_open:["文件查找","查找、候选选择、确认打开"], knowledge_query:["知识库问答","本地文档检索与来源引用"],
+  general_chat:["通用问答","数学、常识、闲聊与翻译"],
   reminder_create:["提醒管理","创建、查询、取消、完成、清空"], todo_manage:["待办事项","创建、查询、更新、完成、删除"],
   schedule_manage:["日程管理","创建、范围查询、重复日程、取消"], text_polish:["文本处理","润色、总结、语气调整、草拟"],
   meeting_process:["会议纪要","授权文稿处理与 Markdown 输出"]
@@ -109,7 +111,7 @@ async function loadRuntime() {
 }
 
 function capabilityRows() {
-  const routes = {file_open:"files",knowledge_query:"knowledge",reminder_create:"reminders",todo_manage:"todos",schedule_manage:"schedule",text_polish:"text",meeting_process:"meetings"};
+  const routes = {file_open:"files",general_chat:"console",knowledge_query:"knowledge",reminder_create:"reminders",todo_manage:"todos",schedule_manage:"schedule",text_polish:"text",meeting_process:"meetings"};
   return (state.capabilities?.tools || []).map(tool => {
     const label = toolLabels[tool.name] || [tool.name,tool.description];
     return `<a class="module-row" href="#${routes[tool.name] || "console"}"><span class="module-icon">${esc(tool.name.slice(0,2).toUpperCase())}</span><span><b>${esc(label[0])}</b><small>${esc(label[1])}</small></span><span class="risk ${tool.risk_level.toLowerCase()}">${tool.risk_level} · ${tool.data_level}</span></a>`;
@@ -119,8 +121,8 @@ function renderOverview() {
   const counts = state.history.reduce((acc,t) => (acc[t.state]=(acc[t.state]||0)+1,acc),{});
   const endpoints = Object.values(state.openapi?.paths || {}).reduce((n,item) => n + Object.keys(item).filter(k => ["get","post","put","patch","delete"].includes(k)).length,0);
   pageRoot.innerHTML = header("OPERATIONS","Agent 操作台","所有主要能力、风险闸门、运行态与接口契约都在这里显式可见。",`<button class="button" id="refreshOverview">刷新状态</button><a class="button primary" href="#api-lab">运行接口体检</a>`)+
-  `<section class="metrics"><div class="metric"><small>已注册能力</small><strong>${state.capabilities?.tools?.length ?? "—"}</strong><em>预期 7 个工具</em></div><div class="metric"><small>HTTP 操作</small><strong>${endpoints || "—"}</strong><em>来自 OpenAPI</em></div><div class="metric"><small>当前会话任务</small><strong>${state.history.length}</strong><em>隔离任务账本</em></div><div class="metric"><small>待人工确认</small><strong>${counts.awaiting_confirmation || 0}</strong><em>R2 / R3 闸门</em></div></section>`+
-  `<div class="grid-2"><section class="panel span-2"><header class="panel-head"><div><h3>七阶段执行链</h3><p>每个任务都会穿过同一条可审计管线</p></div></header>${rail()}</section><section class="panel"><header class="panel-head"><div><h3>功能入口</h3><p>7 个主要能力均有独立测试页</p></div></header><div class="module-list">${capabilityRows() || `<div class="empty-state compact">能力清单未加载</div>`}</div></section>`+
+  `<section class="metrics"><div class="metric"><small>已注册能力</small><strong>${state.capabilities?.tools?.length ?? "—"}</strong><em>预期 8 个工具</em></div><div class="metric"><small>HTTP 操作</small><strong>${endpoints || "—"}</strong><em>来自 OpenAPI</em></div><div class="metric"><small>当前会话任务</small><strong>${state.history.length}</strong><em>隔离任务账本</em></div><div class="metric"><small>待人工确认</small><strong>${counts.awaiting_confirmation || 0}</strong><em>R2 / R3 闸门</em></div></section>`+
+  `<div class="grid-2"><section class="panel span-2"><header class="panel-head"><div><h3>七阶段执行链</h3><p>每个任务都会穿过同一条可审计管线</p></div></header>${rail()}</section><section class="panel"><header class="panel-head"><div><h3>功能入口</h3><p>8 个主要能力均有对应测试入口</p></div></header><div class="module-list">${capabilityRows() || `<div class="empty-state compact">能力清单未加载</div>`}</div></section>`+
   `<div class="stack">${panel("运行配置","公开安全配置，不包含密钥",`<div class="kv"><span>模型提供方</span><b>${esc(state.capabilities?.platform?.model_provider || "—")}</b></div><div class="kv"><span>模型名称</span><span>${esc(state.capabilities?.platform?.model_name || "—")}</span></div><div class="kv"><span>资源模式</span><span>${esc(state.capabilities?.platform?.resource_mode || "—")}</span></div><div class="kv"><span>网络状态</span><span>${state.capabilities?.platform?.network_available ? "可用" : "不可用"}</span></div><div class="kv"><span>文件打开</span><span>${state.capabilities?.platform?.file_open_enabled ? "启用" : "禁用（安全默认）"}</span></div><div class="kv"><span>保留周期</span><span>${esc(state.capabilities?.platform?.retention_days || "—")} 天</span></div>`)}${panel("安全基线","当前运行时声明",subfeatures([["会话隔离","任务查询按会话过滤"],["全链路审计","每次状态变化可回放"],["高风险确认","R2/R3 操作需人工批准"],["密钥不外露","能力接口仅提供非敏感设置"],["本地优先","知识、文件和个人数据本地处理"],["参数白名单","工具参数经 JSON Schema 校验"]]))}</div></div>`;
   $("#refreshOverview").onclick = async () => { await loadRuntime(); renderOverview(); toast("运行状态已刷新"); };
 }
@@ -139,7 +141,7 @@ function featureShell(config) {
 
 function renderConsole() {
   pageRoot.innerHTML = header("UNIVERSAL TASK","通用任务","直接输入自然语言，观察 Agent 如何识别意图、校验参数、评估风险并路由工具。",`<a class="button" href="#tasks">查看历史</a>`)+
-  `<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>自然语言任务</h3><p>适合探索跨模块表达和路由边界</p></div></header><div class="panel-body"><form id="consoleForm">${field("consoleText","任务内容","textarea","例如：查询产品保修政策，给出来源")}${presets(["查询产品保修政策并给出来源","查找项目周报","提醒我30分钟后检查服务","添加待办 提交接口测试报告，高优先级","今天下午有什么安排","总结这段：本季度完成了三个项目"],"consoleText")}<div class="form-actions"><small>Enter 换行；点击按钮提交</small><button class="button primary">提交任务</button></div></form></div></section>${panel("路由说明","输入会经过意图识别与 Schema 校验",subfeatures([["意图识别","映射到 7 个已注册工具"],["参数补全","缺少关键字段时暂停确认"],["数据分级","按 D0–D3 识别敏感度"],["风险判定","按 R0–R3 决定是否确认"],["端云路由","根据数据与资源选择执行位置"],["审计记录","全过程留下可验证事件"]]))}<div id="liveTaskArea" class="span-2"></div></div>`;
+  `<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>自然语言任务</h3><p>适合探索跨模块表达和路由边界</p></div></header><div class="panel-body"><form id="consoleForm">${field("consoleText","任务内容","textarea","例如：1+1等于多少？")}${presets(["1+1等于多少？","请用一句话说明局域网是什么？","把你好翻译成英文","查询产品保修政策并给出来源","查找项目周报","提醒我30分钟后检查服务","总结这段：本季度完成了三个项目"],"consoleText")}<div class="form-actions"><small>Enter 换行；点击按钮提交</small><button class="button primary">提交任务</button></div></form></div></section>${panel("路由说明","输入会经过意图识别与 Schema 校验",subfeatures([["意图识别","映射到 8 个已注册工具"],["参数补全","缺少关键字段时暂停确认"],["数据分级","按 D0–D3 识别敏感度"],["风险判定","按 R0–R3 决定是否确认"],["端云路由","根据数据与资源选择执行位置"],["审计记录","全过程留下可验证事件"]]))}<div id="liveTaskArea" class="span-2"></div></div>`;
   bindPresets(); $("#consoleForm").onsubmit = async e => { e.preventDefault(); await submitTask($("#consoleText").value.trim()); };
   if (state.currentTask) renderLiveTask(state.currentTask);
 }
@@ -169,12 +171,138 @@ function updateTask(task) {
   renderLiveTask(task); selectTask(task,false);
 }
 function resultData(task) { return task?.result?.receipt || task?.result || {}; }
+function resultTool(task,result) { return task?.context?.intent || result?.tool_name || ""; }
+function resultItemId(item) { return item?.id ?? item?.schedule_id ?? ""; }
+function resultItemTitle(item) { return item?.title || item?.text || item?.name || `记录 ${resultItemId(item)}`; }
+function resultField(label,value) {
+  if (value === undefined || value === null || value === "") return "";
+  return `<span class="result-field"><small>${esc(label)}</small><b>${esc(value)}</b></span>`;
+}
+function resultQuickAction(label,command) {
+  return `<button type="button" class="button small quiet" data-quick-command="${esc(command)}">${esc(label)}</button>`;
+}
+function renderResultItem(tool,item,{actions=true}={}) {
+  const id = resultItemId(item);
+  const fields = [
+    resultField("编号",id),
+    resultField("状态",item?.status),
+    resultField("时间",item?.due_at ? fmt(item.due_at) : ""),
+    resultField("开始",item?.start_at ? fmt(item.start_at) : ""),
+    resultField("结束",item?.end_at ? fmt(item.end_at) : ""),
+    resultField("优先级",item?.priority),
+    resultField("地点",item?.location),
+    resultField("标签",Array.isArray(item?.tags) ? item.tags.join("、") : ""),
+  ].join("");
+  let actionMarkup = "";
+  if (actions && id && tool === "reminder_create" && ["active","notified"].includes(item.status)) {
+    actionMarkup = resultQuickAction("完成此提醒",`完成提醒 ${id}`) + resultQuickAction("取消此提醒",`取消提醒 ${id}`);
+  } else if (actions && id && tool === "todo_manage") {
+    actionMarkup = (item.status !== "completed" ? resultQuickAction("完成此待办",`完成待办 ${id}`) : "") + resultQuickAction("删除此待办",`删除待办 ${id}`);
+  } else if (actions && id && tool === "schedule_manage") {
+    actionMarkup = resultQuickAction("取消此日程",`取消日程 ${id}`);
+  }
+  return `<article class="result-item"><div class="result-item-head"><strong>${esc(resultItemTitle(item))}</strong>${id ? `<span class="mono">#${esc(id)}</span>` : ""}</div><div class="result-fields">${fields}</div>${actionMarkup ? `<div class="result-item-actions">${actionMarkup}</div>` : ""}</article>`;
+}
+function renderStructuredOutput(task,result,output) {
+  const tool = resultTool(task,result);
+  if (Array.isArray(output?.items)) {
+    if (!output.items.length) return `<div class="result-items"><div class="empty-state compact">当前查询没有匹配记录</div></div>`;
+    return `<div class="result-items">${output.items.map(item=>renderResultItem(tool,item)).join("")}</div>`;
+  }
+  if (output?.item && typeof output.item === "object") {
+    return `<div class="result-items">${renderResultItem(tool,output.item)}</div>`;
+  }
+  if (output?.deleted && typeof output.deleted === "object") {
+    return `<div class="result-items">${renderResultItem(tool,output.deleted,{actions:false})}</div>`;
+  }
+  if (Array.isArray(output?.deleted_items)) {
+    if (!output.deleted_items.length) return `<div class="result-items"><div class="empty-state compact">没有可删除的记录</div></div>`;
+    return `<div class="result-items">${output.deleted_items.map(item=>renderResultItem(tool,item,{actions:false})).join("")}</div>`;
+  }
+  if (output && Object.prototype.hasOwnProperty.call(output,"deleted_count")) {
+    return `<div class="result-items"><div class="result-item">已删除 <strong>${esc(output.deleted_count)}</strong> 条记录</div></div>`;
+  }
+  return "";
+}
+function bindResultActions(root) {
+  $$('[data-quick-command]',root).forEach(button=>button.onclick=async()=>{
+    button.disabled=true;
+    await submitTask(button.dataset.quickCommand);
+  });
+}
+function speakableText(task) {
+  if (task?.state !== "completed") return "";
+  const result=resultData(task), output=result.output||{};
+  return [output.answer,output.text,output.message,result.output_summary].find(value=>typeof value==="string"&&value.trim())||"";
+}
+function speechControls(task) {
+  if (!state.capabilities?.tts?.enabled || !speakableText(task)) return "";
+  const speech=state.speechByTask.get(task.id)||{};
+  const tts=state.capabilities.tts, voices=(tts.voices||[]).filter(voice=>voice.available!==false);
+  const selectedVoice=speech.voiceId||tts.default_voice_id||voices[0]?.id||"";
+  const playing=state.speechTaskId===task.id&&!state.speechAudio.paused;
+  const status=speech.loading?"正在生成语音":speech.error?speech.error:speech.artifact?`${speech.artifact.voice_label} · ${speech.artifact.duration_seconds.toFixed(1)} 秒 · ${speech.artifact.sample_rate} Hz`:"尚未生成";
+  const options=voices.map(voice=>`<option value="${esc(voice.id)}" ${voice.id===selectedVoice?"selected":""}>${esc(voice.label)}</option>`).join("");
+  return `<div class="speech-controls" aria-label="语音播放控制"><label class="speech-voice"><span>音色</span><select data-speech-voice aria-label="音色" ${speech.loading?"disabled":""}>${options}</select></label><button type="button" class="speech-icon" data-speech-action="play" title="播放" aria-label="播放" ${speech.loading||!voices.length?"disabled":""}>▶</button><button type="button" class="speech-icon" data-speech-action="stop" title="停止" aria-label="停止" ${playing?"":"disabled"}>■</button><button type="button" class="speech-icon" data-speech-action="regenerate" title="重新生成" aria-label="重新生成" ${speech.loading||!voices.length?"disabled":""}>↻</button><span class="speech-status">ZipVoice · ${esc(status)}</span></div>`;
+}
+function refreshSpeechTask(taskId) {
+  if (state.currentTask?.id===taskId) renderLiveTask(state.currentTask);
+}
+function stopSpeech() {
+  const taskId=state.speechTaskId;
+  state.speechAudio.pause();
+  state.speechAudio.currentTime=0;
+  state.speechTaskId=null;
+  if(taskId) refreshSpeechTask(taskId);
+}
+state.speechAudio.addEventListener("ended",()=>{
+  const taskId=state.speechTaskId;
+  state.speechTaskId=null;
+  if(taskId) refreshSpeechTask(taskId);
+});
+async function playTaskSpeech(task,regenerate=false) {
+  let speech=state.speechByTask.get(task.id)||{};
+  const voiceId=speech.voiceId||state.capabilities?.tts?.default_voice_id||state.capabilities?.tts?.voices?.[0]?.id;
+  try {
+    if(regenerate||!speech.artifact||speech.artifact.voice_id!==voiceId) {
+      speech={...speech,loading:true,error:""}; state.speechByTask.set(task.id,speech); refreshSpeechTask(task.id);
+      const artifact=await API.post(`/tasks/${task.id}/speech`,{voice_id:voiceId});
+      speech={artifact,voiceId,loading:false,error:""}; state.speechByTask.set(task.id,speech);
+    }
+    if(state.speechTaskId&&state.speechTaskId!==task.id) stopSpeech();
+    state.speechAudio.pause(); state.speechAudio.currentTime=0;
+    state.speechAudio.src=`${speech.artifact.audio_url}?v=${speech.artifact.version_id}`;
+    state.speechTaskId=task.id;
+    await state.speechAudio.play(); refreshSpeechTask(task.id);
+  } catch(error) {
+    state.speechAudio.pause(); state.speechTaskId=null;
+    state.speechByTask.set(task.id,{...speech,loading:false,error:error.message}); refreshSpeechTask(task.id);
+    toast(error.message,true);
+  }
+}
+function bindSpeechControls(task,root) {
+  const voiceSelect=$('[data-speech-voice]',root);
+  if(voiceSelect) voiceSelect.onchange=()=>{
+    const selectedVoiceId=voiceSelect.value;
+    stopSpeech();
+    const current=state.speechByTask.get(task.id)||{};
+    state.speechByTask.set(task.id,{...current,voiceId:selectedVoiceId,artifact:null,error:""});
+    refreshSpeechTask(task.id);
+  };
+  $$('[data-speech-action]',root).forEach(button=>button.onclick=()=>{
+    const action=button.dataset.speechAction;
+    if(action==="stop") stopSpeech();
+    else playTaskSpeech(task,action==="regenerate");
+  });
+}
 function renderLiveTask(task) {
   const area=$("#liveTaskArea"); if(!area)return; const meta=stateMeta[task.state]||[task.state,0,""]; const result=resultData(task); const output=result.output||{};
   let content=""; if(task.state==="completed") content=output.answer||output.text||result.output_summary||"处理完成"; else if(task.error) content=task.error;
   const sources=output.sources||[];
-  area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已通过全部执行阶段":task.context?.intent?`已识别能力：${esc(task.context.intent)}`:"Agent 正在处理任务"}</p></div><button class="button small" data-inspect-task>在检查器中查看</button></header>${rail(task)}${renderConfirmation(task)}${content?`<div class="task-result"><strong>${task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.section??s.position??"全文")}</span>`).join("")}</div>`:""}</div>`:""}</section>`;
-  $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); $("[data-inspect-task]",area).onclick=()=>openInspector(); bindConfirmation(task,area);
+  const structured = task.state==="completed" ? renderStructuredOutput(task,result,output) : "";
+  const resultBody = `${content ? `<strong>${task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.section??s.position??"全文")}</span>`).join("")}</div>`:""}` : ""}${structured}${speechControls(task)}`;
+  area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已通过全部执行阶段":task.context?.intent?`已识别能力：${esc(task.context.intent)}`:"Agent 正在处理任务"}</p></div><button class="button small" data-inspect-task>在检查器中查看</button></header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
+  $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); $("[data-inspect-task]",area).onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);
 }
 function renderConfirmation(task) {
   if(task.state!=="awaiting_confirmation")return""; const data=task.result||{}; const type=data.type; let body="";

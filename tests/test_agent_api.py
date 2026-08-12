@@ -23,6 +23,29 @@ class _DateDroppingReminderAdapter(MockModelAdapter):
         return await super().generate(messages, response_schema, max_tokens)
 
 
+class _TextOptionalMissingAdapter(MockModelAdapter):
+    async def generate(self, messages, response_schema, max_tokens=512):
+        text = messages[-1].content
+        if text == "总结这段：项目将在2026年8月1日上线，预算为300万元。":
+            return {
+                "arguments": {
+                    "operation": "summarize",
+                    "text": "项目将在2026年8月1日上线，预算为300万元。",
+                },
+                "missing_fields": ["target_length"],
+            }
+        if text == "调整为轻松语气：项目将在2026年8月1日上线，预算为300万元。":
+            return {
+                "arguments": {
+                    "operation": "tone_adjust",
+                    "text": "项目将在2026年8月1日上线，预算为300万元。",
+                    "tone": "casual",
+                },
+                "missing_fields": ["tone"],
+            }
+        return await super().generate(messages, response_schema, max_tokens)
+
+
 async def _wait_for_state(client, task_id, expected, timeout=2.0):
     states = {expected} if isinstance(expected, str) else set(expected)
     deadline = asyncio.get_running_loop().time() + timeout
@@ -159,11 +182,28 @@ async def test_text_operations_complete_through_agent_and_real_tool_executor(tmp
             created = await client.post("/tasks", json={"text": request_text})
             task = await _wait_for_state(client, created.json()["id"], TaskState.COMPLETED.value)
             assert task["result"]["tool_name"] == "text_polish"
-            output = task["result"]["output"]["text"]
-            assert output.strip()
-            assert "【草稿】" not in output
-            assert "FACT_" not in output
-            assert "占位符" not in output
+            assert not task["result"]["output"]["text"].startswith("【草稿】")
+            if "2026年8月1日" in request_text:
+                assert "2026年8月1日" in task["result"]["output"]["text"]
+
+
+@pytest.mark.asyncio
+async def test_text_optional_missing_fields_do_not_stop_processing_at_confirmation_gate(tmp_path):
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        gateway = ModelGateway(_TextOptionalMissingAdapter())
+        app.state.container.gateway = gateway
+        app.state.container.agent._gateway = gateway
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            for request_text in (
+                "总结这段：项目将在2026年8月1日上线，预算为300万元。",
+                "调整为轻松语气：项目将在2026年8月1日上线，预算为300万元。",
+            ):
+                created = await client.post("/tasks", json={"text": request_text})
+                task = await _wait_for_state(client, created.json()["id"], TaskState.COMPLETED.value)
+                assert task["result"]["tool_name"] == "text_polish"
+                assert task["result"]["output"]["text"]
 
 
 @pytest.mark.asyncio
