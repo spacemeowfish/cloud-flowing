@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "assets": {
+    "python": {
+      "kind": "runtime_archive",
+      "version": "3.12.10",
+      "filename": "python-3.12.10-embed-amd64.zip",
+      "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+      "source": "https://www.python.org/downloads/release/python-31210/",
+      "license": "PSF-2.0",
+      "redistribution": {"status": "allowed", "reason": "Official embeddable CPython distribution."}
+    },
+    "llamacpp": {
+      "kind": "runtime_archive",
+      "version": "b10375",
+      "filename": "llama-b10375-bin-win-cpu-x64.zip",
+      "sha256": "c18ad6aa9cef9d119e957472d71e34eb5183848eb9c57f51647fd18692a456c7",
+      "source": "https://github.com/ggml-org/llama.cpp/releases/tag/b10375",
+      "license": "MIT",
+      "redistribution": {"status": "allowed", "reason": "Official llama.cpp CPU release."}
+    },
+    "qwen": {
+      "kind": "gguf",
+      "repository": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "revision": "cc1e68eea5f05f88f41a6de1fc73110178f23715",
+      "filename": "qwen2.5-3b-instruct-q4_k_m.gguf",
+      "sha256": "626b4a6678b86442240e33df819e00132d3ba7dddfe1cdc4fbb18e0a9615c62d",
+      "source": "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "license": "qwen-research",
+      "redistribution": {"status": "blocked", "reason": "Research/evaluation-only terms do not establish commercial internal-test redistribution rights."}
+    },
+    "lfm": {
+      "kind": "gguf",
+      "repository": "LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+      "revision": "012803cf70d6cdcf698f0c65fa8f9b7175128770",
+      "filename": "LFM2.5-1.2B-Instruct-Q4_K_M.gguf",
+      "sha256": "b1b3de114215d9507409a662a501a631095a479a419584e8a2ded6304b19b4f5",
+      "source": "https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF",
+      "license": "lfm-1.0",
+      "redistribution": {"status": "conditional", "assertion": "lfm_eligible_entity", "reason": "Commercial use/redistribution depends on the legal entity revenue condition in LFM 1.0."}
+    },
+    "faster_whisper_small": {
+      "kind": "model_directory",
+      "repository": "Systran/faster-whisper-small",
+      "revision": "536b0662742c02347bc0e980a01041f333bce120",
+      "required_file": "model.bin",
+      "sha256": "3e305921506d8872816023e4c273e75d2419fb89b24da97b4fe7bce14170d671",
+      "source": "https://huggingface.co/Systran/faster-whisper-small/tree/536b0662742c02347bc0e980a01041f333bce120",
+      "license": "MIT",
+      "redistribution": {"status": "allowed", "reason": "Model repository declares MIT."}
+    },
+    "zipvoice": {
+      "kind": "model_directory",
+      "required_file": "decoder.int8.onnx",
+      "sha256": "3cc2e08a96610d7ea1b227398e97cdbbe0414499741d3aec0b8113db2a2ab251",
+      "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/sherpa-onnx-zipvoice-distill-int8-zh-en-emilia.tar.bz2",
+      "license": "mixed-and-incomplete",
+      "redistribution": {"status": "blocked", "reason": "The complete archive includes eSpeak data without a pinned source/COPYING bundle and has unresolved Emilia training-data restrictions."}
+    },
+    "zipvoice_vocoder": {
+      "kind": "file",
+      "filename": "vocos_24khz.onnx",
+      "sha256": "bcb3b970e384161c4d634f0bb9e999ff1c471b34c9bc0b1049a5014065ed3cc0",
+      "source": "https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos_24khz.onnx",
+      "license": "MIT-upstream-unverified-export",
+      "redistribution": {"status": "conditional", "assertion": "vocoder_redistribution_authorized", "reason": "Upstream Vocos is MIT, but the exact ONNX export is not accompanied by a license notice."}
+    },
+    "voice_references": {
+      "kind": "voice_reference_set",
+      "required_ids": ["news-female1", "male1", "female1", "female2"],
+      "license": "unverified",
+      "redistribution": {"status": "blocked", "reason": "No source archive proves identity, recording, or redistribution rights for the local WAV files."}
+    }
+  }
+}
+
