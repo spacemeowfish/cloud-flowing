@@ -19,7 +19,7 @@ from agent_platform.core.session_manager import SessionManager
 from agent_platform.core.task_api import TaskAPI
 from agent_platform.core.tool_executor import ToolExecutor
 from agent_platform.core.tool_registry import ToolRegistry
-from agent_platform.tools import FileSearchTool, KnowledgeBaseTool, MeetingNotesTool, ReminderTool, ScheduleTool, TextProcessingTool, TodoTool
+from agent_platform.tools import FileSearchTool, GeneralChatTool, KnowledgeBaseTool, MeetingNotesTool, ReminderTool, ScheduleTool, TextProcessingTool, TodoTool
 
 
 @dataclass
@@ -67,6 +67,7 @@ class ApplicationContainer:
             reminders,
             todos,
             schedules,
+            GeneralChatTool(gateway),
             TextProcessingTool(gateway),
             MeetingNotesTool(settings.authorized_file_roots, settings.meeting_output_dir, classifier),
         ):

@@ -56,6 +56,20 @@ async def test_ollama_adapter_uses_native_non_thinking_contract():
 
 
 @pytest.mark.asyncio
+async def test_ollama_free_text_does_not_request_json_format():
+    async def handler(request):
+        payload = json.loads(request.content)
+        assert "format" not in payload
+        assert payload["messages"] == [{"role": "user", "content": "你好"}]
+        assert payload["options"]["num_predict"] == 64
+        return httpx.Response(200, json=_response("  你好！  "))
+
+    adapter, client = _adapter(handler, max_new_tokens=64)
+    assert await adapter.generate_text([ModelMessage(role=MessageRole.USER, content="你好")]) == "你好！"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
 async def test_ollama_adapter_can_enable_thinking_but_only_parses_final_content():
     async def handler(request):
         payload = json.loads(request.content)

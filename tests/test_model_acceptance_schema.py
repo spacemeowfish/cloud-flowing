@@ -25,6 +25,7 @@ def _registry() -> ToolRegistry:
     registry = ToolRegistry()
     specs = (
         ("file_open", ["query"], {"query": {"type": "string"}, "selected_path": {"type": "string"}}),
+        ("general_chat", ["text"], {"text": {"type": "string"}}),
         ("knowledge_query", ["query"], {"query": {"type": "string"}}),
         ("meeting_process", ["source_path"], {"source_path": {"type": "string"}}),
         (

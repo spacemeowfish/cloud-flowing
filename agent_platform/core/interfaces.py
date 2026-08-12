@@ -2,6 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable, Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
 from pydantic import JsonValue
@@ -21,7 +22,7 @@ from agent_platform.models import (
 
 
 class ModelAdapter(ABC):
-    """Generate schema-constrained JSON without exposing provider details."""
+    """Generate structured tool data or free text without exposing providers."""
 
     @abstractmethod
     async def generate(
@@ -31,6 +32,28 @@ class ModelAdapter(ABC):
         max_tokens: int = 512,
     ) -> dict[str, JsonValue]:
         """Return a JSON object conforming to ``response_schema``."""
+
+    async def generate_text(
+        self,
+        messages: Sequence[ModelMessage],
+        max_tokens: int = 512,
+    ) -> str:
+        """Return unconstrained text; legacy test adapters use a structured fallback."""
+
+        result = await self.generate(
+            messages,
+            {
+                "type": "object",
+                "properties": {"answer": {"type": "string", "minLength": 1}},
+                "required": ["answer"],
+                "additionalProperties": False,
+            },
+            max_tokens,
+        )
+        answer = result.get("answer")
+        if not isinstance(answer, str):
+            raise TypeError("ModelAdapter.generate_text fallback requires an answer string")
+        return answer
 
     @abstractmethod
     async def close(self) -> None:
@@ -118,10 +141,35 @@ class FileOpener(ABC):
         """Open an authorized path and return a real platform receipt."""
 
 
+@dataclass(frozen=True)
+class SpeechAudio:
+    """Provider-neutral encoded speech returned to the output service."""
+
+    wav_bytes: bytes
+    sample_rate: int
+    duration_seconds: float
+    voice_id: str
+    voice_label: str
+
+
+class SpeechSynthesizer(ABC):
+    """Convert final user-visible text into WAV audio."""
+
+    @abstractmethod
+    async def synthesize(self, text: str, voice_id: str | None = None) -> SpeechAudio:
+        """Generate one complete WAV without mutating Agent task state."""
+
+    @abstractmethod
+    def status(self) -> dict[str, JsonValue]:
+        """Return non-secret readiness metadata without loading the model."""
+
+    async def close(self) -> None:
+        """Release model resources; repeated calls must be safe."""
+
+
 NotificationCallback = Callable[[dict[str, JsonValue]], Awaitable[None]]
 
 __all__ = [
     "DataClassifier", "Embedder", "FileOpener", "ModelAdapter", "NotificationCallback", "Policy",
-    "Router", "TaskStore", "Tool",
+    "Router", "SpeechAudio", "SpeechSynthesizer", "TaskStore", "Tool",
 ]
-

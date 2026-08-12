@@ -90,6 +90,7 @@ async def test_api_task_audit_errors_and_openapi(tmp_path):
             capability_payload = capabilities.json()
             assert {tool["name"] for tool in capability_payload["tools"]} == {
                 "file_open",
+                "general_chat",
                 "knowledge_query",
                 "reminder_create",
                 "todo_manage",
@@ -158,7 +159,11 @@ async def test_text_operations_complete_through_agent_and_real_tool_executor(tmp
             created = await client.post("/tasks", json={"text": request_text})
             task = await _wait_for_state(client, created.json()["id"], TaskState.COMPLETED.value)
             assert task["result"]["tool_name"] == "text_polish"
-            assert task["result"]["output"]["text"].startswith("【草稿】")
+            output = task["result"]["output"]["text"]
+            assert output.strip()
+            assert "【草稿】" not in output
+            assert "FACT_" not in output
+            assert "占位符" not in output
 
 
 @pytest.mark.asyncio

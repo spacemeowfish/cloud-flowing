@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 
 INTENT_NAMES = (
     "file_open",
+    "general_chat",
     "knowledge_query",
     "meeting_process",
     "reminder_create",

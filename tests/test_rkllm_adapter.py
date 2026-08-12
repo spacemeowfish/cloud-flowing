@@ -62,6 +62,21 @@ async def test_rkllm_adapter_uses_frozen_contract_and_shared_intent_cap():
 
 
 @pytest.mark.asyncio
+async def test_rkllm_free_text_prompt_has_no_json_contract():
+    async def handler(request):
+        payload = json.loads(request.content)
+        prompt = payload["messages"][0]["content"]
+        assert "CURRENT_CONVERSATION_JSON" not in prompt
+        assert "JSON" not in prompt
+        assert "user: 你好" in prompt
+        return httpx.Response(200, json=_completion("  你好！  "))
+
+    adapter, client = _adapter(handler, max_new_tokens=64)
+    assert await adapter.generate_text([ModelMessage(role=MessageRole.USER, content="你好")]) == "你好！"
+    await client.aclose()
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("status", "exception", "retryable"),
     [

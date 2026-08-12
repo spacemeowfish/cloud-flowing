@@ -97,6 +97,49 @@ class RKLLMModelAdapter(ModelAdapter):
         finally:
             self._semaphore.release()
 
+    async def generate_text(
+        self,
+        messages: Sequence[ModelMessage],
+        max_tokens: int = 512,
+    ) -> str:
+        """Generate plain text while preserving the one-user-message server subset."""
+
+        prompt = "\n".join(f"{message.role.value}: {message.content}" for message in messages)
+        request = RKLLMChatCompletionRequest(
+            model=self._model,
+            messages=[{"role": MessageRole.USER, "content": prompt}],
+            max_tokens=min(max_tokens, self._max_new_tokens),
+        )
+        try:
+            await asyncio.wait_for(self._semaphore.acquire(), timeout=self._queue_timeout_seconds)
+        except TimeoutError as exc:
+            raise ModelBusyError("RKLLM request queue is full") from exc
+        try:
+            try:
+                response = await self._client.post(self._url, json=request.model_dump(mode="json"))
+            except httpx.TimeoutException as exc:
+                raise ModelTimeoutError("RKLLM model request timed out") from exc
+            except httpx.HTTPError as exc:
+                raise ModelError("RKLLM model connection failed", retryable=True) from exc
+            if response.status_code == 429:
+                raise ModelRateLimitError("RKLLM model rate limit exceeded")
+            if response.status_code == 503:
+                raise ModelBusyError("RKLLM server is busy")
+            if response.status_code >= 500:
+                raise ModelError(f"RKLLM model service returned {response.status_code}", retryable=True)
+            if response.status_code >= 400:
+                raise ModelError(f"RKLLM model rejected the request with {response.status_code}")
+            try:
+                completion = RKLLMChatCompletionResponse.model_validate(response.json())
+                content = completion.choices[0].message.content.strip()
+                if not content:
+                    raise ValueError("message.content must be non-empty text")
+            except (ValueError, IndexError, ValidationError) as exc:
+                raise ModelError("RKLLM model returned an invalid text response") from exc
+            return content
+        finally:
+            self._semaphore.release()
+
     async def close(self) -> None:
         if self._owns_client:
             await self._client.aclose()

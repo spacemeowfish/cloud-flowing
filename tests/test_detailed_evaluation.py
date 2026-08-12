@@ -62,6 +62,7 @@ def _registry() -> ToolRegistry:
     registry = ToolRegistry()
     schemas = {
         "file_open": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False},
+        "general_chat": {"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"], "additionalProperties": False},
         "knowledge_query": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False},
         "meeting_process": {"type": "object", "properties": {"source_path": {"type": "string"}}, "required": ["source_path"], "additionalProperties": False},
         "reminder_create": {"type": "object", "properties": {"action": {"type": "string"}}, "required": ["action"], "additionalProperties": False},
@@ -83,18 +84,20 @@ async def test_detailed_evaluation_records_invalid_model_case_and_continues(tmp_
             {"arguments": {}},
             {"arguments": {}},
             {"intent": "knowledge_query", "confidence": 0.9},
-            {"arguments": {"query": "保修期"}, "missing_fields": []},
+            {"arguments": {"query": "valid case"}, "missing_fields": []},
         ]
     )
     service = EvaluationService(ModelGateway(adapter), registry=_registry())
     cases = [
-        EvaluationCase(id="invalid", input_text="坏输出", expected_intent="knowledge_query", expected_tool="knowledge_query", expected_arguments={"query": "坏输出"}),
+        # These neutral inputs deliberately bypass deterministic pre-routing so
+        # this test continues to exercise model-schema repair and recovery.
+        EvaluationCase(id="invalid", input_text="invalid case", expected_intent="knowledge_query", expected_tool="knowledge_query", expected_arguments={"query": "invalid case"}),
         EvaluationCase(
             id="valid",
-            input_text="保修期",
+            input_text="valid case",
             expected_intent="knowledge_query",
             expected_tool="knowledge_query",
-            expected_arguments={"query": "保修期"},
+            expected_arguments={"query": "valid case"},
             expected_pipeline_outcome="executed",
         ),
     ]
@@ -168,10 +171,10 @@ async def test_detailed_evaluation_marks_cloud_invalid_json_as_model_schema_inva
     service = EvaluationService(ModelGateway(InvalidStructuredAdapter([])), registry=_registry())
     case = EvaluationCase(
         id="malformed-json",
-        input_text="\u67e5\u8be2\u4fdd\u4fee\u671f",
+        input_text="malformed case",
         expected_intent="knowledge_query",
         expected_tool="knowledge_query",
-        expected_arguments={"query": "\u4fdd\u4fee\u671f"},
+        expected_arguments={"query": "malformed case"},
     )
     try:
         report = await service.run([case], detailed=True)

@@ -12,6 +12,7 @@ from agent_platform.config import Settings
 from agent_platform.core.errors import ConfigurationError, ModelError, ModelSchemaError
 from agent_platform.core.interfaces import ModelAdapter
 from agent_platform.core.intent_router import pre_route_intent
+from agent_platform.core.parameter_normalizer import deterministic_pre_route_arguments
 from agent_platform.models import (
     INTENT_CLASSIFICATION_SCHEMA,
     DataLevel,
@@ -45,6 +46,12 @@ class ModelGateway:
         self._adapter = adapter
         self._fallback_adapter = fallback_adapter
         self._fallback_data_levels = fallback_data_levels
+
+    @property
+    def is_local_model(self) -> bool:
+        """Whether the primary adapter executes on the local device."""
+
+        return not isinstance(self._adapter, CloudModelAdapter)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> "ModelGateway":
@@ -111,6 +118,28 @@ class ModelGateway:
             result = await self._fallback_adapter.generate(messages, response_schema, max_tokens)
             return self._validate_result(result, response_schema)
 
+    async def generate_text(
+        self,
+        messages: Sequence[ModelMessage],
+        max_tokens: int = 512,
+        *,
+        data_level: DataLevel | None = None,
+    ) -> str:
+        """Generate free text without applying the structured Agent JSON contract."""
+
+        try:
+            return await self._adapter.generate_text(messages, max_tokens)
+        except ModelError as exc:
+            can_fallback = (
+                self._fallback_adapter is not None
+                and exc.retryable
+                and data_level is not None
+                and data_level in self._fallback_data_levels
+            )
+            if not can_fallback:
+                raise
+            return await self._fallback_adapter.generate_text(messages, max_tokens)
+
     async def interpret(
         self,
         request_text: str,
@@ -141,6 +170,25 @@ class ModelGateway:
             route_source = f"pre_route:{decision.rule}"
 
         selected_schema = build_argument_extraction_schema(response_schema, selected_intent)
+        deterministic_arguments = (
+            deterministic_pre_route_arguments(selected_intent, request_text) if decision is not None else None
+        )
+        if deterministic_arguments is not None:
+            raw = self._validate_result(
+                {"arguments": deterministic_arguments, "missing_fields": []},
+                selected_schema,
+            )
+            return InterpretationResult(
+                intent=IntentResult(
+                    intent=selected_intent,
+                    arguments=dict(raw["arguments"]),
+                    missing_fields=[],
+                    confidence=selected_confidence,
+                ),
+                route_source=f"{route_source}:deterministic_arguments",
+                model_calls=0,
+                schema_repaired=False,
+            )
         messages = [ModelMessage(role=MessageRole.USER, content=request_text)]
         schema_repaired = False
         try:

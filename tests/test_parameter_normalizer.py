@@ -377,7 +377,7 @@ async def test_agent_uses_deterministic_knowledge_arguments_before_schema_valida
         task = await container.agent.submit(TaskCreate(text="\u67e5\u8be2\u4fdd\u4fee\u671f"))
         assert task.state == TaskState.COMPLETED
         assert task.context["arguments"] == {"query": "\u4fdd\u4fee\u671f"}
-        assert task.context["normalization_rules"] == ["knowledge_query.question_to_query"]
+        assert task.context["normalization_rules"] == []
     finally:
         await container.close()
 

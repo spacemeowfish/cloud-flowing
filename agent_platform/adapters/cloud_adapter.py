@@ -81,6 +81,39 @@ class CloudModelAdapter(ModelAdapter):
             error_detail="Cloud model returned invalid structured JSON",
         )
 
+    async def generate_text(
+        self,
+        messages: Sequence[ModelMessage],
+        max_tokens: int = 512,
+    ) -> str:
+        """Generate provider text without a JSON response format."""
+
+        payload = {
+            "model": self._model,
+            "messages": [message.model_dump(mode="json") for message in messages],
+            "max_tokens": max_tokens,
+            "temperature": 0,
+        }
+        try:
+            response = await self._client.post(self._url, json=payload)
+        except httpx.TimeoutException as exc:
+            raise ModelTimeoutError("Cloud model request timed out") from exc
+        except httpx.HTTPError as exc:
+            raise ModelError("Cloud model connection failed", retryable=True) from exc
+        if response.status_code == 429:
+            raise ModelRateLimitError("Cloud model rate limit exceeded")
+        if response.status_code >= 500:
+            raise ModelError(f"Cloud model service returned {response.status_code}", retryable=True)
+        if response.status_code >= 400:
+            raise ModelError(f"Cloud model rejected the request with {response.status_code}")
+        try:
+            content = response.json()["choices"][0]["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise TypeError("message.content must be non-empty text")
+        except (ValueError, KeyError, IndexError, TypeError) as exc:
+            raise ModelError("Cloud model returned an invalid text response") from exc
+        return content.strip()
+
     async def close(self) -> None:
         if self._owns_client:
             await self._client.aclose()

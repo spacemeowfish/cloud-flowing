@@ -88,9 +88,18 @@ class DatabaseInUseError(AgentPlatformError):
     code = "database_in_use"
 
 
+class SpeechUnavailableError(AgentPlatformError):
+    code = "speech_unavailable"
+
+
+class SpeechSynthesisError(AgentPlatformError):
+    code = "speech_synthesis_error"
+    retryable = True
+
+
 __all__ = [
     "AgentPlatformError", "ConcurrencyConflictError", "ConfigurationError", "DatabaseInUseError",
     "InvalidTransitionError", "ModelBusyError", "ModelError", "ModelRateLimitError", "ModelSchemaError", "ModelTimeoutError",
-    "PermissionDeniedError", "SchemaValidationError", "SensitiveDataError", "TaskNotFoundError",
+    "PermissionDeniedError", "SchemaValidationError", "SensitiveDataError", "SpeechSynthesisError", "SpeechUnavailableError", "TaskNotFoundError",
     "ToolExecutionError", "ToolNotFoundError", "ToolTimeoutError",
 ]

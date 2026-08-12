@@ -28,7 +28,7 @@ INTENT_RESPONSE_SCHEMA: dict[str, JsonValue] = {
     "properties": {
         "intent": {
             "type": "string",
-            "enum": ["file_open", "knowledge_query", "meeting_process", "reminder_create", "todo_manage", "schedule_manage", "text_polish"],
+            "enum": ["file_open", "general_chat", "knowledge_query", "meeting_process", "reminder_create", "todo_manage", "schedule_manage", "text_polish"],
         },
         "arguments": {"type": "object"},
         "missing_fields": {"type": "array", "items": {"type": "string"}},

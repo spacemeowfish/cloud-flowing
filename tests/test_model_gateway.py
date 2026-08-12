@@ -22,6 +22,7 @@ from agent_platform.models import DataLevel, INTENT_RESPONSE_SCHEMA, MessageRole
         ("创建日程 明天下午2点开会", "schedule_manage"),
         ("润色：明天提交", "text_polish"),
         (r"整理会议纪要 C:\demo\meeting.txt", "meeting_process"),
+        ("1+1等于多少？", "general_chat"),
     ],
 )
 async def test_mock_adapter_supported_intents(text, intent):
@@ -49,6 +50,19 @@ async def test_cloud_adapter_valid_json():
     await adapter._client.aclose()
 
 
+@pytest.mark.asyncio
+async def test_cloud_adapter_free_text_omits_json_response_format():
+    async def handler(request):
+        payload = json.loads(request.content)
+        assert "response_format" not in payload
+        assert payload["messages"] == [{"role": "user", "content": "hello"}]
+        return httpx.Response(200, json={"choices": [{"message": {"content": "  hi  "}}]})
+
+    adapter = _cloud_adapter(handler)
+    assert await adapter.generate_text([ModelMessage(role=MessageRole.USER, content="hello")]) == "hi"
+    await adapter._client.aclose()
+
+
 def _acceptance_registry() -> ToolRegistry:
     class MetadataTool:
         def __init__(self, name, required, properties):
@@ -70,6 +84,7 @@ def _acceptance_registry() -> ToolRegistry:
     registry = ToolRegistry()
     specs = {
         "file_open": (["query"], {"query": {"type": "string"}}),
+        "general_chat": (["text"], {"text": {"type": "string"}}),
         "knowledge_query": (["query"], {"query": {"type": "string"}}),
         "meeting_process": (["source_path"], {"source_path": {"type": "string"}}),
         "reminder_create": (["action"], {"action": {"type": "string"}}),
@@ -188,12 +203,12 @@ async def test_interpret_uses_pre_route_and_only_selected_intent_schema():
     gateway = ModelGateway(adapter)
 
     result = await gateway.interpret(
-        "待办：1小时后检查服务",
+        "提醒我30分钟后开会",
         build_model_acceptance_schema(_acceptance_registry()),
     )
 
     assert result.intent.intent == "reminder_create"
-    assert result.route_source == "pre_route:relative_time_priority"
+    assert result.route_source == "pre_route:explicit_reminder"
     assert result.model_calls == 1
     assert argument_extraction_contract(adapter.calls[0][1])[0] == "reminder_create"
 

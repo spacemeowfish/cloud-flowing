@@ -104,6 +104,47 @@ class OllamaModelAdapter(ModelAdapter):
             error_detail="Ollama model returned invalid structured JSON",
         )
 
+    async def generate_text(
+        self,
+        messages: Sequence[ModelMessage],
+        max_tokens: int = 512,
+    ) -> str:
+        """Use Ollama's native free-text mode without ``format=json``."""
+
+        payload = {
+            "model": self._model,
+            "messages": [message.model_dump(mode="json") for message in messages],
+            "stream": False,
+            "think": self._thinking_enabled,
+            "keep_alive": self._keep_alive,
+            "options": {
+                "temperature": 0,
+                "num_predict": min(max_tokens, self._max_new_tokens),
+            },
+        }
+        try:
+            response = await self._client.post(self._url, json=payload)
+        except httpx.TimeoutException as exc:
+            raise ModelTimeoutError("Ollama model request timed out") from exc
+        except httpx.HTTPError as exc:
+            raise ModelError("Ollama model connection failed", retryable=True) from exc
+
+        if response.status_code == 429:
+            raise ModelRateLimitError("Ollama model rate limit exceeded")
+        if response.status_code == 503:
+            raise ModelBusyError("Ollama server is busy")
+        if response.status_code >= 500:
+            raise ModelError(f"Ollama model service returned {response.status_code}", retryable=True)
+        if response.status_code >= 400:
+            raise ModelError(f"Ollama model rejected the request with {response.status_code}")
+        try:
+            content = response.json()["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise TypeError("message.content must be non-empty text")
+        except (ValueError, KeyError, TypeError) as exc:
+            raise ModelError("Ollama model returned an invalid text response") from exc
+        return content.strip()
+
     async def close(self) -> None:
         if self._owns_client:
             await self._client.aclose()
