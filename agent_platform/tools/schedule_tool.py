@@ -186,9 +186,10 @@ class ScheduleTool(Tool):
         end_at: datetime | None = None
         end_text = str(arguments.get("end_text", "")).strip()
         if not end_text:
+            normalized_start_text = self._parser.normalize(str(arguments["start_text"]))
             interval = re.search(
                 r"(?:到|至)\s*((?:上午|下午|晚上)?\s*\d{1,2}\s*(?::\s*\d{2}|点(?:半)?))",
-                str(arguments["start_text"]),
+                normalized_start_text,
             )
             end_text = interval.group(1) if interval else ""
         if end_text:
@@ -336,14 +337,24 @@ class ScheduleTool(Tool):
             rows = self._connection.execute(sql, tuple(params)).fetchall()
         occurrences: list[dict[str, JsonValue]] = []
         truncated = False
-        for row in rows:
-            for occurrence in self._expand_row(row, range_start, range_end):
-                if len(occurrences) >= _MAX_OCCURRENCES:
-                    truncated = True
+        # A title-only query is primarily used to select a record for cancel or
+        # update. It must still find an active schedule outside the current week;
+        # explicit range queries retain bounded occurrence expansion.
+        title_candidate_mode = bool(title_query and "range" not in arguments)
+        if title_candidate_mode:
+            for row in rows[:_MAX_OCCURRENCES]:
+                base_start = datetime.fromisoformat(str(row["start_at"]))
+                occurrences.append(self._occurrence(row, base_start))
+            truncated = len(rows) > _MAX_OCCURRENCES
+        else:
+            for row in rows:
+                for occurrence in self._expand_row(row, range_start, range_end):
+                    if len(occurrences) >= _MAX_OCCURRENCES:
+                        truncated = True
+                        break
+                    occurrences.append(occurrence)
+                if truncated:
                     break
-                occurrences.append(occurrence)
-            if truncated:
-                break
         occurrences.sort(key=lambda item: (str(item["start_at"]), int(item["schedule_id"])))
         return ToolReceipt(
             tool_name=self.metadata.name,
@@ -355,6 +366,7 @@ class ScheduleTool(Tool):
                 "range_start": range_start.isoformat(),
                 "range_end": range_end.isoformat(),
                 "truncated": truncated,
+                "candidate_mode": title_candidate_mode,
             },
         )
 

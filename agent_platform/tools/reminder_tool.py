@@ -19,32 +19,119 @@ from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceip
 
 _WEEKDAYS = {"一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5, "日": 6, "天": 6}
 
+# Keep the stored reminder body separate from the natural-language command that
+# created it.  The same cleanup is applied to legacy rows when they are read so
+# an existing database does not keep displaying the command prefix.
+_REMINDER_COMMAND_PREFIX = re.compile(
+    r"^\s*(?:请|帮我|请帮我)?(?:提醒我|提醒|设置提醒|创建提醒)[：:\s]*"
+)
+_CN_TIME_NUMBER = r"[0-9零〇一二两三四五六七八九十百千万壹贰叁肆伍陆柒捌玖拾佰仟萬億]+"
+_REMINDER_TIME_PREFIX = re.compile(
+    rf"^\s*(?:"
+    rf"{_CN_TIME_NUMBER}\s*(?:分钟|小时|天)后"
+    rf"|(?:今天|明天|后天)(?:(?:上午|下午|晚上)\s*)?"
+    rf"{_CN_TIME_NUMBER}(?::\s*\d{{2}}|点(?:半)?)"
+    rf"|每周[一二三四五六日天壹贰叁肆伍陆柒捌玖]+(?:(?:上午|下午|晚上)\s*)?"
+    rf"{_CN_TIME_NUMBER}(?::\s*\d{{2}}|点(?:半)?)"
+    rf")\s*(?:提醒我|提醒)?[：:\s]*"
+)
+_REMINDER_TIME_SUFFIX = re.compile(
+    rf"[，,、\s]*(?:{_CN_TIME_NUMBER}\s*(?:分钟|小时|天)后|"
+    rf"(?:今天|明天|后天)(?:(?:上午|下午|晚上)\s*)?{_CN_TIME_NUMBER}(?::\s*\d{{2}}|点(?:半)?)|"
+    rf"每周[一二三四五六日天壹贰叁肆伍陆柒捌玖]+(?:(?:上午|下午|晚上)\s*)?{_CN_TIME_NUMBER}(?::\s*\d{{2}}|点(?:半)?))\s*$"
+)
+
+
+def clean_reminder_text(raw_text: str) -> str:
+    """Return the user-facing reminder body without command/time boilerplate."""
+
+    original = str(raw_text or "").strip()
+    if not original:
+        return original
+    cleaned = _REMINDER_COMMAND_PREFIX.sub("", original, count=1)
+    # Accept both ``提醒我 5 分钟后开会`` and ``5 分钟后提醒我开会``.
+    cleaned = _REMINDER_TIME_PREFIX.sub("", cleaned, count=1)
+    cleaned = _REMINDER_COMMAND_PREFIX.sub("", cleaned, count=1)
+    cleaned = _REMINDER_TIME_SUFFIX.sub("", cleaned, count=1)
+    return cleaned.strip() or original
+
 
 class ChineseTimeParser:
-    _CN_DIGITS = {"一": "1", "二": "2", "两": "2", "三": "3", "四": "4",
-                  "五": "5", "六": "6", "七": "7", "八": "8", "九": "9",
-                  "半": "0.5"}
-
-    _CN_TENS: dict[str, str] = {"十": "10"}
-    _CN_COMPOUND: list[tuple[str, str]] = [
-        ("二十", "20"), ("三十", "30"), ("四十", "40"), ("五十", "50"),
-        ("六十", "60"), ("七十", "70"), ("八十", "80"), ("九十", "90"),
-    ]
+    # Both everyday and financial/uppercase Chinese numerals occur in spoken
+    # schedule input.  Parsing a complete number token avoids the old ``十五``
+    # -> ``105`` replacement bug.
+    _CN_DIGITS = {
+        "零": 0,
+        "〇": 0,
+        "○": 0,
+        "一": 1,
+        "壹": 1,
+        "二": 2,
+        "贰": 2,
+        "两": 2,
+        "俩": 2,
+        "三": 3,
+        "叁": 3,
+        "四": 4,
+        "肆": 4,
+        "五": 5,
+        "伍": 5,
+        "六": 6,
+        "陆": 6,
+        "七": 7,
+        "柒": 7,
+        "八": 8,
+        "捌": 8,
+        "九": 9,
+        "玖": 9,
+    }
+    _CN_UNITS = {
+        "十": 10,
+        "拾": 10,
+        "百": 100,
+        "佰": 100,
+        "千": 1000,
+        "仟": 1000,
+        "万": 10000,
+        "萬": 10000,
+        "亿": 100000000,
+        "億": 100000000,
+    }
+    _CN_NUMBER_TOKEN = re.compile(
+        r"[零〇○一二两俩三四五六七八九十百千万亿壹贰叁肆伍陆柒捌玖拾佰仟萬億]+"
+    )
 
     def __init__(self, timezone: str = "Asia/Shanghai") -> None:
         self.timezone = ZoneInfo(timezone)
 
     def normalize(self, text: str) -> str:
-        """Normalize the limited Chinese numerals accepted by local time parsing."""
+        """Normalize Chinese numeric tokens to Arabic digits for regex parsing."""
 
-        normalized = text
-        for cn, digit in self._CN_COMPOUND:
-            normalized = normalized.replace(cn, digit)
-        for cn, digit in self._CN_TENS.items():
-            normalized = normalized.replace(cn, digit)
-        for cn, digit in self._CN_DIGITS.items():
-            normalized = normalized.replace(cn, digit)
-        return normalized
+        def replace(match: re.Match[str]) -> str:
+            token = match.group(0)
+            # A token without a unit is a digit sequence (e.g. 二〇二六 -> 2026).
+            if not any(char in self._CN_UNITS for char in token):
+                return "".join(str(self._CN_DIGITS[char]) for char in token)
+            section = 0
+            total = 0
+            number = 0
+            for char in token:
+                digit = self._CN_DIGITS.get(char)
+                if digit is not None:
+                    number = number * 10 + digit
+                    continue
+                unit = self._CN_UNITS[char]
+                if unit < 10000:
+                    section += (number or 1) * unit
+                    number = 0
+                else:
+                    section += number
+                    total += (section or 1) * unit
+                    section = 0
+                    number = 0
+            return str(total + section + number)
+
+        return self._CN_NUMBER_TOKEN.sub(replace, text)
 
     def parse_time_of_day(self, text: str) -> tuple[int, int]:
         """Parse an explicit clock time without assigning a date."""
@@ -139,11 +226,10 @@ class ChineseTimeParser:
             delta = {"分钟": timedelta(minutes=value), "小时": timedelta(hours=value), "天": timedelta(days=value)}[unit]
             return current + delta, None
 
-        weekly = re.search(r"每周([一二三四五六日天]).*?(\d{1,2})(?::(\d{2})|点)", text)
+        weekly = re.search(r"每周([一二三四五六日天])", text)
         if weekly:
             weekday = _WEEKDAYS[weekly.group(1)]
-            hour = int(weekly.group(2))
-            minute = int(weekly.group(3) or 0)
+            hour, minute = self.parse_time_of_day(text)
             if "下午" in normalized and hour < 12:
                 hour += 12
             days = (weekday - current.weekday()) % 7
@@ -152,10 +238,17 @@ class ChineseTimeParser:
                 candidate += timedelta(days=7)
             return candidate, f"weekly:{weekday}:{hour:02d}:{minute:02d}"
 
-        iso = re.search(r"(20\d{2})[-/年](\d{1,2})[-/月](\d{1,2})日?\s*(\d{1,2})(?::(\d{2})|点)?", normalized)
+        iso = re.search(
+            r"(20\d{2})[-/年](\d{1,2})[-/月](\d{1,2})日?\s*"
+            r"(上午|下午|晚上)?\s*(\d{1,2})(?::(\d{2})|点(?:半)?)?",
+            normalized,
+        )
         if iso:
-            hour = int(iso.group(4))
-            minute = int(iso.group(5) or 0)
+            period = iso.group(4) or ""
+            hour = int(iso.group(5))
+            minute = 30 if iso.group(6) is None and "点半" in iso.group(0) else int(iso.group(6) or 0)
+            if period in {"下午", "晚上"} and hour < 12:
+                hour += 12
             return datetime(int(iso.group(1)), int(iso.group(2)), int(iso.group(3)), hour, minute, tzinfo=self.timezone), None
 
         day_offset = 0
@@ -236,15 +329,38 @@ class ReminderTool(Tool):
         )
 
     def idempotency_key(self, arguments: dict[str, JsonValue]) -> str:
+        if arguments.get("action") == "query":
+            # Query results are mutable.  A stable key would replay the first
+            # result for the whole executor TTL after a create/delete action.
+            return f"reminder:query:{datetime.now(UTC).isoformat()}"
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"reminder:{hashlib.sha256(value.encode()).hexdigest()}"
+
+    @staticmethod
+    def _item(row: sqlite3.Row | dict[str, JsonValue]) -> dict[str, JsonValue]:
+        """Return a stable, human-readable reminder representation."""
+
+        get = row.__getitem__
+        return {
+            "id": int(get("id")),
+            "text": clean_reminder_text(str(get("text"))),
+            "due_at": str(get("due_at")),
+            "repeat_rule": str(get("repeat_rule")) if get("repeat_rule") is not None else None,
+            "status": str(get("status")),
+            "created_at": str(get("created_at")),
+        }
 
     async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
         action = str(arguments["action"])
         if action == "create":
-            text = str(arguments.get("text", ""))
+            raw_text = str(arguments.get("text", ""))
+            text = clean_reminder_text(raw_text)
             when = str(arguments.get("when", "")).strip()
-            expression = f"{text} {when}".strip() if when else text
+            if not text and when:
+                text = clean_reminder_text(when)
+            # Parse the original request so an embedded time such as
+            # ``30分钟后检查服务`` is not removed before the time parser sees it.
+            expression = f"{raw_text} {when}".strip() if when else raw_text.strip()
             try:
                 due_at, repeat_rule = self._parser.parse(expression)
             except ValueError as exc:
@@ -266,21 +382,44 @@ class ReminderTool(Tool):
                 (text, due_at.isoformat(), repeat_rule, datetime.now(UTC).isoformat()),
             )
             self._connection.commit()
-            output = {"id": cursor.lastrowid, "due_at": due_at.isoformat(), "repeat_rule": repeat_rule, "status": "active"}
-            summary = f"已创建提醒，时间：{due_at.isoformat()}"
+            row = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (cursor.lastrowid,)).fetchone()
+            assert row is not None
+            item = self._item(row)
+            output = {"id": cursor.lastrowid, "item": item, "due_at": due_at.isoformat(), "repeat_rule": repeat_rule, "status": "active"}
+            summary = f"已创建提醒 {item['id']}：{item['text']}（{due_at.isoformat()}）"
         elif action in {"cancel", "complete"}:
             reminder_id = int(arguments.get("id", 0))
             status = "cancelled" if action == "cancel" else "completed"
+            existing = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
+            if existing is None:
+                self._connection.commit()
+                output = {"id": reminder_id, "status": status, "updated": False, "item": None}
+                summary = f"未找到提醒 {reminder_id}"
+                return ToolReceipt(
+                    tool_name=self.metadata.name,
+                    actual_arguments=arguments,
+                    success=True,
+                    output_summary=summary,
+                    output=output,
+                )
             cursor = self._connection.execute("UPDATE reminders SET status = ? WHERE id = ?", (status, reminder_id))
             self._connection.commit()
-            output = {"id": reminder_id, "status": status, "updated": cursor.rowcount == 1}
-            summary = f"提醒 {reminder_id} 状态已更新为 {status}"
+            updated = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
+            assert updated is not None
+            item = self._item(updated)
+            output = {"id": reminder_id, "status": status, "updated": cursor.rowcount == 1, "item": item}
+            verb = "已取消" if action == "cancel" else "已完成"
+            summary = f"提醒 {reminder_id} {verb}：{item['text']}（{item['due_at']}）"
         elif action == "delete_all":
+            rows = self._connection.execute("SELECT * FROM reminders ORDER BY due_at, id").fetchall()
             cursor = self._connection.execute("DELETE FROM reminders")
             self._connection.commit()
-            output = {"deleted_count": cursor.rowcount, "status": "deleted"}
-            summary = f"已删除 {cursor.rowcount} 条提醒"
-        else:
+            deleted_items = [self._item(row) for row in rows]
+            output = {"deleted_count": cursor.rowcount, "deleted_items": deleted_items, "status": "deleted"}
+            summary = f"已删除 {cursor.rowcount} 条提醒" + (
+                "：" + "；".join(f"{item['id']} {item['text']}" for item in deleted_items) if deleted_items else ""
+            )
+        elif action == "query":
             output = {"items": self.query(str(arguments.get("scope", "next_7_days")))}
             summary = f"查询到 {len(output['items'])} 条提醒"
         return ToolReceipt(
@@ -304,7 +443,7 @@ class ReminderTool(Tool):
                 "SELECT * FROM reminders WHERE status IN ('active', 'notified') AND due_at BETWEEN ? AND ? ORDER BY due_at",
                 (current.isoformat(), end.isoformat()),
             ).fetchall()
-        return [dict(row) for row in rows]  # type: ignore[return-value]
+        return [self._item(row) for row in rows]
 
     async def poll_due(self, *, now: datetime | None = None) -> int:
         current = now or datetime.now(self._parser.timezone)
@@ -312,7 +451,7 @@ class ReminderTool(Tool):
             "SELECT * FROM reminders WHERE status = 'active' AND due_at <= ? ORDER BY due_at", (current.isoformat(),)
         ).fetchall()
         for row in rows:
-            await self._callback(dict(row))  # type: ignore[arg-type]
+            await self._callback(self._item(row))
             if row["repeat_rule"]:
                 _, weekday, hour, minute = str(row["repeat_rule"]).split(":")
                 due = datetime.fromisoformat(row["due_at"]) + timedelta(days=7)
@@ -321,6 +460,17 @@ class ReminderTool(Tool):
                 self._connection.execute("UPDATE reminders SET status = 'notified' WHERE id = ?", (row["id"],))
         self._connection.commit()
         return len(rows)
+
+    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+        """Expose the selected reminder body to a confirmation UI."""
+
+        if arguments.get("action") not in {"cancel", "complete"} or not isinstance(arguments.get("id"), int):
+            return {}
+        row = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (int(arguments["id"]),)).fetchone()
+        if row is None:
+            return {}
+        item = self._item(row)
+        return {"text": str(item["text"]), "due_at": str(item["due_at"]), "status": str(item["status"])}
 
     async def start_scheduler(self) -> None:
         if self._scheduler_task is None:
@@ -344,4 +494,4 @@ class ReminderTool(Tool):
         self._connection.close()
 
 
-__all__ = ["ChineseTimeParser", "ReminderTool"]
+__all__ = ["ChineseTimeParser", "ReminderTool", "clean_reminder_text"]

@@ -11,6 +11,19 @@ _ABSOLUTE_TEXT_PATH = re.compile(
     re.IGNORECASE,
 )
 _RELATIVE_TIME = re.compile(r"\d+\s*(?:分钟|小时|天)后")
+_ARITHMETIC = re.compile(
+    r"^\s*(?:请)?(?:计算|算一下|算)?\s*[0-9eE.()+\-*/%\s]+\s*(?:等于多少|等于几|是多少|=|＝)?\s*[?？]?\s*$"
+)
+_CHINESE_ARITHMETIC = re.compile(
+    r"^\s*[零一二两三四五六七八九十]+\s*(?:加|减|乘以|乘|除以|除)\s*"
+    r"[零一二两三四五六七八九十]+\s*(?:等于多少|等于几|是多少)?\s*[?？]?\s*$"
+)
+_KNOWLEDGE_BOUND_MARKERS = (
+    "知识库", "本地文档", "本地资料", "文档中", "资料中", "根据文档", "根据资料", "来源",
+    "公司", "产品保修", "产品参数", "设备重启", "设备使用", "设备参数", "设备故障", "保修", "请假",
+    "年假", "差旅", "入职", "报销", "安全规范", "售后", "发布流程", "采购", "会议室", "制度",
+    "政策", "规定", "操作手册",
+)
 
 
 @dataclass(frozen=True)
@@ -23,12 +36,19 @@ def pre_route_intent(text: str) -> PreRouteDecision | None:
     """Return an intent only when product semantics have a high-confidence anchor."""
 
     normalized = text.strip()
+    if _ARITHMETIC.fullmatch(normalized) or _CHINESE_ARITHMETIC.fullmatch(normalized):
+        return PreRouteDecision("general_chat", "deterministic_arithmetic")
+    if re.match(r"^(?:请)?(?:翻译|把.+翻译|将.+翻译)", normalized):
+        return PreRouteDecision("general_chat", "translation_request")
     if _ABSOLUTE_TEXT_PATH.search(normalized) and any(
         marker in normalized for marker in ("会议纪要", "会议记录", "整理会议", "会议文稿", "会议文稿在")
     ):
         return PreRouteDecision("meeting_process", "meeting_text_path")
 
-    if re.match(r"^(?:请|帮我|请帮我)?(?:润色|改写|草拟|缩写|总结(?:这段)?|调整语气|语气调整)", normalized):
+    if re.match(
+        r"^(?:请|帮我|请帮我)?(?:润色|改写|草拟|缩写|总结(?:这段)?|调整语气|语气调整|调整为(?:正式|轻松)?语气)",
+        normalized,
+    ):
         return PreRouteDecision("text_polish", "text_operation_prefix")
 
     if "提醒" in normalized:
@@ -38,7 +58,7 @@ def pre_route_intent(text: str) -> PreRouteDecision | None:
     if _RELATIVE_TIME.search(normalized) and "待办" in normalized:
         return PreRouteDecision("reminder_create", "relative_time_priority")
 
-    if "日程" in normalized or re.search(r"(?:今天|明天|后天).*(?:有什么|有哪些).*安排", normalized):
+    if "日程" in normalized or re.search(r"(?:今天|明天|后天|本周|下周).*(?:有什么|有哪些).*安排", normalized):
         return PreRouteDecision("schedule_manage", "explicit_schedule")
     if any(marker in normalized for marker in ("待办", "待处理", "标记为完成")):
         return PreRouteDecision("todo_manage", "explicit_todo")
@@ -48,13 +68,20 @@ def pre_route_intent(text: str) -> PreRouteDecision | None:
     ):
         return PreRouteDecision("file_open", "explicit_file_action")
 
-    if (
-        re.match(r"^(?:请|帮我|请帮我)?(?:查询|查一下|告诉我|如何)", normalized)
-        or "知识库" in normalized
-        or normalized.endswith("是什么")
-    ):
+    if is_knowledge_bound_request(normalized):
         return PreRouteDecision("knowledge_query", "knowledge_question")
+    if re.search(r"[?？]$", normalized) or re.match(
+        r"^(?:请|帮我|请帮我)?(?:查询|查一下|告诉我|如何|为什么|什么是|谁是)", normalized
+    ) or normalized.endswith("是什么"):
+        return PreRouteDecision("general_chat", "general_question")
     return None
 
 
-__all__ = ["PreRouteDecision", "pre_route_intent"]
+def is_knowledge_bound_request(text: str) -> bool:
+    """Whether an empty local retrieval must remain an explicit no-hit result."""
+
+    normalized = text.strip()
+    return any(marker in normalized for marker in _KNOWLEDGE_BOUND_MARKERS)
+
+
+__all__ = ["PreRouteDecision", "is_knowledge_bound_request", "pre_route_intent"]

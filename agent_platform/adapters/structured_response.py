@@ -148,6 +148,7 @@ def _intent_system_prompt(response_schema: dict[str, JsonValue]) -> str:
         return _selected_intent_system_prompt(intent, names)
     fields = contract or {
         "file_open": ("query",),
+        "general_chat": ("text",),
         "knowledge_query": ("query",),
         "meeting_process": ("source_path",),
         "reminder_create": ("action", "text", "when", "id", "scope"),
@@ -161,6 +162,8 @@ def _intent_system_prompt(response_schema: dict[str, JsonValue]) -> str:
         "助手：{\"intent\":\"file_open\",\"arguments\":{\"query\":\"会议记录\"},\"missing_fields\":[],\"confidence\":0.95}\n\n"
         "用户：查询产品保修期\n"
         "助手：{\"intent\":\"knowledge_query\",\"arguments\":{\"query\":\"产品保修期\"},\"missing_fields\":[],\"confidence\":0.95}\n\n"
+        "用户：1+1等于多少\n"
+        "助手：{\"intent\":\"general_chat\",\"arguments\":{\"text\":\"1+1等于多少\"},\"missing_fields\":[],\"confidence\":0.99}\n\n"
         "用户：取消提醒 12\n"
         "助手：{\"intent\":\"reminder_create\",\"arguments\":{\"action\":\"cancel\",\"id\":12},\"missing_fields\":[],\"confidence\":0.97}\n\n"
         "用户：总结这段：本季度完成了三个项目\n"
@@ -182,7 +185,7 @@ def _intent_system_prompt(response_schema: dict[str, JsonValue]) -> str:
         "可选意图和允许的参数字段：\n"
         f"{field_lines}\n\n"
         "规则：\n"
-        "- file_open 用于找或打开文件；knowledge_query 用于查询已授权知识；meeting_process 用于从会议文本路径生成纪要。\n"
+        "- file_open 用于找或打开文件；knowledge_query 只用于查询已授权本地知识；general_chat 用于不属于其他工具的数学、常识、闲聊和翻译；meeting_process 用于从会议文本路径生成纪要。\n"
         "- reminder_create.action 只能是 create、query、cancel、complete、delete_all。查看未来提醒用 query。\n"
         "- 只有明确“取消提醒 + 数字 ID”才用 cancel；只有明确“删除所有/全部提醒”才用 delete_all。不得编造路径、ID 或时间。\n"
         "- todo_manage 的 complete、delete、update 只能在用户给出数字 ID 时使用；按标题完成或删除必须用 query + title_query 返回候选。\n"
@@ -199,19 +202,21 @@ def _classification_system_prompt() -> str:
         "CONTRACT_KIND:intent_classification\n"
         "你只判断用户请求属于哪个意图，不提取参数。只能输出一个 JSON 对象："
         "{\"intent\":\"...\",\"confidence\":0.95}。不得输出 arguments、解释或 Markdown。\n"
-        "可选意图：file_open, knowledge_query, meeting_process, reminder_create, todo_manage, schedule_manage, text_polish。\n"
+        "可选意图：file_open, general_chat, knowledge_query, meeting_process, reminder_create, todo_manage, schedule_manage, text_polish。\n"
         "边界规则和对比示例：\n"
         "- 找会议记录 -> file_open；整理会议纪要 C:/docs/周会.txt -> meeting_process。\n"
         "- 待办：1小时后检查服务 -> reminder_create；添加待办 检查服务 -> todo_manage。\n"
         "- 每周一上午9点提醒我开会 -> reminder_create；创建日程 每周一上午9点开会 -> schedule_manage。\n"
         "- 取消日程 项目会 -> schedule_manage；取消提醒 12 -> reminder_create。\n"
-        "- 总结这段文字 -> text_polish；查询产品保修期 -> knowledge_query。"
+        "- 总结这段文字 -> text_polish；查询产品保修期 -> knowledge_query。\n"
+        "- 1+1等于多少、常识、闲聊、翻译，以及不属于其他工具的请求 -> general_chat。"
     )
 
 
 def _selected_intent_system_prompt(intent: str, fields: tuple[str, ...]) -> str:
     examples = {
         "file_open": "打开预算表.xlsx => {\"intent\":\"file_open\",\"arguments\":{\"query\":\"预算表.xlsx\"},\"missing_fields\":[],\"confidence\":0.98}",
+        "general_chat": "1+1等于多少 => {\"intent\":\"general_chat\",\"arguments\":{\"text\":\"1+1等于多少\"},\"missing_fields\":[],\"confidence\":0.99}",
         "knowledge_query": "公司报销标准是什么 => {\"intent\":\"knowledge_query\",\"arguments\":{\"query\":\"公司报销标准是什么\"},\"missing_fields\":[],\"confidence\":0.96}",
         "meeting_process": "会议文稿在 C:/docs/周会.txt => {\"intent\":\"meeting_process\",\"arguments\":{\"source_path\":\"C:/docs/周会.txt\"},\"missing_fields\":[],\"confidence\":0.98}",
         "reminder_create": "提醒我30分钟后开会 => {\"intent\":\"reminder_create\",\"arguments\":{\"action\":\"create\",\"text\":\"开会\",\"when\":\"30分钟后\"},\"missing_fields\":[],\"confidence\":0.98}",
@@ -225,6 +230,7 @@ def _selected_intent_system_prompt(intent: str, fields: tuple[str, ...]) -> str:
         "schedule_manage": "创建使用 title/start_text；重复日程使用 recurrence，weekly 还需 weekdays；按标题取消先 query + title_query。",
         "meeting_process": "只提取一个绝对 txt/md 路径；Windows 路径在 JSON 中使用正斜杠。",
         "text_polish": "总结/缩写=summarize，草拟=draft，语气调整=tone_adjust，其余改写/润色=polish；不要输出 tone:null。",
+        "general_chat": "只把用户原始问题放入 text；不得改写成知识库查询或添加其他字段。",
     }
     allowed = ", ".join(fields)
     return (
@@ -245,6 +251,10 @@ def _argument_extraction_system_prompt(
         "file_open": [
             "打开预算表.xlsx => {\"arguments\":{\"query\":\"预算表.xlsx\"},\"missing_fields\":[]}",
             "找文件在哪：设备手册 => {\"arguments\":{\"query\":\"设备手册\"},\"missing_fields\":[]}",
+        ],
+        "general_chat": [
+            "1+1等于多少 => {\"arguments\":{\"text\":\"1+1等于多少\"},\"missing_fields\":[]}",
+            "把你好翻译成英文 => {\"arguments\":{\"text\":\"把你好翻译成英文\"},\"missing_fields\":[]}",
         ],
         "knowledge_query": [
             "查询产品保修期 => {\"arguments\":{\"query\":\"产品保修期\"},\"missing_fields\":[]}",
@@ -279,6 +289,7 @@ def _argument_extraction_system_prompt(
         "todo_manage": "action 必须是 create/query/update/complete/delete；按标题完成或删除使用 query + title_query。",
         "schedule_manage": "action 必须是 create/query/cancel；创建必须包含 title 和 start_text；按标题取消先 query + title_query。",
         "text_polish": "arguments 必须包含 operation 和 text；不得输出 tone:null。",
+        "general_chat": "arguments 必须且只能包含非空 text；保留用户原始问题。",
     }
     schema_json = json.dumps(response_schema, ensure_ascii=False, separators=(",", ":"))
     return (

@@ -30,5 +30,5 @@ rules:
     requires_confirmation: true
     title: 确认删除全部提醒
     message: 即将删除全部提醒，此操作不可撤销。确认继续？
-    impact: 所有本地提醒和待办将被永久删除
+    impact: 所有本地提醒将被永久删除
     reversible: false

@@ -257,10 +257,29 @@ async def test_text_draft_preserves_facts():
         {"operation": "polish", "text": "项目预算300万元，日期2026年8月1日，电话13800138000。"}
     )
     text = receipt.output["text"]
-    assert text.startswith("【草稿】")
+    assert not text.startswith("【草稿】")
     assert "300万元" in text
     assert "2026年8月1日" in text
     assert "13800138000" in text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "extra", "prompt_fragment"),
+    [
+        ("polish", {}, "请润色以下文字"),
+        ("summarize", {"target_length": 40}, "请用简洁的语言总结"),
+        ("tone_adjust", {"tone": "formal"}, "语气调整为formal风格"),
+        ("draft", {}, "请根据以下内容草拟"),
+    ],
+)
+async def test_mock_text_processing_does_not_return_the_instruction_prompt(operation, extra, prompt_fragment):
+    tool = TextProcessingTool(ModelGateway(MockModelAdapter()))
+    receipt = await tool.execute({"operation": operation, "text": "项目将在2026年8月1日上线。", **extra})
+    result = str(receipt.output["text"])
+    assert not result.startswith("【草稿】")
+    assert prompt_fragment not in result
+    assert "项目将在2026年8月1日上线" in result
 
 
 class _TextPayloadAdapter:
@@ -294,10 +313,88 @@ async def test_each_text_operation_executes_and_preserves_protected_facts(operat
 
     assert receipt.success is True
     assert receipt.output["status"] == "draft"
-    assert receipt.output["text"].startswith("【草稿】")
+    assert not receipt.output["text"].startswith("【草稿】")
     assert all(fact in receipt.output["text"] for fact in receipt.output["facts_preserved"])
     if operation == "polish":
-        assert len(receipt.output["text"].removeprefix("【草稿】")) <= len(original) * 2
+        assert len(receipt.output["text"]) >= len(original)
+
+
+class _BadTextAdapter:
+    def __init__(self, value: str):
+        self.value = value
+
+    async def generate(self, messages, response_schema, max_tokens=512):
+        del messages, response_schema, max_tokens
+        return {"text": self.value}
+
+    async def close(self):
+        return None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad_output", ["请尽快提交相关材料，以确保流程的", "<FACT_0>", "<占位符>请尽快提交资料"])
+async def test_text_processing_quality_gate_falls_back_without_leaking_markers(bad_output):
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter(bad_output)))
+    receipt = await tool.execute({"operation": "polish", "text": "请尽快提交资料"})
+    text = str(receipt.output["text"])
+    assert text == "请尽快提交资料"
+    assert "【草稿】" not in text
+    assert "<" not in text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "model_output", "expected"),
+    [
+        (
+            "polish",
+            "本季度完成了三个项目。所有占位符保持原样。",
+            "本季度完成了三个项目。",
+        ),
+        (
+            "draft",
+            "通知：本季度完成了三个项目。所有 ext{FACT_n}占位符必须原样保留。",
+            "通知：本季度完成了三个项目。",
+        ),
+        (
+            "polish",
+            "Please submit the materials soon.",
+            "请尽快提交材料。",
+        ),
+        (
+            "tone_adjust",
+            "调整后的文本",
+            "本季度完成了三个项目。",
+        ),
+        (
+            "draft",
+            "草稿内容 通知：本季度完成了三个项目。",
+            "通知：本季度完成了三个项目。",
+        ),
+    ],
+)
+async def test_text_processing_removes_instruction_echo_and_language_drift(operation, model_output, expected):
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter(model_output)))
+    receipt = await tool.execute({"operation": operation, "text": "请尽快提交材料。" if operation == "polish" and "Please" in model_output else "本季度完成了三个项目。"})
+    assert receipt.output["text"] == expected
+    assert "占位符" not in receipt.output["text"]
+    assert "FACT" not in receipt.output["text"]
+
+
+@pytest.mark.asyncio
+async def test_text_processing_casual_tone_has_a_deterministic_short_text_fallback():
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter("请尽快提交材料。")))
+    receipt = await tool.execute(
+        {"operation": "tone_adjust", "tone": "casual", "text": "请尽快提交材料。"}
+    )
+    assert receipt.output["text"] == "麻烦尽快把材料交一下。"
+
+
+@pytest.mark.asyncio
+async def test_text_processing_summary_does_not_hard_truncate_short_text():
+    tool = TextProcessingTool(ModelGateway(_BadTextAdapter("请尽快提交所有")))
+    receipt = await tool.execute({"operation": "summarize", "text": "请尽快提交资料"})
+    assert receipt.output["text"] == "请尽快提交资料"
 
 
 @pytest.mark.asyncio

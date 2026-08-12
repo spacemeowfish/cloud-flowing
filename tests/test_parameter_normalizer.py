@@ -7,7 +7,7 @@ from agent_platform.adapters.mock_adapter import MockModelAdapter
 from agent_platform.api.container import ApplicationContainer
 from agent_platform.config import Settings
 from agent_platform.core.model_gateway import ModelGateway
-from agent_platform.core.parameter_normalizer import normalize_arguments
+from agent_platform.core.parameter_normalizer import deterministic_pre_route_arguments, normalize_arguments
 from agent_platform.models import AuditEventType, TaskConfirmation, TaskCreate, TaskState, is_argument_extraction_schema
 
 
@@ -91,6 +91,14 @@ def test_reminder_rules_only_change_unambiguous_request_text():
     assert delete_all.arguments["action"] == "delete_all"
     assert delete_all.applied_rules == ["reminder_create.delete_all_from_request"]
 
+    clear_all = normalize_arguments(
+        intent="reminder_create",
+        arguments={},
+        request_text="\u6e05\u7a7a\u5168\u90e8\u63d0\u9192",
+    )
+    assert clear_all.arguments == {"action": "delete_all"}
+    assert clear_all.applied_rules == ["reminder_create.delete_all_from_request"]
+
     descriptive_cancel = normalize_arguments(
         intent="reminder_create",
         arguments={"action": "create"},
@@ -168,6 +176,14 @@ def test_text_operation_normalization_respects_explicit_non_default_operation():
     assert tone.arguments == {"operation": "tone_adjust", "text": "x"}
     assert tone.applied_rules == ["text_polish.tone_adjust_from_request"]
 
+    formal = normalize_arguments(
+        intent="text_polish",
+        arguments={"operation": "polish", "text": "x"},
+        request_text="调整为正式语气：麻烦大家记得下午一点开会",
+    )
+    assert formal.arguments == {"operation": "tone_adjust", "text": "x", "tone": "formal"}
+    assert formal.applied_rules == ["text_polish.tone_adjust_from_request"]
+
 
 def test_todo_priority_normalization_is_whitelisted_and_never_invents_an_id():
     result = normalize_arguments(
@@ -226,6 +242,85 @@ def test_schedule_normalization_only_extracts_unambiguous_id_or_range():
     ]
 
 
+def test_schedule_create_restores_request_time_and_moves_model_range_end():
+    result = normalize_arguments(
+        intent="schedule_manage",
+        arguments={
+            "action": "create",
+            "title": "上线评审",
+            "start_text": "2026-08-01 09:00",
+            "range_end": "2026-08-08T10:00:00+08:00",
+        },
+        request_text="创建日程：2026年8月8日上午9点到10点上线评审",
+    )
+
+    assert result.arguments["start_text"] == "创建日程：2026年8月8日上午9点到10点上线评审"
+    assert result.arguments["end_text"] == "2026-08-08T10:00:00+08:00"
+    assert "range_end" not in result.arguments
+    assert result.applied_rules == [
+        "schedule_manage.range_end_to_end_text",
+        "schedule_manage.start_text_from_request",
+    ]
+
+
+def test_deterministic_small_model_arguments_cover_literal_id_and_query_anchors():
+    assert deterministic_pre_route_arguments("todo_manage", "添加待办 整理材料，高优先级") == {
+        "action": "create",
+        "title": "整理材料",
+        "priority": "high",
+    }
+    assert deterministic_pre_route_arguments("reminder_create", "待办：1小时后检查服务") == {
+        "action": "create",
+        "text": "检查服务",
+        "when": "1小时后",
+    }
+    assert deterministic_pre_route_arguments("reminder_create", "清空全部提醒") == {
+        "action": "delete_all",
+    }
+    assert deterministic_pre_route_arguments("reminder_create", "完成提醒 ID 7") == {
+        "action": "complete",
+        "id": 7,
+    }
+    assert deterministic_pre_route_arguments("reminder_create", "查看未来7天提醒") == {
+        "action": "query",
+        "scope": "next_7_days",
+    }
+    assert deterministic_pre_route_arguments("todo_manage", "更新待办 ID 3 为进行中") == {
+        "action": "update",
+        "id": 3,
+        "status": "in_progress",
+    }
+    assert deterministic_pre_route_arguments("todo_manage", "完成待办 ID 2") == {
+        "action": "complete",
+        "id": 2,
+    }
+    assert deterministic_pre_route_arguments("todo_manage", "查看已完成待办") == {
+        "action": "query",
+        "status": "completed",
+    }
+    assert deterministic_pre_route_arguments("schedule_manage", "查询日程 产品评审") == {
+        "action": "query",
+        "title_query": "产品评审",
+    }
+    assert deterministic_pre_route_arguments("todo_manage", "帮我处理一下待办") is None
+
+
+def test_schedule_create_restores_uppercase_chinese_date_from_request():
+    result = normalize_arguments(
+        intent="schedule_manage",
+        arguments={
+            "action": "create",
+            "id": 123,
+            "title": "产品评审",
+            "start_text": "上午九点到上午十点",
+        },
+        request_text="创建日程 二〇二六年八月八日上午九点到上午十点 产品评审",
+    )
+
+    assert result.arguments["start_text"] == "创建日程 二〇二六年八月八日上午九点到上午十点 产品评审"
+    assert result.applied_rules == ["schedule_manage.start_text_from_request"]
+
+
 class _QuestionAliasAdapter(MockModelAdapter):
     async def generate(self, messages, response_schema, max_tokens=512):
         if messages[-1].content == "\u67e5\u8be2\u4fdd\u4fee\u671f" and is_argument_extraction_schema(response_schema):
@@ -273,7 +368,7 @@ def _settings(tmp_path: Path) -> Settings:
 
 
 @pytest.mark.asyncio
-async def test_agent_persists_alias_normalization_before_schema_validation(tmp_path):
+async def test_agent_uses_deterministic_knowledge_arguments_before_schema_validation(tmp_path):
     container = ApplicationContainer.build(_settings(tmp_path))
     gateway = ModelGateway(_QuestionAliasAdapter())
     container.gateway = gateway

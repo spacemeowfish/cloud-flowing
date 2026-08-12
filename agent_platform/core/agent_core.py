@@ -4,14 +4,16 @@ import asyncio
 import json
 from uuid import UUID
 
+from jsonschema import Draft202012Validator
 from pydantic import JsonValue
 
 from agent_platform.core.audit_service import AuditService
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.edge_cloud_router import EdgeCloudRouter
 from agent_platform.core.errors import AgentPlatformError, PermissionDeniedError, SensitiveDataError
+from agent_platform.core.intent_router import is_knowledge_bound_request
 from agent_platform.core.model_gateway import ModelGateway
-from agent_platform.core.parameter_normalizer import normalize_arguments
+from agent_platform.core.parameter_normalizer import NormalizationResult, extract_text_payload, normalize_arguments
 from agent_platform.core.policy_engine import PolicyEngine
 from agent_platform.core.resource_monitor import ResourceMonitor
 from agent_platform.core.schema_validator import SchemaValidator
@@ -21,6 +23,7 @@ from agent_platform.core.tool_registry import ToolRegistry
 from agent_platform.models import (
     AuditEvent,
     AuditEventType,
+    DataLevel,
     ExecutionTarget,
     IntentResult,
     MessageRole,
@@ -35,6 +38,28 @@ from agent_platform.models import (
     ToolCall,
     build_model_acceptance_schema,
 )
+
+
+def _confirmation_detail_lines(intent: str, details: dict[str, str]) -> list[str]:
+    """Render the selected business record in a confirmation preview."""
+
+    if intent == "schedule_manage" and details.get("title"):
+        line = f"日程：{details['title']}"
+        if details.get("start_at"):
+            line += f"；开始：{details['start_at']}"
+        if details.get("end_at"):
+            line += f"；结束：{details['end_at']}"
+        return [line]
+    lines: list[str] = []
+    label = "提醒" if intent == "reminder_create" else "待办" if intent == "todo_manage" else "对象"
+    subject = details.get("text") or details.get("title")
+    if subject:
+        lines.append(f"{label}：{subject}")
+    if details.get("status"):
+        lines.append(f"状态：{details['status']}")
+    if details.get("due_at"):
+        lines.append(f"时间：{details['due_at']}")
+    return lines
 
 
 class AgentCore:
@@ -116,9 +141,48 @@ class AgentCore:
                 arguments=intent.arguments,
                 request_text=task.request_text,
             )
+            if (
+                intent.intent == "text_polish"
+                and classification.level != DataLevel.D3
+                and self._gateway.is_local_model
+            ):
+                local_payload = extract_text_payload(request.text)
+                if local_payload and normalization.arguments.get("text") != local_payload:
+                    normalization = NormalizationResult(
+                        arguments={**normalization.arguments, "text": local_payload},
+                        applied_rules=[*normalization.applied_rules, "text_polish.restore_local_payload"],
+                    )
             missing_fields = list(intent.missing_fields)
             if "meeting_process.source_path_from_request" in normalization.applied_rules:
                 missing_fields = [field for field in missing_fields if field != "source_path"]
+            if intent.intent == "text_polish":
+                # Text tone and target length are optional.  Some local models
+                # incorrectly report them as missing even when operation/text are
+                # already present, which would stop a pure text operation at the
+                # human-confirmation gate.
+                required_text_fields = {"operation", "text"}
+                missing_fields = [
+                    field
+                    for field in missing_fields
+                    if field in required_text_fields
+                    and not (
+                        isinstance(normalization.arguments.get(field), str)
+                        and str(normalization.arguments[field]).strip()
+                    )
+                ]
+            tool_schema = self._registry.get(intent.intent).metadata.parameters_schema
+            if Draft202012Validator(tool_schema).is_valid(normalization.arguments):
+                if missing_fields:
+                    await self._audit.record(
+                        AuditEvent(
+                            task_id=task.id,
+                            event_type=AuditEventType.MODEL_OUTPUT,
+                            output_summary=f"cleared={','.join(missing_fields)}",
+                            decision="schema_valid_missing_fields_cleared",
+                            data_level=classification.level,
+                        )
+                    )
+                missing_fields = []
             if normalization.applied_rules:
                 before_fields = ",".join(sorted(intent.arguments)) or "-"
                 after_fields = ",".join(sorted(normalization.arguments)) or "-"
@@ -174,7 +238,10 @@ class AgentCore:
         arguments = dict(task.context.get("arguments", {}))
         arguments.update(confirmation.arguments)
         if task.context.get("intent") == "reminder_create" and "when" in confirmation.arguments:
-            arguments["text"] = task.request_text
+            # Confirmation supplies the missing time only. Preserve the model's
+            # extracted reminder body; the tool sanitizes legacy command text.
+            if not str(arguments.get("text", "")).strip():
+                arguments["text"] = task.request_text
         confirmed_data = self._classifier.classify(json.dumps(arguments, ensure_ascii=False))
         if confirmed_data.level.value == "D3":
             raise SensitiveDataError("D3 data cannot be persisted as confirmation arguments")
@@ -260,14 +327,15 @@ class AgentCore:
             if callable(preview) and policy.confirmation is not None:
                 details = await preview(arguments)
                 if details:
+                    detail_lines = _confirmation_detail_lines(intent_name, details)
+                    content = policy.confirmation.content
+                    if detail_lines:
+                        content = f"{content}\n" + "\n".join(detail_lines)
                     policy = policy.model_copy(
                         update={
                             "confirmation": policy.confirmation.model_copy(
                                 update={
-                                    "content": (
-                                        f"{policy.confirmation.content}\n"
-                                        f"日程：{details.get('title', '')}；开始：{details.get('start_at', '')}"
-                                    )
+                                    "content": content
                                 }
                             )
                         }
@@ -325,6 +393,37 @@ class AgentCore:
         )
         if not receipt.success:
             raise AgentPlatformError(receipt.error_code or "tool_receipt_failed")
+        if (
+            tool.metadata.name == "knowledge_query"
+            and not list(receipt.output.get("sources", []))
+            and not is_knowledge_bound_request(task.request_text)
+        ):
+            await self._audit.record(
+                AuditEvent(
+                    task_id=task.id,
+                    event_type=AuditEventType.MODEL_OUTPUT,
+                    output_summary="knowledge_query returned no sources; retrying once with general_chat",
+                    decision="knowledge_empty_to_general_chat",
+                    data_level=task.data_level,
+                )
+            )
+            receipt = await self._executor.execute(
+                ToolCall(task_id=task.id, tool_name="general_chat", arguments={"text": task.request_text}),
+                self.tasks.cancellation_event(task.id),
+            )
+            await self._audit.record(
+                AuditEvent(
+                    task_id=task.id,
+                    event_type=AuditEventType.TOOL_CALLED,
+                    input_summary="tool=general_chat; fallback=knowledge_empty",
+                    output_summary=receipt.output_summary,
+                    execution_target=decision.target,
+                    success=receipt.success,
+                    data_level=task.data_level,
+                )
+            )
+            if not receipt.success:
+                raise AgentPlatformError(receipt.error_code or "general_chat_fallback_failed")
         if receipt.output.get("requires_confirmation") is True:
             confirmation_type = str(receipt.output.get("confirmation_type", "candidate_confirmation"))
             if confirmation_type == "missing_fields":

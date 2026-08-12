@@ -13,7 +13,14 @@ from agent_platform.core.intent_router import pre_route_intent
         ("每周一上午9点提醒我开会", "reminder_create"),
         ("创建日程 每周一上午9点开会", "schedule_manage"),
         ("总结这段：完成三个项目", "text_polish"),
+        ("调整为正式语气：本季度完成了三个项目，分别覆盖知识库、工作流和接口验证。", "text_polish"),
+        ("调整为正式语气：麻烦大家记得下午一点开会", "text_polish"),
         ("查询产品保修期", "knowledge_query"),
+        ("1+1等于多少？", "general_chat"),
+        ("十二加八等于多少", "general_chat"),
+        ("把你好翻译成英文", "general_chat"),
+        ("什么是局域网？", "general_chat"),
+        ("什么是产品经理？", "general_chat"),
     ],
 )
 def test_pre_router_only_selects_high_confidence_intents(text, intent):

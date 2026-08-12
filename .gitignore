@@ -11,8 +11,14 @@ htmlcov/
 .env.*
 !.env.example
 !deployment/rk3588/.env.rk3588.example
+.reasonix/
+reasonix.toml
+.env.backups/
 data/
 logs/
+dist/
+models/*.gguf
+build/
 *.db
 *.db-*
 *.lock

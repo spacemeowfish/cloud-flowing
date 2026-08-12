@@ -17,6 +17,21 @@ from agent_platform.tools.reminder_tool import ChineseTimeParser
 
 
 _MUTABLE_FIELDS = ("title", "description", "priority", "tags", "status", "due_text")
+_STATUS_ALIASES = {
+    "待处理": "pending",
+    "未处理": "pending",
+    "未完成": "pending",
+    "未开始": "pending",
+    "进行中": "in_progress",
+    "处理中": "in_progress",
+    "正在进行": "in_progress",
+    "执行中": "in_progress",
+    "已完成": "completed",
+    "已办结": "completed",
+    "已结束": "completed",
+    "全部": "all",
+    "所有": "all",
+}
 
 
 class TodoTool(Tool):
@@ -187,7 +202,7 @@ class TodoTool(Tool):
     async def _query(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
         clauses: list[str] = []
         parameters: list[object] = []
-        status = str(arguments.get("status", ""))
+        status = _STATUS_ALIASES.get(str(arguments.get("status", "")), str(arguments.get("status", "")))
         if status and status != "all":
             clauses.append("status = ?")
             parameters.append(status)
@@ -232,7 +247,8 @@ class TodoTool(Tool):
         for name in ("title", "description", "priority", "status"):
             if name in arguments:
                 fields.append(f"{name} = ?")
-                parameters.append(str(arguments[name]).strip())
+                value = str(arguments[name]).strip()
+                parameters.append(_STATUS_ALIASES.get(value, value) if name == "status" else value)
         if "tags" in arguments:
             tags = list(dict.fromkeys(str(tag).strip() for tag in arguments["tags"] if str(tag).strip()))
             fields.append("tags = ?")
@@ -244,6 +260,13 @@ class TodoTool(Tool):
                 return self._time_error(arguments, str(exc))
             fields.append("due_at = ?")
             parameters.append(due_at)
+        if "status" in arguments:
+            status_value = _STATUS_ALIASES.get(str(arguments["status"]).strip(), str(arguments["status"]).strip())
+            if status_value == "completed":
+                fields.append("completed_at = ?")
+                parameters.append(datetime.now(UTC).isoformat())
+            elif status_value in {"pending", "in_progress"}:
+                fields.append("completed_at = NULL")
         fields.append("updated_at = ?")
         parameters.append(datetime.now(UTC).isoformat())
         parameters.append(todo_id)
@@ -258,7 +281,7 @@ class TodoTool(Tool):
             tool_name=self.metadata.name,
             actual_arguments=arguments,
             success=True,
-            output_summary=f"已更新待办 {todo_id}",
+            output_summary=f"已更新待办 {todo_id}：{item['title']}（{item['status']}）",
             output={"item": item},
         )
 
@@ -277,7 +300,7 @@ class TodoTool(Tool):
             tool_name=self.metadata.name,
             actual_arguments=arguments,
             success=True,
-            output_summary=f"待办 {todo_id} 已完成",
+            output_summary=f"待办 {todo_id} 已完成：{self._item(row)['title']}",
             output={"item": self._item(row)},
         )
 
@@ -293,7 +316,7 @@ class TodoTool(Tool):
             tool_name=self.metadata.name,
             actual_arguments=arguments,
             success=True,
-            output_summary=f"已删除待办 {todo_id}",
+            output_summary=f"已删除待办 {todo_id}：{item['title']}",
             output={"deleted": item},
         )
 
@@ -305,6 +328,18 @@ class TodoTool(Tool):
             output_summary=f"未找到待办 {todo_id}",
             output={"updated": False, "id": todo_id},
         )
+
+    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+        """Expose the selected todo title before a destructive confirmation."""
+
+        if arguments.get("action") != "delete" or not isinstance(arguments.get("id"), int):
+            return {}
+        async with self._lock:
+            row = self._connection.execute("SELECT * FROM todos WHERE id = ?", (int(arguments["id"]),)).fetchone()
+        if row is None:
+            return {}
+        item = self._item(row)
+        return {"title": str(item["title"]), "status": str(item["status"]), "due_at": str(item["due_at"] or "")}
 
     def close(self) -> None:
         self._connection.close()
