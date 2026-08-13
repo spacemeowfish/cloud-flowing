@@ -1,5 +1,8 @@
 import io
+import shutil
+import subprocess
 import tarfile
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -32,12 +35,131 @@ def test_pc_setup_script_keeps_downloads_out_of_git_and_pins_assets() -> None:
     assert 'Join-Path $ZipVoiceModelRoot "espeak-ng-data"' in content
 
 
+def test_python_launcher_without_runtime_falls_back_to_winget(tmp_path: Path) -> None:
+    powershell = shutil.which("powershell") or shutil.which("pwsh")
+    if powershell is None:
+        pytest.skip("PowerShell is required for the Windows setup regression test")
+
+    harness = tmp_path / "python-fallback-regression.ps1"
+    harness.write_text(
+        textwrap.dedent(
+            r'''
+            param([Parameter(Mandatory = $true)][string]$SetupScript)
+
+            $ErrorActionPreference = "Stop"
+            $PlanOnly = $false
+            $RepositoryRoot = $PSScriptRoot
+            $PythonPath = Join-Path $PSScriptRoot ".venv\Scripts\python.exe"
+            $env:LOCALAPPDATA = $PSScriptRoot
+            $script:PythonInstalled = $false
+            $script:VenvCreated = $false
+
+            $tokens = $null
+            $parseErrors = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                $SetupScript,
+                [ref]$tokens,
+                [ref]$parseErrors
+            )
+            if ($parseErrors.Count -ne 0) {
+                throw "Setup script failed to parse."
+            }
+            foreach ($name in @(
+                "Write-Step",
+                "Invoke-External",
+                "Resolve-Python312Launcher",
+                "Install-PythonIfMissing"
+            )) {
+                $definition = $ast.Find({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                        $node.Name -eq $name
+                }, $true)
+                if (-not $definition) {
+                    throw "Setup function was not found: $name"
+                }
+                . ([scriptblock]::Create($definition.Extent.Text))
+            }
+
+            function global:Get-Command {
+                [CmdletBinding()]
+                param([Parameter(Mandatory = $true, Position = 0)][string]$Name)
+
+                switch -Exact ($Name) {
+                    "py" { return [pscustomobject]@{ Source = "py.exe" } }
+                    "winget" { return [pscustomobject]@{ Source = "winget.exe" } }
+                    default { return $null }
+                }
+            }
+
+            function global:py.exe {
+                param(
+                    [Parameter(ValueFromRemainingArguments = $true)]
+                    [string[]]$PassedArguments
+                )
+
+                if (-not $script:PythonInstalled) {
+                    Write-Error "No suitable Python runtime found"
+                }
+                if ($PassedArguments -contains "-c") {
+                    Write-Output "3.12"
+                } else {
+                    $script:VenvCreated = $true
+                }
+                $global:LASTEXITCODE = 0
+            }
+
+            function global:winget.exe {
+                param(
+                    [Parameter(ValueFromRemainingArguments = $true)]
+                    [string[]]$PassedArguments
+                )
+
+                $script:PythonInstalled = $true
+                $global:LASTEXITCODE = 0
+            }
+
+            Install-PythonIfMissing
+            if (-not $script:PythonInstalled) {
+                throw "winget fallback was not called."
+            }
+            if (-not $script:VenvCreated) {
+                throw "Python 3.12 virtual environment was not created after fallback."
+            }
+            '''
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            powershell,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(harness),
+            "-SetupScript",
+            str(SCRIPT),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def test_colleague_guide_covers_fork_models_testing_and_pr() -> None:
     content = GUIDE.read_text(encoding="utf-8")
 
     for required in (
         "Fork",
         "Setup-PC-Test.ps1",
+        "py.exe",
+        "默认保持禁用",
         "qwen2.5:3b",
         "lfm2.5-thinking:1.2b",
         "Faster-Whisper",

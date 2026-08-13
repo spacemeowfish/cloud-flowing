@@ -2,7 +2,7 @@
 
 - ID: `PC-COLLEAGUE-SETUP-001`
 - Title: `同事 Fork 后一键准备 PC 测试环境与模型`
-- Status: `handoff`
+- Status: `active`
 - Owner: `Codex`
 - Next owner: `spacemeowfish/reviewer`
 
@@ -15,7 +15,7 @@
 ## Acceptance scenarios
 
 - [x] 同事指南覆盖 Fork、Clone、`origin/upstream`、一键准备、启动、真实功能检查、问题记录和跨 Fork PR。
-- [x] PowerShell 脚本可重复执行，准备 Python 3.12、`.[dev,tts,voice]`、Ollama、`qwen2.5:3b`、`lfm2.5-thinking:1.2b` 和固定版本 Faster-Whisper small。
+- [ ] PowerShell 脚本可重复执行，准备 Python 3.12、`.[dev,tts,voice]`、Ollama、`qwen2.5:3b`、`lfm2.5-thinking:1.2b` 和固定版本 Faster-Whisper small；`py.exe` 无 3.12 runtime 的回退修复仍需在报告问题的 Windows PC 上复验。
 - [x] 可选 ZipVoice 流程使用固定官方 URL 和 SHA256 下载模型与 vocoder；安全选择性解压跳过上游 `test_wavs`，不保留、伪造或启用未经授权的参考音色。
 - [x] 脚本把本机资产放入被忽略的 `.local-models/`，仅更新被忽略的 `.env`；模型、音频、密钥和个人路径不进入 Git。
 - [x] 脚本 PowerShell 语法、`-PlanOnly` 无下载演练、专项测试、全量回归和 VibeCollab 检查全部通过。
@@ -45,24 +45,30 @@
 - 已核对仓库锁文件、现有本机资产哈希、Ollama 官方模型标签和 sherpa-onnx 官方下载入口。
 - 已新增一键准备脚本、同事中文指南、专项契约测试和 `.local-models/` 忽略规则。
 - 已用真实官方 ZipVoice 归档验证安全选择性解压：保留 359 个运行文件，`test_wavs` 目录和 WAV 文件均为 0，decoder SHA256 与锁定值一致；临时验证目录随后已删除。
-- PowerShell parser、`-PlanOnly -IncludeZipVoice`、5 项专项测试、406 项全量测试、Python 编译、前端语法、VibeCollab、私有路径及二进制状态扫描均通过。
-- 已提交并推送实现提交 `07430e4`，创建 PR #3：`https://github.com/spacemeowfish/cloud-flowing/pull/3`。
+- 另一台 Windows PC 真实测试发现：存在 `py.exe` 但无 Python 3.12 runtime 时，Python 探测产生终止错误，脚本未进入 `winget` 自动安装流程。
+- 已最小修复 Python 探测错误处理，使该场景继续回退 `winget`，并补充执行实际函数路径的 PowerShell 回归测试。
+- 已在同事指南中补充 `py.exe` 无 runtime 时回退 `winget` 的说明，并让回归测试覆盖这条文档约束。
+- 已在同事指南中补充 `-IncludeZipVoice` 仍默认保持禁用、需要手动启用 ZipVoice 的说明，并让测试覆盖这条文档约束。
+- 已修正 ZipVoice 默认禁用说明的测试归属：脚本测试验证 `TTS_PROVIDER=disabled` 行为，指南测试验证中文操作说明，避免把指南文案错误绑定到 PowerShell 脚本。
+- PowerShell parser、`-PlanOnly -IncludeZipVoice`、6 项专项测试、407 项全量测试、Python 编译、前端语法、VibeCollab、私有路径及二进制状态扫描均通过。
 
 ## Pending
 
+- 在报告问题的 Windows PC 上重新执行 `scripts/Setup-PC-Test.ps1`，确认真实 `py.exe` 无 runtime 场景可进入 `winget` 并继续完成环境准备。
+- 将本次缺陷修复、回归测试、指南和 `TASK.md` 同步更新作为同一个提交追加到 PR #3；当前按用户要求不提交、不推送。
 - 等待 PR #3 的 CI 与仓库所有者审查。
 - 同事在另一台 Windows PC 实际下载和执行真实模型/ASR/TTS测试；这部分不能由本机 PlanOnly 代替。
 
 ## Next step
 
-仓库所有者审查 PR 与 CI；合并后由同事按指南在另一台 Windows PC 执行真实下载和人工功能验收，并将问题通过独立分支和 PR 回传。
+先在报告问题的 Windows PC 复验 Python 3.12 自动安装回退；通过后将代码、测试、指南和 `TASK.md` 一起提交并更新 PR #3，再由仓库所有者审查 CI 与改动。合并后继续真实模型、ASR 和 TTS 人工验收，并将其他问题通过独立分支和 PR 回传。
 
 ## Verification
 
 - [x] PowerShell parser：`scripts/Setup-PC-Test.ps1`
 - [x] `powershell -File scripts/Setup-PC-Test.ps1 -PlanOnly -IncludeZipVoice`：通过，且前后均未生成 `.env` 或 `.local-models/`
-- [x] `python -m pytest -q tests/test_pc_test_setup_script.py -p no:cacheprovider`：5 项通过
-- [x] `python -m pytest -q -p no:cacheprovider`：406 项通过
+- [x] `python -m pytest -q tests/test_pc_test_setup_script.py -p no:cacheprovider`：6 项通过；因当前 `.venv` 启动器引用的基础 Python 已不存在，本次使用工作区提供的 Python 3.12.13 临时加载 `.venv` 中现有 pytest 依赖，并把 `--basetemp` 指向工作区内临时目录执行，未修改或安装依赖
+- [x] `python -m pytest --collect-only -q -p no:cacheprovider`：收集 407 项；`python -m pytest -q -p no:cacheprovider`：407 项通过。本次与专项测试相同，使用工作区 Python 3.12.13 临时加载 `.venv` 中已有依赖并指定工作区 `--basetemp`
 - [x] `python -m compileall -q agent_platform evaluation deployment packaging scripts`
 - [x] `node --check agent_platform/static/app.js`
 - [x] `git diff --check`
@@ -74,4 +80,4 @@
 
 - From: `Codex`
 - To: `spacemeowfish/reviewer`
-- Summary: 一键准备脚本、同事测试说明和安全解压防护已完成本地验证。下一位审查并合并 PR；另一台电脑的真实下载、模型推理、麦克风和合法音色 TTS 仍是后续独立验收，不能由本机 PlanOnly 代替。
+- Summary: 当前仍为 `active`，尚未重新 handoff。`py.exe` 无 Python 3.12 runtime 的回退缺陷已完成最小修复和自动化回归；先由报告问题的 Windows PC 复验，随后再将同一组代码、测试、指南与任务证据交给 reviewer 审查。真实模型推理、麦克风和合法音色 TTS 仍需独立验收，不能由本机自动化或 PlanOnly 代替。

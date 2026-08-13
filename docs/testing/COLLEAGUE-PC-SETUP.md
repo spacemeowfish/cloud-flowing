@@ -51,10 +51,12 @@ Set-ExecutionPolicy -Scope Process Bypass
 脚本会：
 
 - 检查并通过 `winget` 安装 Python 3.12 和 Ollama。
+- 如果机器上已有 `py.exe` 但没有可用的 Python 3.12 runtime，脚本会继续回退到 `winget` 安装流程。
 - 创建 `.venv` 并安装 `dev,tts,voice` 依赖。
 - 通过 Ollama 下载 `qwen2.5:3b` 和 `lfm2.5-thinking:1.2b`。
 - 下载固定版本的 Faster-Whisper small，并校验 SHA256。
 - 使用 `-IncludeZipVoice` 时下载官方 ZipVoice INT8 模型及 vocoder，并校验 SHA256；选择性解压时跳过上游 `test_wavs` 示例音频，随后删除下载归档。
+- 即使使用 `-IncludeZipVoice`，ZipVoice 仍默认保持禁用；需要在设置页手动切换到 `zipvoice` 并提供合法参考 WAV 和逐字文本。
 - 创建本机 `.env`，默认选择 Qwen，并启用 Faster-Whisper。
 
 下载中断后可以重新运行，已通过 SHA256 校验的文件会跳过。模型和本机配置位于被 Git 忽略的 `.local-models/`、`.venv/` 和 `.env`。
