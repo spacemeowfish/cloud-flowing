@@ -72,7 +72,11 @@ function Resolve-Python312Launcher {
         if ($PlanOnly) {
             return @{ Path = $command.Source; Prefix = $prefix }
         }
-        $version = & $command.Source @prefix -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+        try {
+            $version = & $command.Source @prefix -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')" 2>$null
+        } catch {
+            continue
+        }
         if ($LASTEXITCODE -eq 0 -and $version -eq "3.12") {
             return @{ Path = $command.Source; Prefix = $prefix }
         }
