@@ -46,10 +46,11 @@
 - 已新增一键准备脚本、同事中文指南、专项契约测试和 `.local-models/` 忽略规则。
 - 已用真实官方 ZipVoice 归档验证安全选择性解压：保留 359 个运行文件，`test_wavs` 目录和 WAV 文件均为 0，decoder SHA256 与锁定值一致；临时验证目录随后已删除。
 - PowerShell parser、`-PlanOnly -IncludeZipVoice`、5 项专项测试、406 项全量测试、Python 编译、前端语法、VibeCollab、私有路径及二进制状态扫描均通过。
+- 已提交并推送实现提交 `07430e4`，创建 PR #3：`https://github.com/spacemeowfish/cloud-flowing/pull/3`。
 
 ## Pending
 
-- 提交并推送分支，创建 PR，等待 CI 与仓库所有者审查。
+- 等待 PR #3 的 CI 与仓库所有者审查。
 - 同事在另一台 Windows PC 实际下载和执行真实模型/ASR/TTS测试；这部分不能由本机 PlanOnly 代替。
 
 ## Next step
