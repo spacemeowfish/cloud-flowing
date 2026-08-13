@@ -12,6 +12,8 @@ node .ai-team/check.mjs --base origin/main
 
 当前活动任务是第一轮 PC 内部测试，测试记录位于 [`docs/testing/PC-INTERNAL-TEST-001.md`](docs/testing/PC-INTERNAL-TEST-001.md)。安装包、托盘、开机自启、唤醒词、常驻监听、会议录音、流式 TTS 和真实外部连接器暂不进入本轮内测。
 
+同事从 Fork 准备 Windows PC 环境、下载 Qwen/LFM/Faster-Whisper/ZipVoice、执行完整测试并提交 PR 的流程见 [`docs/testing/COLLEAGUE-PC-SETUP.md`](docs/testing/COLLEAGUE-PC-SETUP.md)。
+
 ## 安装
 
 ```powershell
