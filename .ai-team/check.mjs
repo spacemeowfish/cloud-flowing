@@ -47,7 +47,9 @@ function field(markdown, name) {
 
 function section(markdown, title) {
   const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return markdown.match(new RegExp(`^## ${escaped}\\s*\\n([\\s\\S]*?)(?=^## |$)`, "m"))?.[1]?.trim() ?? "";
+  // (?![\\s\\S]) = end of string. Do NOT use `$` here: with the `m` flag `$` matches
+  // every line end, so a non-greedy section match would stop after the first line.
+  return markdown.match(new RegExp(`^## ${escaped}\\s*\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, "m"))?.[1]?.trim() ?? "";
 }
 
 function git(root, args) {

@@ -231,3 +231,42 @@ def test_zipvoice_loads_pcm24_reference_audio(tmp_path):
     assert sample_rate == 48000
     assert samples.dtype == np.float32
     assert samples.tolist() == pytest.approx([-1.0, -1 / 8388608, 0.0, 1 / 8388608, 8388607 / 8388608])
+
+
+def test_zipvoice_espeak_data_dir_keeps_ascii_model_path(tmp_path):
+    espeak_source = tmp_path / "espeak-ng-data"
+    espeak_source.mkdir()
+    synthesizer = ZipVoiceSpeechSynthesizer(
+        model_dir=tmp_path,
+        vocoder_path=tmp_path / "vocoder.onnx",
+        reference_audio_path=tmp_path / "reference.wav",
+        reference_text="参考文本",
+        num_threads=1,
+        speed=1.0,
+        num_steps=4,
+    )
+    assert synthesizer._espeak_data_dir() == espeak_source.resolve()
+
+
+def test_zipvoice_espeak_data_dir_copies_to_ascii_path_for_non_ascii_model(tmp_path):
+    model_dir = tmp_path / "新建文件夹"
+    espeak_source = model_dir / "espeak-ng-data"
+    espeak_source.mkdir(parents=True)
+    (espeak_source / "phontab").write_bytes(b"\x80\x00\x00\x00")
+
+    synthesizer = ZipVoiceSpeechSynthesizer(
+        model_dir=model_dir,
+        vocoder_path=tmp_path / "vocoder.onnx",
+        reference_audio_path=tmp_path / "reference.wav",
+        reference_text="参考文本",
+        num_threads=1,
+        speed=1.0,
+        num_steps=4,
+    )
+
+    resolved = synthesizer._espeak_data_dir()
+    assert str(resolved).isascii()
+    assert (resolved / "phontab").exists()
+    assert resolved != espeak_source.resolve()
+    # 第二次调用复用同一 ASCII 缓存路径
+    assert synthesizer._espeak_data_dir() == resolved

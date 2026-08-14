@@ -68,6 +68,7 @@ def test_python_launcher_without_runtime_falls_back_to_winget(tmp_path: Path) ->
                 "Write-Step",
                 "Invoke-External",
                 "Resolve-Python312Launcher",
+                "Enable-WinGetWinINetDownloader",
                 "Install-PythonIfMissing"
             )) {
                 $definition = $ast.Find({
@@ -209,3 +210,154 @@ def test_zipvoice_extractor_rejects_parent_traversal(tmp_path: Path) -> None:
 
     with pytest.raises(ExtractionError, match="unsafe archive path"):
         extract_zipvoice(archive, tmp_path / "models")
+
+
+def _function_body(content: str, name: str) -> str:
+    """Return the text of a PowerShell function body between its outer braces."""
+    start = content.index(f"function {name} {{") + len(f"function {name} {{")
+    depth = 1
+    index = start
+    while index < len(content) and depth:
+        if content[index] == "{":
+            depth += 1
+        elif content[index] == "}":
+            depth -= 1
+        index += 1
+    return content[start:index - 1]
+
+
+def test_setup_script_forces_winget_wininet_downloader() -> None:
+    content = SCRIPT.read_text(encoding="utf-8")
+
+    assert "function Enable-WinGetWinINetDownloader" in content
+    assert "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe" in content
+    assert '"downloader"' in content or "downloader =" in content
+    assert "wininet" in content
+
+    # The WinINet switch must run before the winget install in both paths that
+    # use winget (Python 3.12 and Ollama), so the DeliveryOptimization downloader
+    # cannot stall GitHub downloads first.
+    for name in ("Install-PythonIfMissing", "Install-OllamaIfMissing"):
+        body = _function_body(content, name)
+        assert "Enable-WinGetWinINetDownloader" in body
+        assert body.index("Enable-WinGetWinINetDownloader") < body.index(
+            "Invoke-External $winget.Source"
+        )
+
+
+def test_ollama_winget_install_forces_wininet_downloader(tmp_path: Path) -> None:
+    powershell = shutil.which("powershell") or shutil.which("pwsh")
+    if powershell is None:
+        pytest.skip("PowerShell is required for the Windows setup regression test")
+
+    harness = tmp_path / "ollama-wininet-regression.ps1"
+    harness.write_text(
+        textwrap.dedent(
+            r'''
+            param([Parameter(Mandatory = $true)][string]$SetupScript)
+
+            $ErrorActionPreference = "Stop"
+            $PlanOnly = $false
+            $env:LOCALAPPDATA = $PSScriptRoot
+            $script:WingetCalled = $false
+            $script:OllamaResolved = $false
+
+            $tokens = $null
+            $parseErrors = $null
+            $ast = [System.Management.Automation.Language.Parser]::ParseFile(
+                $SetupScript,
+                [ref]$tokens,
+                [ref]$parseErrors
+            )
+            if ($parseErrors.Count -ne 0) {
+                throw "Setup script failed to parse."
+            }
+            foreach ($name in @(
+                "Write-Step",
+                "Invoke-External",
+                "Enable-WinGetWinINetDownloader",
+                "Install-OllamaIfMissing"
+            )) {
+                $definition = $ast.Find({
+                    param($node)
+                    $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+                        $node.Name -eq $name
+                }, $true)
+                if (-not $definition) {
+                    throw "Setup function was not found: $name"
+                }
+                . ([scriptblock]::Create($definition.Extent.Text))
+            }
+
+            function global:Get-Command {
+                [CmdletBinding()]
+                param([Parameter(Mandatory = $true, Position = 0)][string]$Name)
+
+                switch -Exact ($Name) {
+                    "winget" { return [pscustomobject]@{ Source = "winget.exe" } }
+                    default { return $null }
+                }
+            }
+
+            function global:winget.exe {
+                param(
+                    [Parameter(ValueFromRemainingArguments = $true)]
+                    [string[]]$PassedArguments
+                )
+
+                $script:WingetCalled = $true
+                $global:LASTEXITCODE = 0
+            }
+
+            function global:Resolve-Ollama {
+                if ($script:OllamaResolved) {
+                    return "ollama.exe"
+                }
+                $script:OllamaResolved = $true
+                return $null
+            }
+
+            Install-OllamaIfMissing | Out-Null
+            if (-not $script:WingetCalled) {
+                throw "winget install was not called for Ollama."
+            }
+            $settingsPath = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json"
+            if (-not (Test-Path -LiteralPath $settingsPath -PathType Leaf)) {
+                throw "WinINet settings.json was not written before the Ollama winget install."
+            }
+            $settings = Get-Content -LiteralPath $settingsPath -Raw | ConvertFrom-Json
+            if ($settings.network.downloader -ne "wininet") {
+                throw "network.downloader was not set to wininet."
+            }
+            '''
+        ).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = subprocess.run(
+        [
+            powershell,
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(harness),
+            "-SetupScript",
+            str(SCRIPT),
+        ],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_colleague_guide_mentions_winget_wininet_downloader() -> None:
+    content = GUIDE.read_text(encoding="utf-8")
+
+    assert "wininet" in content
+    assert "DeliveryOptimization" in content
+    assert "Microsoft.DesktopAppInstaller_8wekyb3d8bbwe" in content

@@ -84,6 +84,22 @@ function Resolve-Python312Launcher {
     return $null
 }
 
+function Enable-WinGetWinINetDownloader {
+    # winget's default DeliveryOptimization downloader can stall near 100% and
+    # write zero-filled files for GitHub-hosted packages behind a proxy (observed
+    # four times on a Windows 11 machine). Force the WinINet downloader so
+    # `winget install` completes reliably.
+    $packageRoot = Join-Path $env:LOCALAPPDATA "Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState"
+    $settingsPath = Join-Path $packageRoot "settings.json"
+    $settingsJson = @{ network = @{ downloader = "wininet" } } | ConvertTo-Json -Depth 3
+    if ($PlanOnly) {
+        Write-Host "PLAN: write $settingsPath -> $settingsJson"
+        return
+    }
+    New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
+    [System.IO.File]::WriteAllText($settingsPath, $settingsJson, [System.Text.UTF8Encoding]::new($false))
+}
+
 function Install-PythonIfMissing {
     if (Test-Path -LiteralPath $PythonPath -PathType Leaf) {
         if (-not $PlanOnly) {
@@ -105,6 +121,7 @@ function Install-PythonIfMissing {
             throw "Python 3.12 and winget are both unavailable. Install Python 3.12, then rerun this script."
         }
         Write-Step "Install Python 3.12"
+        Enable-WinGetWinINetDownloader
         Invoke-External $winget.Source @(
             "install", "--id", "Python.Python.3.12", "--exact",
             "--accept-package-agreements", "--accept-source-agreements", "--silent"
@@ -150,6 +167,7 @@ function Install-OllamaIfMissing {
         throw "Ollama and winget are both unavailable. Install Ollama from https://ollama.com/download/windows, then rerun this script."
     }
     Write-Step "Install Ollama"
+    Enable-WinGetWinINetDownloader
     Invoke-External $winget.Source @(
         "install", "--id", "Ollama.Ollama", "--exact",
         "--accept-package-agreements", "--accept-source-agreements", "--silent"
