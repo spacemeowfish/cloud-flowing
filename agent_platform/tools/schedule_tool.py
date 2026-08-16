@@ -253,7 +253,10 @@ class ScheduleTool(Tool):
             actual_arguments=arguments,
             success=True,
             output_summary=f"已创建日程 {item['id']}：{item['title']}",
-            output={"item": item},
+            output={
+                "item": item,
+                "notice": "仅创建本地日程，不代表会议室已经锁定",
+            },
         )
 
     def _range_window(self, arguments: dict[str, JsonValue], now: datetime) -> tuple[datetime, datetime]:

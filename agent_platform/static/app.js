@@ -359,7 +359,7 @@ function bindResultActions(root) {
 function speakableText(task) {
   if (task?.state !== "completed") return "";
   const result=resultData(task), output=result.output||{};
-  return [output.answer,output.text,output.message,result.output_summary].find(value=>typeof value==="string"&&value.trim())||"";
+  return [output.answer,output.text,output.message,result.message,result.output_summary].find(value=>typeof value==="string"&&value.trim())||"";
 }
 function speechControls(task) {
   if (!state.capabilities?.tts?.enabled || !speakableText(task)) return "";
@@ -423,10 +423,13 @@ function bindSpeechControls(task,root) {
 }
 function renderLiveTask(task) {
   const area=$("#liveTaskArea"); if(!area)return; const meta=stateMeta[task.state]||[task.state,0,""]; const result=resultData(task); const output=result.output||{};
-  let content=""; if(task.state==="completed") content=output.answer||output.text||result.output_summary||"处理完成"; else if(task.error) content=task.error;
+  let content=""; if(task.state==="completed") content=output.answer||output.text||output.message||result.message||result.output_summary||"处理完成"; else if(task.error) content=task.error;
   const sources=output.sources||[];
   const structured = task.state==="completed" ? renderStructuredOutput(task,result,output) : "";
-  const resultBody = `${content ? `<strong>${task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.section??s.position??"全文")}</span>`).join("")}</div>`:""}` : ""}${structured}${speechControls(task)}`;
+  const terminal = result.type==="clarification" || result.type==="unsupported";
+  const notice = output.notice || result.notice;
+  const candidateMarkup = terminal && Array.isArray(result.candidates) && result.candidates.length ? `<div class="sources">${result.candidates.map(s=>`<span class="source-chip">${esc(s.name||s.file||"候选")} · ${esc(s.date||s.path_summary||"")}</span>`).join("")}</div>` : "";
+  const resultBody = `${content ? `<strong>${terminal?"说明":task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${notice?`<div class="callout">${esc(notice)}</div>`:""}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.date || s.section || s.position || "全文")}</span>`).join("")}</div>`:""}${candidateMarkup}` : ""}${structured}${speechControls(task)}`;
   const inspectorAction = appMode === "developer" ? `<button class="button small" data-inspect-task>在检查器中查看</button>` : "";
   area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已完成":task.context?.intent?`正在处理：${esc(task.context.intent)}`:"正在处理任务"}</p></div>${inspectorAction}</header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
   $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); const inspect=$("[data-inspect-task]",area); if(inspect)inspect.onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);

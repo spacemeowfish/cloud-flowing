@@ -1,5 +1,6 @@
 """Typed configuration loaded once from environment and .env."""
 
+import json
 import os
 from ipaddress import ip_address
 from functools import lru_cache
@@ -8,16 +9,22 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 def _split_paths(value: object) -> object:
     if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            decoded = None
+        if isinstance(decoded, list):
+            return decoded
         return [part.strip() for part in value.split(";") if part.strip()]
     return value
 
 
-PathList = Annotated[list[Path], BeforeValidator(_split_paths)]
+PathList = Annotated[list[Path], NoDecode, BeforeValidator(_split_paths)]
 
 
 class ZipVoicePreset(BaseModel):
@@ -36,7 +43,7 @@ def _application_root() -> Path:
 
     The CLI is commonly launched from a shell shortcut or another working
     directory.  Relative defaults must still point at this checkout's
-    ``demo_docs``/``demo_files`` and persistent ``data`` directory rather than
+    ``demo_documents`` and persistent ``data`` directory rather than
     creating empty sibling directories under the caller's current directory.
     Portable distributions set ``AGENT_APP_ROOT`` so installed code and its
     relative configuration continue to follow the distribution after it moves.
@@ -125,8 +132,12 @@ class Settings(BaseSettings):
     audit_dir: Path = Field(default=Path("logs/audit"), validation_alias="AGENT_AUDIT_DIR")
     retention_days: int = Field(default=30, ge=1, validation_alias="AGENT_RETENTION_DAYS")
     file_open_enabled: bool = Field(default=False, validation_alias="AGENT_FILE_OPEN_ENABLED")
-    authorized_file_roots: PathList = Field(default_factory=lambda: [Path("data/authorized_files"), Path("demo_files")], validation_alias="AGENT_AUTHORIZED_FILE_ROOTS")
-    knowledge_roots: PathList = Field(default_factory=lambda: [Path("data/knowledge"), Path("demo_docs")], validation_alias="AGENT_KNOWLEDGE_ROOTS")
+    authorized_file_roots: PathList = Field(default_factory=lambda: [Path("data/documents"), Path("demo_documents")], validation_alias="AGENT_AUTHORIZED_FILE_ROOTS")
+    knowledge_roots: PathList = Field(default_factory=lambda: [Path("data/documents"), Path("demo_documents")], validation_alias="AGENT_KNOWLEDGE_ROOTS")
+    document_roots: PathList = Field(
+        default_factory=lambda: [Path("data/documents"), Path("demo_documents")],
+        validation_alias="AGENT_DOCUMENT_ROOTS",
+    )
     meeting_output_dir: Path = Field(default=Path("data/meeting_notes"), validation_alias="AGENT_MEETING_OUTPUT_DIR")
     tts_provider: str = Field(default="disabled", validation_alias="TTS_PROVIDER")
     tts_output_dir: Path = Field(default=Path("data/tts"), validation_alias="TTS_OUTPUT_DIR")
@@ -173,12 +184,26 @@ class Settings(BaseSettings):
         """Resolve relative local paths once against the application root."""
 
         root = _application_root()
+        # The new unified source wins when configured. Explicit legacy values
+        # remain useful for older deployments and are merged only as fallback.
+        if not os.getenv("AGENT_DOCUMENT_ROOTS", "").strip() and (
+            "authorized_file_roots" in self.model_fields_set
+            or "knowledge_roots" in self.model_fields_set
+            or os.getenv("AGENT_AUTHORIZED_FILE_ROOTS", "").strip()
+            or os.getenv("AGENT_KNOWLEDGE_ROOTS", "").strip()
+        ):
+            merged: list[Path] = []
+            for candidate in [*self.authorized_file_roots, *self.knowledge_roots]:
+                if candidate not in merged:
+                    merged.append(candidate)
+            self.document_roots = merged
         self.database_path = _resolve_local_path(self.database_path, root)
         self.audit_dir = _resolve_local_path(self.audit_dir, root)
         self.authorized_file_roots = [
             _resolve_local_path(path, root) for path in self.authorized_file_roots
         ]
         self.knowledge_roots = [_resolve_local_path(path, root) for path in self.knowledge_roots]
+        self.document_roots = [_resolve_local_path(path, root) for path in self.document_roots]
         self.meeting_output_dir = _resolve_local_path(self.meeting_output_dir, root)
         self.tts_output_dir = _resolve_local_path(self.tts_output_dir, root)
         self.zipvoice_model_dir = _resolve_local_path(self.zipvoice_model_dir, root)

@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+import re
+from pathlib import Path
 from uuid import UUID
 
 from jsonschema import Draft202012Validator
@@ -11,7 +13,7 @@ from agent_platform.core.audit_service import AuditService
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.edge_cloud_router import EdgeCloudRouter
 from agent_platform.core.errors import AgentPlatformError, PermissionDeniedError, SensitiveDataError
-from agent_platform.core.intent_router import is_knowledge_bound_request
+from agent_platform.core.intent_router import is_external_general_knowledge_request
 from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.core.parameter_normalizer import NormalizationResult, extract_text_payload, normalize_arguments
 from agent_platform.core.policy_engine import PolicyEngine
@@ -60,6 +62,47 @@ def _confirmation_detail_lines(intent: str, details: dict[str, str]) -> list[str
     if details.get("due_at"):
         lines.append(f"时间：{details['due_at']}")
     return lines
+
+
+def _capability_boundary(intent: str, request_text: str, arguments: dict[str, JsonValue]) -> tuple[str, str] | None:
+    """Reject cross-capability model drift before a tool can execute."""
+
+    text = request_text.strip()
+    action_words = ("创建", "预约", "打开", "删除", "修改", "取消", "添加", "完成")
+    local_state_words = ("文件", "文档", "项目", "周报", "会议", "日程", "提醒", "待办", "知识库", "本地")
+    if intent == "general_chat" and any(word in text for word in local_state_words):
+        return ("clarification", "这是本地文件、项目或日程相关请求，请明确要查找文件、查询文档内容还是操作本地记录")
+    if intent == "knowledge_query" and any(word in text for word in action_words):
+        return ("unsupported", "知识问答只读取文档内容，不执行创建、预约、打开、删除、修改或取消动作")
+    if intent == "file_open" and (
+        re.search(r"(?:文档|周报|报告).*(?:中|写了|完成了|进展|内容|总结)", text)
+        or any(key in arguments for key in ("question", "answer"))
+    ):
+        return ("clarification", "这是文档内容问答，请补充文件名或日期后再查询内容")
+    if intent == "meeting_process":
+        source = Path(str(arguments.get("source_path", "")))
+        if not source.is_file() or source.suffix.casefold() not in {".txt", ".md"}:
+            return ("clarification", "请提供统一文档目录内真实存在的 TXT 或 MD 会议文本路径")
+    if intent == "text_polish" and not re.search(r"(?:[:：]|这段|以下|如下|原文|内容为|[\"“])", text):
+        return ("clarification", "请提供需要处理的原始文本；文件名不能当作正文")
+    expected_actions = {
+        "reminder_create": (("删除全部", "delete_all"), ("取消", "cancel"), ("完成", "complete"), ("查看", "query"), ("查询", "query")),
+        "todo_manage": (("删除", "delete"), ("完成", "complete"), ("添加", "create"), ("创建", "create")),
+        "schedule_manage": (("取消", "cancel"), ("预约", "create"), ("创建", "create")),
+    }
+    for verb, expected in expected_actions.get(intent, ()):
+        actual = str(arguments.get("action", ""))
+        if (
+            verb in text
+            and actual != expected
+            and not (expected in {"cancel", "complete", "delete"} and actual == "query" and "id" not in arguments)
+        ):
+            return ("clarification", "请求动词与操作类型不一致，请补充明确操作")
+    if intent == "schedule_manage" and str(arguments.get("action", "")) == "create":
+        # The local tool is allowed to create a record; it must never imply an
+        # external room reservation. The tool adds the user-visible notice.
+        return None
+    return None
 
 
 class AgentCore:
@@ -136,6 +179,37 @@ class AgentCore:
                     data_level=classification.level,
                 )
             )
+            if interpretation.terminal_type is not None:
+                if intent.intent == "clarify":
+                    message = (
+                        "请补充要查看的项目周报日期"
+                        if "周报" in task.request_text
+                        else "请补充具体对象、日期或操作"
+                    )
+                    result: dict[str, JsonValue] = {
+                        "type": "clarification",
+                        "message": message,
+                        "candidates": [],
+                    }
+                else:
+                    result = {
+                        "type": "unsupported",
+                        "message": "当前没有可执行该请求的本地能力",
+                    }
+                task = await self.tasks.transition(
+                    task.id,
+                    TaskEvent.VALIDATE,
+                    context_update={
+                        "intent": intent.intent,
+                        "confidence": intent.confidence,
+                        "intent_route": interpretation.route_source,
+                        "model_calls": interpretation.model_calls,
+                        "terminal": True,
+                    },
+                )
+                task = await self.tasks.transition(task.id, TaskEvent.EXECUTE)
+                task = await self.tasks.transition(task.id, TaskEvent.DELIVER, result=result)
+                return await self.tasks.transition(task.id, TaskEvent.COMPLETE)
             normalization = normalize_arguments(
                 intent=intent.intent,
                 arguments=intent.arguments,
@@ -287,6 +361,17 @@ class AgentCore:
                 result={"type": "missing_fields", "fields": missing_fields},
             )
 
+        boundary = _capability_boundary(intent_name, task.request_text, arguments)
+        if boundary is not None:
+            result_type, message = boundary
+            task = await self.tasks.transition(task.id, TaskEvent.EXECUTE)
+            task = await self.tasks.transition(
+                task.id,
+                TaskEvent.DELIVER,
+                result={"type": result_type, "message": message, "candidates": []},
+            )
+            return await self.tasks.transition(task.id, TaskEvent.COMPLETE)
+
         tool = self._registry.get(intent_name)
         SchemaValidator.validate(arguments, tool.metadata.parameters_schema)
         await self._audit.record(
@@ -393,10 +478,21 @@ class AgentCore:
         )
         if not receipt.success:
             raise AgentPlatformError(receipt.error_code or "tool_receipt_failed")
+        if receipt.output.get("type") in {"clarification", "unsupported"}:
+            task = await self.tasks.transition(
+                task.id,
+                TaskEvent.DELIVER,
+                result={
+                    "type": receipt.output["type"],
+                    "message": str(receipt.output.get("message", receipt.output_summary)),
+                    "candidates": list(receipt.output.get("candidates", [])),
+                },
+            )
+            return await self.tasks.transition(task.id, TaskEvent.COMPLETE)
         if (
             tool.metadata.name == "knowledge_query"
             and not list(receipt.output.get("sources", []))
-            and not is_knowledge_bound_request(task.request_text)
+            and is_external_general_knowledge_request(task.request_text)
         ):
             await self._audit.record(
                 AuditEvent(

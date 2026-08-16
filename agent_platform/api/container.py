@@ -57,7 +57,7 @@ class ApplicationContainer:
         )
         opener = SystemFileOpener() if settings.file_open_enabled else DisabledFileOpener()
         knowledge = KnowledgeBaseTool(
-            settings.knowledge_roots,
+            settings.document_roots,
             settings.database_path.with_name("knowledge.db"),
             classifier,
         )
@@ -66,14 +66,14 @@ class ApplicationContainer:
         schedules = ScheduleTool(settings.database_path.with_name("schedules.db"), settings.timezone, callback=windows_toast)
         registry = ToolRegistry()
         for tool in (
-            FileSearchTool(settings.authorized_file_roots, opener),
+            FileSearchTool(settings.document_roots, opener),
             knowledge,
             reminders,
             todos,
             schedules,
             GeneralChatTool(gateway),
             TextProcessingTool(gateway),
-            MeetingNotesTool(settings.authorized_file_roots, settings.meeting_output_dir, classifier),
+            MeetingNotesTool(settings.document_roots, settings.meeting_output_dir, classifier),
         ):
             registry.register(tool)
         registry.freeze()
