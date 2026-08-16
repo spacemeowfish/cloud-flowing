@@ -51,7 +51,7 @@ Set-Location '<项目目录>'
 python -m agent_platform.cli desktop
 ```
 
-打开 `http://127.0.0.1:8000/` 使用 Web 功能操作台；`http://127.0.0.1:8000/docs` 是 API 文档。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。运行演示和评测：
+打开 `http://127.0.0.1:8000/` 使用免登录普通任务页。页面底部锁形按钮使用仓库外的 `DEVELOPER_PASSWORD` 解锁 `/developer` 完整控制台；Swagger `/docs` 与 OpenAPI 同样只对已登录开发者开放。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。运行演示和评测：
 
 ```powershell
 python -m agent_platform.cli demo
@@ -224,12 +224,15 @@ Web 端会按任务状态实时更新，并在执行前展示对应确认控件�
 | `GET` | `/tasks/{id}` | 查询持久化状态 |
 | `POST` | `/tasks/{id}/confirm` | 补充参数、选择候选或批准 R2/R3 操作 |
 | `POST` | `/tasks/{id}/cancel` | 取消任务并传播取消信号 |
-| `GET` | `/tasks/{id}/audit` | 获取当前会话的脱敏审计链 |
+| `GET` | `/tasks/{id}/audit` | 开发者获取当前会话的脱敏审计链 |
 | `GET` | `/tasks/{id}/events` | 通过 SSE 订阅状态变化 |
 | `GET` | `/health` | 服务与连接器健康状态 |
 | `GET` | `/meta/capabilities` | 获取工具 Schema、风险/数据等级与非敏感运行配置 |
+| `GET` | `/meta/client-capabilities` | 获取普通任务页所需的生命周期、TTS 与语音状态 |
+| `GET/POST` | `/auth/*` | 查询身份、开发者登录和退出 |
+| `GET` | `/developer/logs` | 开发者手动读取最近 200 条内存脱敏日志 |
 
-外部认证代理可注入 `X-Agent-Role` 与 `X-Session-Id`。未提供时分别使用 `user` 和 `default`；API 不自行实现账号认证。
+角色和浏览器任务会话只来自服务端 HttpOnly Cookie；`X-Agent-Role`、`X-Session-Id` 以及任务请求体中的角色/会话字段均不能提权或切换会话。开发者登录令牌仅保存在服务进程内存中，退出或服务重启后失效。
 
 ## 模块边界
 
@@ -249,7 +252,7 @@ Web 端会按任务状态实时更新，并在执行前展示对应确认控件�
 - `MODEL_PROVIDER=mock`；云端和 RKLLM 适配器使用各自冻结的 OpenAI-compatible 契约。
 - RKLLM 默认 `127.0.0.1`、单并发和有界排队；云回退默认关闭，启用后也只允许 D0/D1 的可重试模型错误。
 - `AGENT_FILE_OPEN_ENABLED=false`；只索引配置白名单目录。
-- API 仅监听本机。暴露到局域网前必须接入外部认证代理。
+- API 默认仅监听本机。受信任开发网络的板端预览可显式设置 `AGENT_HOST=0.0.0.0`，但必须同时在 Git 外配置非空 `DEVELOPER_PASSWORD`；该模式不替代 HTTPS 或生产认证，禁止直接暴露到公网。
 - D3 数据禁止进入模型、日志、离线队列或云端；D2 默认不上云。
 - 任务与审计默认保留 30 天，可通过环境变量调整。
 

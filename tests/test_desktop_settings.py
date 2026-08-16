@@ -38,6 +38,7 @@ def _settings(tmp_path: Path) -> Settings:
         authorized_file_roots=[files],
         knowledge_roots=[knowledge],
         meeting_output_dir=tmp_path / "meeting",
+        developer_password="test-developer-password",
     )
 
 
@@ -126,6 +127,12 @@ async def test_admin_api_never_exposes_secret_and_reindexes(tmp_path: Path) -> N
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            denied = await client.get("/admin/settings")
+            assert denied.status_code == 403
+            login = await client.post(
+                "/auth/developer/login", json={"password": "test-developer-password"}
+            )
+            assert login.status_code == 200
             response = await client.get("/admin/settings")
             assert response.status_code == 200
             assert "api_key" not in response.text.casefold()

@@ -1,5 +1,7 @@
 "use strict";
 
+const appMode = document.body.dataset.mode || "user";
+
 const API = {
   async request(path, options = {}) {
     const started = performance.now();
@@ -40,7 +42,7 @@ const routeInfo = {
   files:["FILES · R1 / D1","文件查找"], reminders:["REMINDERS · R1 / D1","提醒管理"], todos:["TODOS · R1 / D1","待办事项"],
   schedule:["SCHEDULE · R1 / D1","日程管理"], text:["TEXT · R1 / D1","文本处理"], meetings:["MEETING · R2 / D2","会议纪要"],
   "api-lab":["CONTRACT LAB","接口测试中心"], tasks:["TASK LEDGER","任务历史"],
-  settings:["DESKTOP SETTINGS","设置"]
+  settings:["DESKTOP SETTINGS","设置"], logs:["RECENT LOGS","最近日志"]
 };
 const toolLabels = {
   file_open:["文件查找","查找、候选选择、确认打开"], knowledge_query:["知识库问答","本地文档检索与来源引用"],
@@ -116,16 +118,24 @@ function settingsSelect(name,label,value,options,extra="") {
 }
 
 async function loadRuntime() {
-  const results = await Promise.allSettled([API.get("/health"), API.get("/meta/capabilities"), API.get("/openapi.json"), API.get("/tasks?limit=100")]);
+  const capabilityPath = appMode === "developer" ? "/meta/capabilities" : "/meta/client-capabilities";
+  const requests = [API.get("/health"), API.get(capabilityPath), API.get("/tasks?limit=100")];
+  if (appMode === "developer") requests.push(API.get("/openapi.json"));
+  const results = await Promise.allSettled(requests);
   if (results[0].status === "fulfilled") state.health = results[0].value;
   if (results[1].status === "fulfilled") state.capabilities = results[1].value;
-  if (results[2].status === "fulfilled") state.openapi = results[2].value;
-  if (results[3].status === "fulfilled") state.history = results[3].value;
+  if (results[2].status === "fulfilled") state.history = results[2].value;
+  if (appMode === "developer" && results[3]?.status === "fulfilled") state.openapi = results[3].value;
+  state.voiceStatus = state.capabilities?.voice || state.voiceStatus;
   const ok = Boolean(state.health && state.capabilities);
-  $("#sideHealthDot").className = `status-dot ${ok ? "ok" : "bad"}`;
-  $("#sideHealthText").textContent = ok ? `服务在线 · ${state.health.model_provider}` : "服务不可用";
-  $("#runtimeBadge").className = `runtime-badge ${ok ? "ok" : "bad"}`;
-  $("#runtimeBadge").innerHTML = `<i></i>${ok ? `${state.health.model_provider} · ${state.capabilities.tools.length} tools` : "服务离线"}`;
+  const sideDot = $("#sideHealthDot"), sideText = $("#sideHealthText"), badge = $("#runtimeBadge");
+  if (sideDot) sideDot.className = `status-dot ${ok ? "ok" : "bad"}`;
+  if (sideText) sideText.textContent = ok ? `服务在线 · ${state.health.model_provider}` : "服务不可用";
+  if (badge) {
+    badge.className = `runtime-badge ${ok ? "ok" : "bad"}`;
+    const detail = appMode === "developer" ? `${state.health?.model_provider} · ${state.capabilities?.tools?.length || 0} tools` : "服务在线";
+    badge.innerHTML = `<i></i>${ok ? detail : "服务离线"}`;
+  }
 }
 
 function capabilityRows() {
@@ -161,6 +171,34 @@ function renderConsole() {
   pageRoot.innerHTML = header("UNIVERSAL TASK","通用任务","直接输入自然语言，观察 Agent 如何识别意图、校验参数、评估风险并路由工具。",`<a class="button" href="#tasks">查看历史</a>`)+
   `<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>自然语言任务</h3><p>适合探索跨模块表达和路由边界</p></div></header><div class="panel-body"><form id="consoleForm">${field("consoleText","任务内容","textarea","例如：1+1等于多少？")}<div class="voice-entry"><button id="voiceButton" class="voice-button" type="button" aria-label="按住说话" title="按住说话">●</button><div class="voice-feedback"><span id="voiceState">正在读取语音状态</span><div class="level-track"><i id="voiceLevel"></i></div></div><button id="voiceCancel" class="button small" type="button" hidden>取消录音</button></div>${presets(["1+1等于多少？","请用一句话说明局域网是什么？","把你好翻译成英文","查询产品保修政策并给出来源","查找项目周报","提醒我30分钟后检查服务","总结这段：本季度完成了三个项目"],"consoleText")}<div class="form-actions"><small>语音只回填输入框，确认内容后再提交</small><button class="button primary">提交任务</button></div></form></div></section>${panel("路由说明","输入会经过意图识别与 Schema 校验",subfeatures([["意图识别","映射到 8 个已注册工具"],["参数补全","缺少关键字段时暂停确认"],["数据分级","按 D0–D3 识别敏感度"],["风险判定","按 R0–R3 决定是否确认"],["端云路由","根据数据与资源选择执行位置"],["审计记录","全过程留下可验证事件"]]))}<div id="liveTaskArea" class="span-2"></div></div>`;
   bindPresets(); bindVoiceEntry(); $("#consoleForm").onsubmit = async e => { e.preventDefault(); await submitTask($("#consoleText").value.trim()); };
+  if (state.currentTask) renderLiveTask(state.currentTask);
+}
+
+function renderUserTaskList() {
+  const root = $("#userTaskList"); if (!root) return;
+  const recent = state.history.slice(0, 8);
+  root.innerHTML = recent.length ? recent.map(task => `<button type="button" class="user-task-row" data-user-task="${task.id}"><span class="state-pill ${task.state}">${esc(stateMeta[task.state]?.[0] || task.state)}</span><b>${esc(task.request_text)}</b><small>${fmt(task.updated_at)}</small></button>`).join("") : `<div class="empty-state compact">暂无任务</div>`;
+  $$('[data-user-task]', root).forEach(button => button.onclick = () => {
+    const task = state.history.find(item => item.id === button.dataset.userTask);
+    if (task) { state.currentTask = task; renderLiveTask(task); }
+  });
+}
+
+function renderUserPage() {
+  pageRoot.innerHTML = `<section class="user-task-layout">
+    <header class="user-heading"><span class="eyebrow">TASK</span><h1>今天需要处理什么？</h1></header>
+    <section class="panel user-compose"><div class="panel-body"><form id="consoleForm">
+      ${field("consoleText","任务内容","textarea","输入要完成的任务")}
+      <div class="voice-entry"><button id="voiceButton" class="voice-button" type="button" aria-label="按住说话" title="按住说话">●</button><div class="voice-feedback"><span id="voiceState">正在读取语音状态</span><div class="level-track"><i id="voiceLevel"></i></div></div><button id="voiceCancel" class="button small" type="button" hidden>取消录音</button></div>
+      <div class="form-actions"><span></span><button class="button primary" type="submit">提交任务</button></div>
+    </form></div></section>
+    <div id="liveTaskArea"></div>
+    <section class="user-recent"><header><h2>近期任务</h2><button id="refreshUserTasks" class="button small quiet" type="button">刷新</button></header><div id="userTaskList"></div></section>
+  </section>`;
+  bindVoiceEntry();
+  $("#consoleForm").onsubmit = async event => { event.preventDefault(); await submitTask($("#consoleText").value.trim()); };
+  renderUserTaskList();
+  $("#refreshUserTasks").onclick = async () => { state.history = await API.get("/tasks?limit=100"); renderUserPage(); };
   if (state.currentTask) renderLiveTask(state.currentTask);
 }
 
@@ -246,7 +284,7 @@ async function submitTask(text) {
   if (!text || /[:：]\s*$/.test(text)) { toast("请先填写完整参数", true); return; }
   try {
     const task = await API.post("/tasks", {text}); state.currentTask = task; state.history.unshift(task);
-    renderLiveTask(task); selectTask(task); connectTask(task.id); toast(`任务 ${shortId(task.id)} 已提交`);
+    renderLiveTask(task); renderUserTaskList(); selectTask(task, appMode === "developer"); connectTask(task.id); toast(`任务 ${shortId(task.id)} 已提交`);
   } catch (error) { toast(error.message, true); }
 }
 function connectTask(id) {
@@ -256,7 +294,7 @@ function connectTask(id) {
 }
 function updateTask(task) {
   state.currentTask=task; const index=state.history.findIndex(t=>t.id===task.id); if(index>=0) state.history[index]=task; else state.history.unshift(task);
-  renderLiveTask(task); selectTask(task,false);
+  renderLiveTask(task); renderUserTaskList(); selectTask(task,false);
 }
 function resultData(task) { return task?.result?.receipt || task?.result || {}; }
 function resultTool(task,result) { return task?.context?.intent || result?.tool_name || ""; }
@@ -389,8 +427,9 @@ function renderLiveTask(task) {
   const sources=output.sources||[];
   const structured = task.state==="completed" ? renderStructuredOutput(task,result,output) : "";
   const resultBody = `${content ? `<strong>${task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.section??s.position??"全文")}</span>`).join("")}</div>`:""}` : ""}${structured}${speechControls(task)}`;
-  area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已通过全部执行阶段":task.context?.intent?`已识别能力：${esc(task.context.intent)}`:"Agent 正在处理任务"}</p></div><button class="button small" data-inspect-task>在检查器中查看</button></header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
-  $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); $("[data-inspect-task]",area).onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);
+  const inspectorAction = appMode === "developer" ? `<button class="button small" data-inspect-task>在检查器中查看</button>` : "";
+  area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已完成":task.context?.intent?`正在处理：${esc(task.context.intent)}`:"正在处理任务"}</p></div>${inspectorAction}</header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
+  $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); const inspect=$("[data-inspect-task]",area); if(inspect)inspect.onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);
 }
 function renderConfirmation(task) {
   if(task.state!=="awaiting_confirmation")return""; const data=task.result||{}; const type=data.type; let body="";
@@ -405,9 +444,9 @@ function bindConfirmation(task,root) {
   reject.onclick=async()=>{reject.disabled=true;try{updateTask(await API.post(`/tasks/${task.id}/confirm`,{approved:false,arguments:{}}));}catch(e){toast(e.message,true);reject.disabled=false;}};
 }
 
-function selectTask(task, open=true) { state.currentTask=task; renderInspector(); if(open && window.innerWidth<=1180) openInspector(); }
-function openInspector(){ $("#inspector").classList.add("open"); }
-function closeInspector(){ $("#inspector").classList.remove("open"); }
+function selectTask(task, open=true) { state.currentTask=task; if(appMode!=="developer")return; renderInspector(); if(open && window.innerWidth<=1180) openInspector(); }
+function openInspector(){ $("#inspector")?.classList.add("open"); }
+function closeInspector(){ $("#inspector")?.classList.remove("open"); }
 async function renderInspector() {
   const root=$("#inspectorContent"), task=state.currentTask; if(!task){root.innerHTML=`<div class="empty-state compact"><b>尚未选择任务</b><p>提交功能测试或从任务历史中选择一条记录。</p></div>`;return;}
   if(state.inspectorTab==="response") root.innerHTML=`<div class="inspector-block"><h3>TASK</h3><div class="kv"><span>ID</span><span class="mono">${esc(task.id)}</span></div><div class="kv"><span>状态</span><span>${esc(task.state)}</span></div><div class="kv"><span>风险 / 数据</span><span>${esc(task.risk_level)} / ${esc(task.data_level)}</span></div><div class="kv"><span>更新时间</span><span>${fmt(task.updated_at)}</span></div></div><div class="inspector-block"><h3>REQUEST</h3><pre class="json-view">${esc(pretty({text:task.request_text,session_id:task.session_id}))}</pre></div><div class="inspector-block"><h3>RESPONSE</h3><pre class="json-view">${esc(pretty(task))}</pre></div>`;
@@ -424,6 +463,18 @@ async function renderTasks() {
   draw(); $("#taskFilter").onchange=draw; $("#refreshTasks").onclick=async()=>{state.history=await API.get("/tasks?limit=100");draw();toast("任务历史已刷新");};
 }
 
+async function renderLogs() {
+  pageRoot.innerHTML = header("RECENT LOGS","最近日志","只显示进程内最近 200 条脱敏记录。",`<button class="button primary" id="refreshLogs">刷新</button>`)+`<section class="panel"><div id="logTable"><div class="empty-state compact">正在读取日志</div></div></section>`;
+  const draw = async () => {
+    try {
+      const payload = await API.get("/developer/logs");
+      $("#logTable").innerHTML = payload.items.length ? `<table class="task-table log-table"><thead><tr><th>时间</th><th>级别</th><th>模块</th><th>消息</th></tr></thead><tbody>${payload.items.slice().reverse().map(item=>`<tr><td>${fmt(item.timestamp)}</td><td>${esc(item.level)}</td><td class="mono">${esc(item.module)}</td><td>${esc(item.message)}</td></tr>`).join("")}</tbody></table>` : `<div class="empty-state compact">暂无日志</div>`;
+    } catch (error) { $("#logTable").innerHTML=`<div class="callout bad">${esc(error.message)}</div>`; }
+  };
+  $("#refreshLogs").onclick = draw;
+  await draw();
+}
+
 async function runApiChecks() {
   const button=$("#runChecks");button.disabled=true;state.apiChecks=[];const cases=[
     ["GET","/health"],["GET","/meta/capabilities"],["GET","/openapi.json"],["GET","/tasks?limit=5"]
@@ -435,13 +486,30 @@ function drawApiChecks(){const root=$("#apiChecks");if(!root)return;root.innerHT
 async function renderApiLab(){const operations=[];for(const [path,item] of Object.entries(state.openapi?.paths||{}))for(const method of Object.keys(item))if(["get","post","put","patch","delete"].includes(method))operations.push([method.toUpperCase(),path,item[method].summary||item[method].description||""]);pageRoot.innerHTML=header("CONTRACT LAB","接口测试中心","从实时 OpenAPI 发现接口，执行安全体检、查看工具契约，并可发送自定义 HTTP 请求。",`<a class="button" href="/docs" target="_blank">Swagger UI ↗</a><button class="button primary" id="runChecks">运行只读体检</button>`)+`<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>接口清单</h3><p>${operations.length} 个 HTTP 操作 · 来自 /openapi.json</p></div></header><div>${operations.map(([m,p,s])=>`<div class="api-row"><span class="method">${m}</span><span><b class="mono">${esc(p)}</b><small style="display:block;color:var(--muted)">${esc(s)}</small></span><span class="api-status">已发现</span></div>`).join("")}</div></section><section class="panel"><header class="panel-head"><div><h3>接口体检</h3><p>健康、能力、OpenAPI、任务列表</p></div></header><div id="apiChecks"></div></section><section class="panel"><header class="panel-head"><div><h3>自定义请求</h3><p>可测试任意已暴露路径</p></div></header><div class="panel-body"><form id="customRequest"><div class="form-grid">${selectField("customMethod","方法",[["GET","GET"],["POST","POST"]])}${field("customPath","路径","text","/health")} ${field("customBody","JSON 请求体","textarea",'{"text":"查询产品保修政策"}',"full")}</div><div class="form-actions"><small>POST 请求体必须为合法 JSON</small><button class="button primary">发送请求</button></div></form></div></section><section class="panel"><header class="panel-head"><div><h3>原始响应</h3><p>点击体检项或发送自定义请求</p></div></header><div class="panel-body"><pre id="customResponse" class="json-view">{}</pre></div></section><section class="panel span-2"><header class="panel-head"><div><h3>工具契约</h3><p>${state.capabilities?.tools?.length||0} 个工具 · 参数、枚举、风险与数据等级</p></div></header><div class="module-list">${capabilityRows()}</div></section></div>`;drawApiChecks();$("#runChecks").onclick=runApiChecks;$("#customMethod").onchange=()=>{$("#customBody").closest(".field").style.display=$("#customMethod").value==="GET"?"none":"grid";};$("#customRequest").onsubmit=async e=>{e.preventDefault();const method=$("#customMethod").value,path=$("#customPath").value.trim();let body;try{if(method!=="GET")body=JSON.stringify(JSON.parse($("#customBody").value||"{}"));const r=await API.request(path,{method,body});$("#customResponse").textContent=pretty(r);toast(`${method} ${path} 成功`);}catch(err){$("#customResponse").textContent=pretty({error:err.message,status:err.status,body:err.body});toast(err.message,true);}};}
 
 function currentRoute(){const route=location.hash.replace(/^#/,"")||"overview";return routeInfo[route]?route:"overview";}
-async function renderRoute(){const route=currentRoute(),info=routeInfo[route];$("#pageEyebrow").textContent=info[0];$("#pageTitle").textContent=info[1];$$('[data-route]').forEach(a=>a.classList.toggle("active",a.dataset.route===route));closeNavigation();const renderers={overview:renderOverview,console:renderConsole,knowledge:renderKnowledge,files:renderFiles,reminders:renderReminders,todos:renderTodos,schedule:renderSchedule,text:renderText,meetings:renderMeetings,"api-lab":renderApiLab,tasks:renderTasks,settings:renderSettings};await renderers[route]();pageRoot.focus({preventScroll:true});window.scrollTo(0,0);}
-function closeNavigation(){$("#sidebar").classList.remove("open");$("#navBackdrop").hidden=true;$("#menuButton").setAttribute("aria-expanded","false");}
+async function renderRoute(){const route=currentRoute(),info=routeInfo[route];$("#pageEyebrow").textContent=info[0];$("#pageTitle").textContent=info[1];$$('[data-route]').forEach(a=>a.classList.toggle("active",a.dataset.route===route));closeNavigation();const renderers={overview:renderOverview,console:renderConsole,knowledge:renderKnowledge,files:renderFiles,reminders:renderReminders,todos:renderTodos,schedule:renderSchedule,text:renderText,meetings:renderMeetings,"api-lab":renderApiLab,tasks:renderTasks,settings:renderSettings,logs:renderLogs};await renderers[route]();pageRoot.focus({preventScroll:true});window.scrollTo(0,0);}
+function closeNavigation(){const sidebar=$("#sidebar"),backdrop=$("#navBackdrop"),menu=$("#menuButton");if(sidebar)sidebar.classList.remove("open");if(backdrop)backdrop.hidden=true;if(menu)menu.setAttribute("aria-expanded","false");}
 
-$("#menuButton").onclick=()=>{const open=$("#sidebar").classList.toggle("open");$("#navBackdrop").hidden=!open;$("#menuButton").setAttribute("aria-expanded",String(open));};
-$("#navBackdrop").onclick=closeNavigation;$("#inspectorButton").onclick=openInspector;$("#closeInspector").onclick=closeInspector;
+if($("#menuButton"))$("#menuButton").onclick=()=>{const open=$("#sidebar").classList.toggle("open");$("#navBackdrop").hidden=!open;$("#menuButton").setAttribute("aria-expanded",String(open));};
+if($("#navBackdrop"))$("#navBackdrop").onclick=closeNavigation;if($("#inspectorButton"))$("#inspectorButton").onclick=openInspector;if($("#closeInspector"))$("#closeInspector").onclick=closeInspector;
 $$('[data-inspector-tab]').forEach(button=>button.onclick=()=>{state.inspectorTab=button.dataset.inspectorTab;$$('[data-inspector-tab]').forEach(b=>b.classList.toggle("active",b===button));renderInspector();});
-window.addEventListener("hashchange",renderRoute);
+if(appMode==="developer")window.addEventListener("hashchange",renderRoute);
 window.addEventListener("beforeunload",()=>state.eventSources.forEach(source=>source.close()));
 
-(async function boot(){await loadRuntime();await renderRoute();})();
+function bindUserLogin() {
+  const dialog=$("#developerLogin"), password=$("#developerPassword"), error=$("#loginError");
+  $("#developerEntry").onclick=()=>{error.textContent="";password.value="";dialog.showModal();password.focus();};
+  const close=()=>dialog.close(); $("#closeLogin").onclick=close;$("#cancelLogin").onclick=close;
+  $("#developerLoginForm").onsubmit=async event=>{event.preventDefault();error.textContent="";try{await API.post("/auth/developer/login",{password:password.value});location.assign("/developer");}catch(loginError){error.textContent=loginError.message;password.select();}};
+}
+
+(async function boot(){
+  const auth=await API.get("/auth/me");
+  if(appMode==="developer"&&auth.role!=="developer"){location.replace("/");return;}
+  await loadRuntime();
+  if(appMode==="user"){
+    bindUserLogin(); state.currentTask=state.history[0]||null; renderUserPage();
+  }else{
+    $("#developerLogout").onclick=async()=>{await API.post("/auth/logout",{});location.replace("/");};
+    await renderRoute();
+  }
+})();

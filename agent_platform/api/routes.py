@@ -4,10 +4,11 @@ import asyncio
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, StreamingResponse
 
 from agent_platform.api.container import ApplicationContainer
+from agent_platform.api.auth import require_developer
 from agent_platform.models import TERMINAL_STATES, AuditEvent, SpeechArtifact, SpeechCreate, TaskCancel, TaskConfirmation, TaskCreate, TaskRecord
 
 
@@ -34,8 +35,7 @@ def _container(request: Request) -> ApplicationContainer:
 
 @router.post("/tasks", response_model=TaskRecord, status_code=201)
 async def create_task(payload: TaskCreate, request: Request) -> TaskRecord:
-    session_id = request.state.session_id if payload.session_id == "default" else payload.session_id
-    normalized = payload.model_copy(update={"role": request.state.role, "session_id": session_id})
+    normalized = payload.model_copy(update={"role": request.state.role, "session_id": request.state.session_id})
     container = _container(request)
     task = await container.agent.start(normalized)
 
@@ -82,7 +82,9 @@ async def cancel_task(task_id: UUID, payload: TaskCancel, request: Request) -> T
 
 
 @router.get("/tasks/{task_id}/audit", response_model=list[AuditEvent])
-async def task_audit(task_id: UUID, request: Request) -> list[AuditEvent]:
+async def task_audit(
+    task_id: UUID, request: Request, _: None = Depends(require_developer)
+) -> list[AuditEvent]:
     task = await _container(request).tasks.get(task_id)
     if task.session_id != request.state.session_id:
         raise HTTPException(status_code=403, detail="Task belongs to another session")
@@ -135,7 +137,9 @@ async def health(request: Request) -> dict[str, object]:
 
 
 @router.get("/meta/capabilities")
-async def capabilities(request: Request) -> dict[str, object]:
+async def capabilities(
+    request: Request, _: None = Depends(require_developer)
+) -> dict[str, object]:
     """Expose non-secret runtime and tool contracts for operator UIs."""
 
     container = _container(request)
@@ -177,6 +181,18 @@ async def capabilities(request: Request) -> dict[str, object]:
             "secret_values_exposed": False,
         },
         "tts": container.speech.status(),
+    }
+
+
+@router.get("/meta/client-capabilities")
+async def client_capabilities(request: Request) -> dict[str, object]:
+    """Expose only the ordinary task UI capabilities."""
+
+    container = _container(request)
+    return {
+        "task_lifecycle": list(TASK_LIFECYCLE),
+        "tts": container.speech.status(),
+        "voice": container.voice.status().model_dump(mode="json"),
     }
 
 
