@@ -1,6 +1,8 @@
-"""Authentication hand-off stub and unified API exception responses."""
+"""Server-owned browser identity and unified API exception responses."""
 
 from collections.abc import Awaitable, Callable
+import logging
+import secrets
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -16,16 +18,37 @@ from agent_platform.core.errors import (
     VoiceServiceBusyError,
     VoiceTranscriptionTimeoutError,
 )
+from agent_platform.api.auth import BROWSER_SESSION_COOKIE, DEVELOPER_SESSION_COOKIE
 from agent_platform.models import ErrorResponse
 
 
 class AuthenticationContextMiddleware(BaseHTTPMiddleware):
-    """Consume identity headers supplied by a future trusted auth proxy."""
+    """Derive both task ownership and role from server-issued cookies."""
 
     async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
-        request.state.role = request.headers.get("X-Agent-Role", "user")
-        request.state.session_id = request.headers.get("X-Session-Id", "default")
-        return await call_next(request)
+        browser_session = request.cookies.get(BROWSER_SESSION_COOKIE)
+        created_session = False
+        if not browser_session:
+            browser_session = secrets.token_urlsafe(24)
+            created_session = True
+        developer_token = request.cookies.get(DEVELOPER_SESSION_COOKIE)
+        auth = request.app.state.developer_sessions
+        request.state.role = "developer" if auth.is_valid(developer_token) else "user"
+        request.state.session_id = browser_session
+        response = await call_next(request)
+        if created_session:
+            response.set_cookie(
+                BROWSER_SESSION_COOKIE,
+                browser_session,
+                httponly=True,
+                samesite="strict",
+                secure=False,
+                path="/",
+            )
+        logging.getLogger("agent_platform.api.access").info(
+            "%s %s -> %s", request.method, request.url.path, response.status_code
+        )
+        return response
 
 
 def register_error_handlers(app: FastAPI) -> None:

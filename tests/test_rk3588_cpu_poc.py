@@ -42,6 +42,8 @@ def test_two_compose_files_select_distinct_images_and_one_service():
     assert set(lfm["services"]) == {"agent"}
     assert qwen["services"]["agent"]["image"] != lfm["services"]["agent"]["image"]
     assert qwen["services"]["agent"]["ports"] == ["8000:8000"]
+    assert qwen["services"]["agent"]["environment"]["DEVELOPER_PASSWORD"]
+    assert lfm["services"]["agent"]["environment"]["DEVELOPER_PASSWORD"]
 
 
 def test_profiles_and_automatic_benchmark_match_acceptance_plan():
@@ -67,11 +69,13 @@ def test_profiles_and_automatic_benchmark_match_acceptance_plan():
     assert "selected.env" in benchmark
     assert "--bind-address" in benchmark
     assert 'f"{bind_address}:{port}:8000"' in benchmark
+    assert '"--env", "DEVELOPER_PASSWORD"' in benchmark
     install = (POC / "install.sh").read_text(encoding="utf-8")
     assert "board_probe.sh" in install
     assert "benchmark_profiles.py" in install
     assert 'sha256sum "$archive"' in install
     assert "POC_BIND_ADDRESS" in install
+    assert "POC_DEVELOPER_PASSWORD" in install
     build = (POC / "build_images.ps1").read_text(encoding="utf-8")
     assert "SHA256SUMS" in build
     assert "Get-FileHash -Algorithm SHA256" in build

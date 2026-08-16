@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 from collections.abc import Callable
 import json
+import os
 import re
 import subprocess
 import threading
@@ -40,6 +41,7 @@ def start_container(
     args = [
         "docker", "run", "--detach", "--name", name,
         "--publish", f"{bind_address}:{port}:8000",
+        "--env", "DEVELOPER_PASSWORD",
         "--env", f"LLAMACPP_THREADS={profile['threads']}",
         "--env", f"LLAMACPP_CONTEXT_SIZE={profile['context_size']}",
         "--env", f"LLAMACPP_MAX_TOKENS={profile['max_tokens']}",
@@ -197,6 +199,8 @@ def write_env(path: Path, profile: dict[str, int]) -> None:
 
 
 def main() -> None:
+    if not os.environ.get("DEVELOPER_PASSWORD", "").strip():
+        raise SystemExit("DEVELOPER_PASSWORD is required for the containerized Agent")
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", required=True)
     parser.add_argument("--port", type=int, default=8000)

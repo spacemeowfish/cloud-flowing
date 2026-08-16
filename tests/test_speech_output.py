@@ -123,29 +123,14 @@ async def test_speech_rejects_unfinished_or_cross_session_tasks(tmp_path):
             keep_versions=3,
         )
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            task = (await client.post(
-                "/tasks",
-                json={"text": "1+1=?"},
-                headers={"X-Session-Id": "owner"},
-            )).json()
-            pending = await client.post(
-                f"/tasks/{task['id']}/speech",
-                json={},
-                headers={"X-Session-Id": "owner"},
-            )
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as other:
+            task = (await owner.post("/tasks", json={"text": "1+1=?"})).json()
+            pending = await owner.post(f"/tasks/{task['id']}/speech", json={})
             assert pending.status_code == 400
-            async with httpx.AsyncClient(
-                transport=transport,
-                base_url="http://test",
-                headers={"X-Session-Id": "owner"},
-            ) as owner_client:
-                await _wait_completed(owner_client, task["id"])
-            forbidden = await client.post(
-                f"/tasks/{task['id']}/speech",
-                json={},
-                headers={"X-Session-Id": "other"},
-            )
+            await _wait_completed(owner, task["id"])
+            forbidden = await other.post(f"/tasks/{task['id']}/speech", json={})
             assert forbidden.status_code == 403
 
 
@@ -155,10 +140,10 @@ async def test_tts_capability_does_not_change_agent_tool_set(tmp_path):
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            capabilities = (await client.get("/meta/capabilities")).json()
+            capabilities = (await client.get("/meta/client-capabilities")).json()
             assert capabilities["tts"]["provider"] == "disabled"
             assert capabilities["tts"]["enabled"] is False
-            assert len(capabilities["tools"]) == 8
+            assert "tools" not in capabilities
 
 
 @pytest.mark.asyncio
@@ -175,7 +160,7 @@ async def test_speech_capabilities_publish_selectable_voices(tmp_path):
         )
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            tts = (await client.get("/meta/capabilities")).json()["tts"]
+            tts = (await client.get("/meta/client-capabilities")).json()["tts"]
             assert tts["default_voice_id"] == "female"
             assert [voice["id"] for voice in tts["voices"]] == ["female", "male"]
 

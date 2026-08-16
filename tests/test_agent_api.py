@@ -73,7 +73,15 @@ def _settings(tmp_path):
         knowledge_roots=[knowledge],
         meeting_output_dir=tmp_path / "meeting",
         audit_flush_size=1,
+        developer_password="test-developer-password",
     )
+
+
+async def _developer_login(client: httpx.AsyncClient) -> None:
+    response = await client.post(
+        "/auth/developer/login", json={"password": "test-developer-password"}
+    )
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio
@@ -90,6 +98,8 @@ async def test_api_task_audit_errors_and_openapi(tmp_path):
             task = await _wait_for_state(client, task_id, TaskState.COMPLETED.value)
             queried = await client.get(f"/tasks/{task_id}")
             assert queried.status_code == 200
+            assert (await client.get(f"/tasks/{task_id}/audit")).status_code == 403
+            await _developer_login(client)
             audit = await client.get(f"/tasks/{task_id}/audit")
             assert audit.status_code == 200
             assert len(audit.json()) >= 7
@@ -153,13 +163,15 @@ async def test_session_isolation(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            created = await client.post("/tasks", json={"text": "查询产品", "session_id": "one"}, headers={"X-Session-Id": "one"})
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as other:
+            created = await owner.post("/tasks", json={"text": "查询产品", "session_id": "forged"})
             task_id = created.json()["id"]
-            forbidden = await client.get(f"/tasks/{task_id}", headers={"X-Session-Id": "two"})
+            forbidden = await other.get(f"/tasks/{task_id}", headers={"X-Session-Id": "forged"})
             assert forbidden.status_code == 403
-            visible = await client.get("/tasks", headers={"X-Session-Id": "one"})
-            hidden = await client.get("/tasks", headers={"X-Session-Id": "two"})
+            visible = await owner.get("/tasks")
+            hidden = await other.get("/tasks")
             assert [task["id"] for task in visible.json()] == [task_id]
             assert hidden.json() == []
 
@@ -207,7 +219,7 @@ async def test_text_optional_missing_fields_do_not_stop_processing_at_confirmati
 
 
 @pytest.mark.asyncio
-async def test_header_session_default_and_d3_never_persisted(tmp_path):
+async def test_forged_session_header_is_ignored_and_d3_never_persisted(tmp_path):
     settings = _settings(tmp_path)
     app = create_app(settings)
     async with app.router.lifespan_context(app):
@@ -215,11 +227,11 @@ async def test_header_session_default_and_d3_never_persisted(tmp_path):
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             created = await client.post(
                 "/tasks",
-                json={"text": "查询 password=abc123"},
+                json={"text": "查询 password=abc123", "session_id": "payload-session"},
                 headers={"X-Session-Id": "header-session"},
             )
             payload = created.json()
-            assert payload["session_id"] == "header-session"
+            assert payload["session_id"] not in {"header-session", "payload-session", "default"}
             assert "abc123" not in payload["request_text"]
             database_files = [
                 settings.database_path,
@@ -242,7 +254,15 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             page = await client.get("/")
             assert page.status_code == 200
-            assert "Agent Platform MVP" in page.text
+            assert "云湃 AI" in page.text
+            assert "接口测试中心" not in page.text
+            assert "developerEntry" in page.text
+            assert (await client.get("/developer", follow_redirects=False)).status_code == 303
+            await _developer_login(client)
+            developer_page = await client.get("/developer")
+            assert developer_page.status_code == 200
+            assert "接口测试中心" in developer_page.text
+            await client.post("/auth/logout")
             script = await client.get("/app.js")
             assert script.status_code == 200
             assert "EventSource" in script.text
@@ -279,5 +299,6 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
                 json={"approved": False, "arguments": {}},
             )
             assert rejected.json()["state"] == TaskState.CANCELLED.value
+            await _developer_login(client)
             audit = (await client.get(f"/tasks/{delete_task['id']}/audit")).json()
             assert any(event["event_type"] == "confirmation_rejected" for event in audit)

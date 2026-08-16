@@ -166,17 +166,15 @@ async def test_voice_api_enforces_browser_session(tmp_path: Path) -> None:
     async with app.router.lifespan_context(app):
         app.state.container.voice = service
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            started = await client.post("/voice/recordings", headers={"X-Session-Id": "one"})
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as other:
+            started = await owner.post("/voice/recordings")
             assert started.status_code == 201
             recording_id = started.json()["id"]
-            forbidden = await client.post(
-                f"/voice/recordings/{recording_id}/cancel", headers={"X-Session-Id": "two"}
-            )
+            forbidden = await other.post(f"/voice/recordings/{recording_id}/cancel")
             assert forbidden.status_code == 400
             assert forbidden.json()["code"] == "voice_device_unavailable"
-            stopped = await client.post(
-                f"/voice/recordings/{recording_id}/stop", headers={"X-Session-Id": "one"}
-            )
+            stopped = await owner.post(f"/voice/recordings/{recording_id}/stop")
             assert stopped.status_code == 200
             assert stopped.json()["transcript"] == "一加一等于二"

@@ -1,6 +1,7 @@
 """Typed configuration loaded once from environment and .env."""
 
 import os
+from ipaddress import ip_address
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -119,6 +120,7 @@ class Settings(BaseSettings):
 
     host: str = Field(default="127.0.0.1", validation_alias="AGENT_HOST")
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="AGENT_PORT")
+    developer_password: str = Field(default="", repr=False, validation_alias="DEVELOPER_PASSWORD")
     database_path: Path = Field(default=Path("data/agent_platform.db"), validation_alias="AGENT_DATABASE_PATH")
     audit_dir: Path = Field(default=Path("logs/audit"), validation_alias="AGENT_AUDIT_DIR")
     retention_days: int = Field(default=30, ge=1, validation_alias="AGENT_RETENTION_DAYS")
@@ -189,6 +191,13 @@ class Settings(BaseSettings):
             )
             for voice in self.zipvoice_voices
         ]
+        host = self.host.strip().strip("[]")
+        try:
+            loopback = ip_address(host).is_loopback
+        except ValueError:
+            loopback = host.casefold() == "localhost"
+        if not loopback and not self.developer_password:
+            raise ValueError("DEVELOPER_PASSWORD is required when AGENT_HOST is not a loopback address")
         return self
 
     @field_validator("timezone")

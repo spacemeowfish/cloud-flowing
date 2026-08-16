@@ -62,7 +62,7 @@ python deployment/rk3588/prepare_vendor_server.py \
 ## 5. systemd
 
 1. 创建 `agent-platform` 系统用户，并赋予目标镜像要求的 `render`、`video` 设备组。
-2. 将 `.env.rk3588.example` 复制为 `/etc/agent-platform/rk3588.env`，权限设为 `0600`。
+2. 将 `.env.rk3588.example` 复制为 `/etc/agent-platform/rk3588.env`，权限设为 `0600`。需要受信任局域网预览时，将 `AGENT_HOST` 改为 `0.0.0.0` 并在该文件设置非空 `DEVELOPER_PASSWORD`；不要把真实密码写回仓库。
 3. 安装两个 unit 到 `/etc/systemd/system/`，核对模型、Runtime、Python 和数据目录路径。
 4. 执行 `systemctl daemon-reload && systemctl enable --now agent-platform.service`。
 5. 通过 `journalctl -u rkllm-server -u agent-platform` 检查模型加载和重启原因。

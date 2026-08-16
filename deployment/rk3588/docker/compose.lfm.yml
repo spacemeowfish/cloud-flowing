@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     env_file:
       - ${POC_ENV_FILE:-./profiles/startup.env}
+    environment:
+      DEVELOPER_PASSWORD: ${DEVELOPER_PASSWORD:?set DEVELOPER_PASSWORD}
     ports:
       - "8000:8000"
     volumes:

@@ -9,6 +9,8 @@ model="$1"
 archive="$2"
 pressure_argument="${3:-}"
 bind_address="${POC_BIND_ADDRESS:-127.0.0.1}"
+developer_password="${DEVELOPER_PASSWORD:-${POC_DEVELOPER_PASSWORD:-}}"
+[ -n "$developer_password" ] || { echo "DEVELOPER_PASSWORD or POC_DEVELOPER_PASSWORD is required" >&2; exit 2; }
 case "$model" in
     qwen) image="cloud-flowing-qwen2.5-3b:rk3588-cpu-poc" ;;
     lfm) image="cloud-flowing-lfm2.5-1.2b:rk3588-cpu-poc" ;;
@@ -44,7 +46,7 @@ set -- python3 "$script_dir/benchmark_profiles.py" --image "$image" --output "$r
 if [ "$pressure_argument" = "--skip-pressure" ]; then
     set -- "$@" --skip-pressure
 fi
-"$@"
+DEVELOPER_PASSWORD="$developer_password" "$@"
 echo "Agent URL: http://$bind_address:8000"
 echo "Selected configuration: $results_dir/selected.env"
 echo "Acceptance evidence: $results_dir/benchmark-report.json"
