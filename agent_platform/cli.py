@@ -18,6 +18,14 @@ from agent_platform.models import EvaluationReport, TaskCreate
 from agent_platform.tools import KnowledgeBaseTool, KnowledgeDocumentImporter
 
 
+def _resolve_evaluation_paths(cases: Path | None, output: Path | None) -> tuple[Path, Path]:
+    root = Path(__file__).resolve().parents[1]
+    return (
+        cases if cases is not None else root / "evaluation" / "test_cases",
+        output if output is not None else root / "evaluation" / "reports" / "latest.json",
+    )
+
+
 async def _demo() -> None:
     settings = get_settings()
     container = ApplicationContainer.build(settings)
@@ -212,9 +220,7 @@ def main() -> None:
     else:
         if args.mode != settings.model_provider:
             print(f"Warning: --mode={args.mode} but MODEL_PROVIDER={settings.model_provider}")
-        root = Path(__file__).resolve().parents[1]
-        cases = args.cases if args.cases is not None else root / "evaluation" / "test_cases"
-        output = args.output if args.output is not None else root / "evaluation" / "reports" / "latest.json"
+        cases, output = _resolve_evaluation_paths(args.cases, args.output)
         asyncio.run(
             _evaluate(
                 cases,
