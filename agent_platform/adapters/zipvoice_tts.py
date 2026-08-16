@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import importlib.util
 import io
+import os
+import shutil
+import tempfile
 import threading
 import wave
 from dataclasses import dataclass
@@ -123,6 +127,25 @@ class ZipVoiceSpeechSynthesizer(SpeechSynthesizer):
             self._vocoder_path,
         )
 
+    def _espeak_data_dir(self) -> Path:
+        """Return an ASCII-only espeak-ng-data path for the sherpa-onnx engine.
+
+        sherpa-onnx bundles espeak-ng (C code) which cannot read espeak-ng-data
+        from a path containing non-ASCII characters. On Windows with a Chinese
+        path this surfaces as "Illegal byte sequence" while loading phontab.
+        Copy the data to a temp ASCII directory only when the model path is not
+        ASCII, and cache the copy by a hash of the source path.
+        """
+        source = self._model_dir / "espeak-ng-data"
+        if str(source).isascii():
+            return source
+        target = Path(tempfile.gettempdir()) / (
+            "espeak-ng-data-" + hashlib.sha256(str(source).encode("utf-8")).hexdigest()[:12]
+        )
+        if not target.exists():
+            shutil.copytree(source, target)
+        return target
+
     def _synthesize_blocking(self, text: str, voice_id: str) -> SpeechAudio:
         with self._runtime_lock:
             engine, np = self._load_engine()
@@ -179,12 +202,14 @@ class ZipVoiceSpeechSynthesizer(SpeechSynthesizer):
         except ImportError as exc:
             raise SpeechUnavailableError("未安装 TTS 依赖，请运行 python -m pip install -e \".[tts]\"") from exc
 
+        espeak_data = self._espeak_data_dir()
+        os.environ["ESPEAK_DATA_PATH"] = str(espeak_data)
         zipvoice = sherpa_onnx.OfflineTtsZipvoiceModelConfig(
             tokens=str(self._model_dir / "tokens.txt"),
             encoder=str(self._model_dir / "encoder.int8.onnx"),
             decoder=str(self._model_dir / "decoder.int8.onnx"),
             vocoder=str(self._vocoder_path),
-            data_dir=str(self._model_dir / "espeak-ng-data"),
+            data_dir=str(espeak_data),
             lexicon=str(self._model_dir / "lexicon.txt"),
         )
         model = sherpa_onnx.OfflineTtsModelConfig(

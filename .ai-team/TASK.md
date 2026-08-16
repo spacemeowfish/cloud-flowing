@@ -1,83 +1,78 @@
 # Current Task
 
-- ID: `PC-COLLEAGUE-SETUP-001`
-- Title: `同事 Fork 后一键准备 PC 测试环境与模型`
-- Status: `active`
-- Owner: `Codex`
+- ID: `PC-COLLEAGUE-SETUP-002`
+- Title: `回传 PC 实测问题：winget DO 下载器卡死 + check.mjs 门禁解析缺陷 + ZipVoice espeak-ng-data 非 ASCII 路径崩溃`
+- Status: `handoff`
+- Owner: `qkx-yytj`
 - Next owner: `spacemeowfish/reviewer`
 
 ## Goal
 
-让同事从自己的 GitHub Fork 获取云湃 Agent 后，通过一个 Windows PowerShell 脚本准备 Python、项目语音依赖、Ollama、Qwen2.5、LFM2.5 和 Faster-Whisper；按需下载 ZipVoice 与 vocoder，并使用本人或公司已授权参考音频完成 PC 内部测试。模型、音频、本机配置和测试数据必须留在 Git 之外。
+同事在 Windows PC 按指南完成真实下载和人工功能验收时，发现三个问题并通过独立分支和 PR 回传：1) `winget` 默认 DeliveryOptimization（DO）下载器在代理环境下无法完成 GitHub 下载——Ollama/Python 安装卡在接近 100% 并产出全零文件，需要在 `winget install` 前切换 WinINet 下载器；2) `.ai-team/check.mjs` 的 `section()` 正则把 TASK.md 每个 section 截断到第一行，导致门禁的"验收/验证完整性"校验失效，需要修复；3) ZipVoice TTS 在非 ASCII（中文）路径下崩溃——sherpa-onnx 捆绑的 espeak-ng（C 代码）无法读取含非 ASCII 字符的 espeak-ng-data 路径（`Illegal byte sequence`），且应用未设置 `ESPEAK_DATA_PATH`，需要适配器把 espeak-ng-data 解析到 ASCII 临时目录。模型、音频、本机配置和测试数据必须留在 Git 之外。
 
-本任务不制作或分发含第三方模型和音色的离线包，不扩展 Windows 安装器、托盘、自启动、唤醒词、常驻监听、会议录音、流式 TTS 或真实外部连接器。此前 `PC-OFFLINE-BUNDLE-001` 的实现与许可阻塞保留在 `docs/tasks/2026-08-13-windows-offline-internal-bundle.md` 和 `docs/releases/2026-08-13-windows-offline-local-validation.md`。
+本任务不制作或分发含第三方模型和音色的离线包，不扩展 Windows 安装器、托盘、自启动、唤醒词、常驻监听、会议录音、流式 TTS 或真实外部连接器。
 
 ## Acceptance scenarios
 
-- [x] 同事指南覆盖 Fork、Clone、`origin/upstream`、一键准备、启动、真实功能检查、问题记录和跨 Fork PR。
-- [ ] PowerShell 脚本可重复执行，准备 Python 3.12、`.[dev,tts,voice]`、Ollama、`qwen2.5:3b`、`lfm2.5-thinking:1.2b` 和固定版本 Faster-Whisper small；`py.exe` 无 3.12 runtime 的回退修复仍需在报告问题的 Windows PC 上复验。
-- [x] 可选 ZipVoice 流程使用固定官方 URL 和 SHA256 下载模型与 vocoder；安全选择性解压跳过上游 `test_wavs`，不保留、伪造或启用未经授权的参考音色。
-- [x] 脚本把本机资产放入被忽略的 `.local-models/`，仅更新被忽略的 `.env`；模型、音频、密钥和个人路径不进入 Git。
-- [x] 脚本 PowerShell 语法、`-PlanOnly` 无下载演练、专项测试、全量回归和 VibeCollab 检查全部通过。
+- [x] `scripts/Setup-PC-Test.ps1` 新增 `Enable-WinGetWinINetDownloader`，并在 `Install-PythonIfMissing`（Python 3.12）与 `Install-OllamaIfMissing`（Ollama）的 `winget install` 之前调用，把下载器配置为 WinINet。
+- [x] 修复 `.ai-team/check.mjs` 的 `section()` 正则截断缺陷（`(?=^## |$)` → `(?=^## |(?![\\s\\S]))`），完整解析 TASK.md 每个 section；修复前后验收项 1/1 → 6 项、验证项 1/1 → 10 项。
+- [x] 修复 ZipVoice 在非 ASCII 路径下的崩溃：`zipvoice_tts.py` 新增 `_espeak_data_dir()`（检测非 ASCII 路径 → 复制 espeak-ng-data 到 ASCII 临时目录并按源路径 hash 缓存，加载引擎前设置 `ESPEAK_DATA_PATH` + `data_dir`）；本机 API 端到端生成成功（24 秒出 WAV，有声音）。
+- [x] 新增专项测试：winget WinINet 内容断言（两处 winget 安装前先启用 WinINet）、Ollama winget 集成回归（真实 PowerShell 执行并校验 `settings.json`）、指南条目断言、espeak-data 路径解析（ASCII 直用 / 非 ASCII 复制）；并把新函数加入既有 Python 回退 harness 的函数提取列表。
+- [x] 同事指南 `docs/testing/COLLEAGUE-PC-SETUP.md` 常见问题节补充 DO 下载器卡死说明与 WinINet 配置路径。
+- [x] PowerShell parser、`-PlanOnly` 演练、专项测试、全量回归 412 项、compileall、前端语法、`git diff --check`、check.mjs 门禁两向验证（先错后对）全部通过。
 - [ ] 当前代码、文档、测试和任务证据进入同一个 PR，并由仓库所有者审查合并。
 
 ## Invariants
 
-- 同事自行下载不消除模型许可证条件；脚本必须在下载前提示并要求确认 Qwen 和 LFM 条款。
 - Qwen、LFM、Faster-Whisper、ZipVoice、vocoder、参考 WAV、`.env`、数据库、日志及用户数据不得进入 Git。
-- ZipVoice 默认保持禁用；只有测试人员配置了合法参考 WAV 和逐字匹配文本后才启用。
 - 服务只监听 `127.0.0.1`；PC 测试不得提升为 RK3588、NPU、实体音响、远场麦克风、功耗、温控或长稳验收结论。
-- Mock、Qwen、LFM、Faster-Whisper 和 ZipVoice 的结果分别记录，不能相互替代。
+- 对比模型（lfm2.5-thinking:1.2b）的已知质量失败必须保留，不能通过放松安全门禁伪装成通过。
+- 代码改动必须与 `.ai-team/TASK.md` 更新在同一个 PR；check.mjs 门禁在只改代码时会拒绝。
 
 ## Decisions
 
-- 源码获取采用同事 Fork：`origin` 指向同事 Fork，`upstream` 指向 `spacemeowfish/cloud-flowing`。
-- 一键脚本为 `scripts/Setup-PC-Test.ps1`；默认安装 Qwen、LFM 和 Faster-Whisper，`-IncludeZipVoice` 显式加入 ZipVoice 与 vocoder。
-- Ollama 模型使用项目已经验证的标签；Faster-Whisper 和 ZipVoice 使用固定版本/URL及 SHA256，避免静默漂移。
-- ZipVoice 不提供参考音色下载；同事使用本人录制或公司明确授权的单声道 PCM WAV，并提供逐字文本。
-- ZipVoice 上游归档自带示例 WAV；脚本使用 Python 标准库选择性解压并跳过 `test_wavs`，随后删除归档，避免示例音色进入本机模型目录。
-- `-PlanOnly` 用于不产生下载或配置修改的脚本路径验证，不代表真实模型下载和推理验收。
+- 本机已存在 `.venv` 与 Ollama，winget 修复通过专项测试与真实 PowerShell harness 验证，不在本机实际重跑 winget 安装（避免破坏现有环境）；真实安装路径由后续未装环境复验。
+- WinINet 配置写入 `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json`，`{"network":{"downloader":"wininet"}}`，UTF-8 无 BOM（与脚本写 `.env` 的方式一致）。
+- check.mjs 修复采用 JS 惯用绝对末尾 `(?![\\s\\S])` 替代 `$`（`\z` 在 JS 正则中不受支持，已排除）。
+- 开发前已同步最新上游（`nannncy` 的 PR #4 已合并，测试 407 项），本修复基于最新 `main` 的 `fix/pc-test-winget-do-downloader` 分支。
 
 ## Completed
 
-- 2026-08-13 已从远端 `main` 合并提交 `f1adb8bc4c76f8c958734d8bafc7cb436cea87a2` 创建独立 worktree 和分支 `docs/colleague-pc-setup`。
-- 已确认用户电脑当前离线验证构建中存在 ZipVoice 模型和 vocoder；旧 `.data\zipvoice` 路径目前不存在。具体本机绝对路径不写入 Git。
-- 已核对仓库锁文件、现有本机资产哈希、Ollama 官方模型标签和 sherpa-onnx 官方下载入口。
-- 已新增一键准备脚本、同事中文指南、专项契约测试和 `.local-models/` 忽略规则。
-- 已用真实官方 ZipVoice 归档验证安全选择性解压：保留 359 个运行文件，`test_wavs` 目录和 WAV 文件均为 0，decoder SHA256 与锁定值一致；临时验证目录随后已删除。
-- 另一台 Windows PC 真实测试发现：存在 `py.exe` 但无 Python 3.12 runtime 时，Python 探测产生终止错误，脚本未进入 `winget` 自动安装流程。
-- 已最小修复 Python 探测错误处理，使该场景继续回退 `winget`，并补充执行实际函数路径的 PowerShell 回归测试。
-- 已在同事指南中补充 `py.exe` 无 runtime 时回退 `winget` 的说明，并让回归测试覆盖这条文档约束。
-- 已在同事指南中补充 `-IncludeZipVoice` 仍默认保持禁用、需要手动启用 ZipVoice 的说明，并让测试覆盖这条文档约束。
-- 已修正 ZipVoice 默认禁用说明的测试归属：脚本测试验证 `TTS_PROVIDER=disabled` 行为，指南测试验证中文操作说明，避免把指南文案错误绑定到 PowerShell 脚本。
-- PowerShell parser、`-PlanOnly -IncludeZipVoice`、6 项专项测试、407 项全量测试、Python 编译、前端语法、VibeCollab、私有路径及二进制状态扫描均通过。
+- 已复现 winget DO 下载器问题：`winget install` 拉取 GitHub 托管包实测 4 次全部卡在接近 99%，产出文件魔数 `0000`（全零）。
+- 已新增 `Enable-WinGetWinINetDownloader` 并在两处 `winget install` 前调用。
+- 已修复 `.ai-team/check.mjs` `section()` 正则截断缺陷，并用 node 对比测试验证修复前后解析差异。
+- 已新增 3 项专项测试（`test_setup_script_forces_winget_wininet_downloader`、`test_ollama_winget_install_forces_wininet_downloader`、`test_colleague_guide_mentions_winget_wininet_downloader`），并把 `Enable-WinGetWinINetDownloader` 加入既有 Python 回退 harness 的函数提取列表。
+- 已定位并修复 ZipVoice 非 ASCII 路径崩溃：真实参考 WAV（单声道 PCM16 16kHz 30s）+ 逐字文本配置合法且 `tts.ready=true`，但生成崩溃；日志定位为 espeak-ng-data 路径问题，经纯 ASCII 路径复制实验确认根因（espeak-ng C 代码无法读中文路径）。已新增 `_espeak_data_dir()` + 2 项单元测试，本机 API 端到端生成成功。
+- 已同步最新上游（PR #4 合并后 407 项基线），专项 + 全量 412 项回归通过。
+- 已完成 check.mjs 门禁两向验证：仅改代码 → `Result: blocked`（`Code or product files changed without updating .ai-team/TASK.md in the same PR`）；代码 + TASK.md 同分支 → `Result: valid`。
 
 ## Pending
 
-- 在报告问题的 Windows PC 上重新执行 `scripts/Setup-PC-Test.ps1`，确认真实 `py.exe` 无 runtime 场景可进入 `winget` 并继续完成环境准备。
-- 将本次缺陷修复、回归测试、指南和 `TASK.md` 同步更新作为同一个提交追加到 PR #3；当前按用户要求不提交、不推送。
-- 等待 PR #3 的 CI 与仓库所有者审查。
-- 同事在另一台 Windows PC 实际下载和执行真实模型/ASR/TTS测试；这部分不能由本机 PlanOnly 代替。
+- 等待仓库所有者审查本 PR（`fix/pc-test-winget-do-downloader`）、运行 CI 并合并。
+- 本机已有 Ollama，无法在本机完整复现 winget 安装路径；WinINet 修复需在另一台无环境的 Windows PC 上复验真实下载。
+- 麦克风转写与合法音色 TTS 已在本机完成实测；其他 Windows PC 的真实模型验收与 TTS 音质评估仍属后续独立验收。
 
 ## Next step
 
-先在报告问题的 Windows PC 复验 Python 3.12 自动安装回退；通过后将代码、测试、指南和 `TASK.md` 一起提交并更新 PR #3，再由仓库所有者审查 CI 与改动。合并后继续真实模型、ASR 和 TTS 人工验收，并将其他问题通过独立分支和 PR 回传。
+将本分支 `fix/pc-test-winget-do-downloader` 推送至同事 Fork，并向 `spacemeowfish/cloud-flowing:main` 创建 PR；仓库所有者审查合并后，本问题修复进入上游。后续继续其他 Windows PC 的真实模型验收，并将其他问题继续通过独立分支和 PR 回传。
 
 ## Verification
 
 - [x] PowerShell parser：`scripts/Setup-PC-Test.ps1`
-- [x] `powershell -File scripts/Setup-PC-Test.ps1 -PlanOnly -IncludeZipVoice`：通过，且前后均未生成 `.env` 或 `.local-models/`
-- [x] `python -m pytest -q tests/test_pc_test_setup_script.py -p no:cacheprovider`：6 项通过；因当前 `.venv` 启动器引用的基础 Python 已不存在，本次使用工作区提供的 Python 3.12.13 临时加载 `.venv` 中现有 pytest 依赖，并把 `--basetemp` 指向工作区内临时目录执行，未修改或安装依赖
-- [x] `python -m pytest --collect-only -q -p no:cacheprovider`：收集 407 项；`python -m pytest -q -p no:cacheprovider`：407 项通过。本次与专项测试相同，使用工作区 Python 3.12.13 临时加载 `.venv` 中已有依赖并指定工作区 `--basetemp`
+- [x] `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/Setup-PC-Test.ps1 -PlanOnly`：通过，且无 `.env`/`.local-models/` 改动
+- [x] `python -m pytest -q tests/test_pc_test_setup_script.py -p no:cacheprovider`：9 项通过
+- [x] `python -m pytest -q tests/test_speech_output.py -p no:cacheprovider`：8 项通过（含 espeak-data 路径解析 2 项新增）
+- [x] `python -m pytest -q -p no:cacheprovider`：412 项通过（`--collect-only` 收集 412 项）
 - [x] `python -m compileall -q agent_platform evaluation deployment packaging scripts`
 - [x] `node --check agent_platform/static/app.js`
 - [x] `git diff --check`
-- [x] `node .ai-team/check.mjs --base origin/main`
-- [x] 真实 ZipVoice 归档过滤：359 个运行文件、0 个 WAV、0 个 `test_wavs` 目录；decoder SHA256 匹配
+- [x] `node .ai-team/check.mjs --base upstream/main`（仅改代码）：`Result: blocked`，验证门禁强制"代码与 TASK.md 同 PR"
+- [x] `node .ai-team/check.mjs --base upstream/main`（代码 + TASK.md）：`Result: valid`
+- [x] ZipVoice API 端到端：`POST /tasks/{id}/speech` 生成成功（24 秒出 WAV，单声道 24kHz，有声音）
 - [x] 变更文件私有路径、密钥及二进制状态扫描
 
 ## Handoff note
 
-- From: `Codex`
+- From: `qkx-yytj`
 - To: `spacemeowfish/reviewer`
-- Summary: 当前仍为 `active`，尚未重新 handoff。`py.exe` 无 Python 3.12 runtime 的回退缺陷已完成最小修复和自动化回归；先由报告问题的 Windows PC 复验，随后再将同一组代码、测试、指南与任务证据交给 reviewer 审查。真实模型推理、麦克风和合法音色 TTS 仍需独立验收，不能由本机自动化或 PlanOnly 代替。
+- Summary: 同事在 Windows PC 真实验收时发现三个问题并回传：① winget DO 下载器在代理环境无法完成 GitHub 下载（已在 Python/Ollama 两处 `winget install` 前切换 WinINet）；② check.mjs `section()` 门禁解析截断（已修复并验证解析完整性）；③ ZipVoice 在非 ASCII 路径下 espeak-ng-data 崩溃（已新增 ASCII 临时目录解析并设置 `ESPEAK_DATA_PATH`，本机 API 端到端生成成功）。麦克风转写与 TTS 已实测。专项/全量测试（412 项）、`-PlanOnly` 演练与门禁两向验证均通过，请审查 PR 并合并。

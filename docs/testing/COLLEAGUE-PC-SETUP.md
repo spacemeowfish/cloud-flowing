@@ -148,6 +148,7 @@ git push -u origin fix/pc-test-问题简述
 ## 8. 常见问题
 
 - `winget` 不存在：先从 Microsoft Store 更新“应用安装程序”，或手动安装 Python 3.12 和 Ollama 后重跑脚本。
+- `winget` 安装 Python/Ollama 卡在接近 100% 或下载文件全零：在部分代理环境下，winget 默认的 DeliveryOptimization（DO）下载器无法完成 GitHub 下载。脚本已在每次 `winget install` 前把下载器切换为 WinINet（写入 `%LOCALAPPDATA%\Packages\Microsoft.DesktopAppInstaller_8wekyb3d8bbwe\LocalState\settings.json` 的 `network.downloader=wininet`）。若仍异常，可检查该文件是否生效，或改用 `winget settings` 查看。
 - Ollama 拉取失败：确认 `http://127.0.0.1:11434/api/tags` 可访问，再重跑脚本。
 - Hugging Face 下载慢：保留已经完成的文件，重新执行脚本即可继续准备其他缺失文件。
 - 麦克风没有设备：在 Windows 隐私设置中允许桌面应用访问麦克风。
