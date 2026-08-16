@@ -18,6 +18,14 @@ from agent_platform.models import EvaluationReport, TaskCreate
 from agent_platform.tools import KnowledgeBaseTool, KnowledgeDocumentImporter
 
 
+def _resolve_evaluation_paths(cases: Path | None, output: Path | None) -> tuple[Path, Path]:
+    root = Path(__file__).resolve().parents[1]
+    return (
+        cases if cases is not None else root / "evaluation" / "test_cases",
+        output if output is not None else root / "evaluation" / "reports" / "latest.json",
+    )
+
+
 async def _demo() -> None:
     settings = get_settings()
     container = ApplicationContainer.build(settings)
@@ -64,6 +72,11 @@ async def _evaluate(
                 registry=container.registry if detailed else None,
                 normalizer=normalize_arguments if detailed else None,
             )
+            if not directory.is_dir() or not any(directory.glob("*.json")):
+                raise FileNotFoundError(
+                    f"Evaluation cases not found at {directory.resolve()} (no *.json files). "
+                    "Use --cases to point at the dataset, e.g. the project's evaluation/test_cases directory."
+                )
             cases = service.load_cases(directory)
             if expected_total is not None and len(cases) != expected_total:
                 raise ValueError(f"Expected {expected_total} fixed cases, found {len(cases)}")
@@ -169,8 +182,18 @@ def main() -> None:
     subparsers.add_parser("demo", help="Run one offline task")
     evaluate = subparsers.add_parser("evaluate", help="Run the fixed evaluation dataset")
     evaluate.add_argument("--mode", choices=["mock", "cloud", "ollama", "rkllm", "llamacpp"], default="mock")
-    evaluate.add_argument("--cases", type=Path, default=Path("evaluation/test_cases"))
-    evaluate.add_argument("--output", type=Path, default=Path("evaluation/reports/latest.json"))
+    evaluate.add_argument(
+        "--cases",
+        type=Path,
+        default=None,
+        help="Fixed evaluation dataset directory (default: <package root>/evaluation/test_cases)",
+    )
+    evaluate.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Report output path (default: <package root>/evaluation/reports/latest.json)",
+    )
     evaluate.add_argument("--detailed", action="store_true", help="Enable raw, normalized, and isolated dry-run scoring")
     evaluate.add_argument("--capture-raw", type=Path, help="Write replayable raw model output as JSONL")
     evaluate.add_argument("--raw-snapshot", type=Path, help="Replay a captured JSONL raw-output snapshot")
@@ -197,10 +220,11 @@ def main() -> None:
     else:
         if args.mode != settings.model_provider:
             print(f"Warning: --mode={args.mode} but MODEL_PROVIDER={settings.model_provider}")
+        cases, output = _resolve_evaluation_paths(args.cases, args.output)
         asyncio.run(
             _evaluate(
-                args.cases,
-                args.output,
+                cases,
+                output,
                 detailed=args.detailed,
                 raw_snapshot=args.raw_snapshot,
                 capture_raw=args.capture_raw,
