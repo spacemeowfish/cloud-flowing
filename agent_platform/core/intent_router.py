@@ -62,6 +62,8 @@ def pre_route_intent(text: str) -> PreRouteDecision | None:
 
     if re.match(r"^(?:请|帮我|请帮我)?(?:创建|添加|取消|删除|查看|查询)(?:一个)?日程", normalized):
         return PreRouteDecision("schedule_manage", "explicit_schedule")
+    if re.match(r"^(?:请|帮我|请帮我)?(?:预约|预订)", normalized) and "会议室" in normalized:
+        return PreRouteDecision("schedule_manage", "meeting_room_booking")
     if re.search(r"(?:今天|明天|后天|本周|下周).*(?:有什么|有哪些).*安排", normalized):
         return PreRouteDecision("schedule_manage", "schedule_arrangement_query")
     if re.match(r"^(?:请|帮我|请帮我)?(?:添加|创建|完成|删除|取消|查看|查询)(?:一个)?(?:待办|待处理)", normalized):

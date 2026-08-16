@@ -115,8 +115,28 @@ _SCHEDULE_TIME_CUE = re.compile(
 )
 _FILE_COMMAND_WRAPPER = re.compile(
     r"^\s*(?:请|帮我|请帮我)?\s*"
-    r"(?:查找并打开|打开|查找|找一下|找)"
-    r"(?:文件)?(?:在哪)?\s*[：:,，]?\s*(.+?)\s*$"
+    r"(?:查找并打开|打开|查找|找一下|找|查看|看看)"
+    r"(?:文件)?(?:在哪)?\s*[：:,，]?\s*(.+?)\s*"
+    r"(?:文件)?(?:在哪|在哪里|在哪个目录|在哪个文件夹)?\s*[?？]?\s*$"
+)
+_FILE_LOCATION_QUERY = re.compile(
+    r"^\s*(.+?)\s*(?:文件)?(?:在哪|在哪里|在哪个目录|在哪个文件夹)\s*[?？]?\s*$"
+)
+
+
+def _strip_file_command(text: str) -> str:
+    """Remove workbench command wording so the matcher sees the file subject."""
+
+    wrapper = _FILE_COMMAND_WRAPPER.fullmatch(text)
+    if wrapper is not None:
+        return wrapper.group(1).strip() or text
+    located = _FILE_LOCATION_QUERY.fullmatch(text)
+    if located is not None:
+        return located.group(1).strip() or text
+    return text
+_MEETING_ROOM_BOOKING = re.compile(
+    r"^\s*(?:请|帮我|请帮我)?(?:预约|预订)\s*"
+    r"([A-Za-z][A-Za-z0-9\-]{0,9}\s*)?会议室\s*$"
 )
 _KNOWLEDGE_WRAPPER = re.compile(
     r"^\s*(?:(?:请|帮我|请帮我)?\s*(?:查询|查一下|告诉我)\s*)?"
@@ -162,8 +182,7 @@ def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[st
             ).strip()
         return {"query": query or text}
     if intent == "file_open":
-        wrapper = _FILE_COMMAND_WRAPPER.fullmatch(text)
-        return {"query": wrapper.group(1).strip() if wrapper is not None else text}
+        return {"query": _strip_file_command(text)}
     if intent == "meeting_process":
         source_path = _unique_source_path(text)
         return {"source_path": source_path} if source_path is not None else None
@@ -232,6 +251,17 @@ def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[st
                 "when": delayed.group(1).strip(),
             }
     if intent == "schedule_manage":
+        booking = _MEETING_ROOM_BOOKING.fullmatch(text)
+        if booking is not None:
+            room = (booking.group(1) or "").strip()
+            arguments: dict[str, JsonValue] = {
+                "action": "create",
+                "title": f"{room + ' ' if room else ''}会议室预约".replace("  ", " "),
+                "start_text": text,
+            }
+            if room:
+                arguments["location"] = room
+            return arguments
         if (title_cancel := _CANCEL_SCHEDULE_TITLE.fullmatch(text)) is not None:
             title = title_cancel.group(1).strip()
             if not title.isdigit():
@@ -295,12 +325,10 @@ def normalize_arguments(
             applied_rules.append("meeting_process.source_path_from_request")
 
     if intent == "file_open":
-        wrapper = _FILE_COMMAND_WRAPPER.fullmatch(request_text)
-        if wrapper is not None:
-            query = wrapper.group(1).strip()
-            if query and normalized.get("query") != query:
-                normalized["query"] = query
-                applied_rules.append("file_open.strip_command_wrapper")
+        query = _strip_file_command(request_text)
+        if query != request_text and normalized.get("query") != query:
+            normalized["query"] = query
+            applied_rules.append("file_open.strip_command_wrapper")
 
     elif intent == "reminder_create":
         cancel_match = _CANCEL_REMINDER.fullmatch(request_text)

@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -10,6 +11,13 @@ from pydantic import JsonValue
 from agent_platform.core.errors import PermissionDeniedError
 from agent_platform.core.interfaces import FileOpener, Tool
 from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+
+_CJK_RUN = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _is_subsequence(term: str, target: str) -> bool:
+    cursor = iter(target)
+    return all(character in cursor for character in term)
 
 
 class FileSearchTool(Tool):
@@ -58,12 +66,24 @@ class FileSearchTool(Tool):
 
     def search(self, query: str, limit: int = 20) -> list[dict[str, JsonValue]]:
         self.build_index()
-        terms = [term.casefold() for term in query.replace(".", " ").split() if term]
+        terms = [term.casefold() for term in re.split(r"[\s,，:：.、;;]+", query) if term]
         scored: list[tuple[int, Path]] = []
         for path in self._index:
             searchable = f"{path.stem} {path.suffix.lstrip('.')} {path.parent.name}".casefold()
-            score = sum(3 if term in path.name.casefold() else 1 for term in terms if term in searchable)
-            if score or query.casefold() in path.name.casefold():
+            name = path.name.casefold()
+            score = 0
+            for term in terms:
+                if term in searchable:
+                    score += 3 if term in name else 1
+                elif (
+                    len(term) >= 2
+                    and _CJK_RUN.search(term)
+                    and _is_subsequence(term, name)
+                ):
+                    # Spoken-Chinese queries ("待办清单") must still match real
+                    # filenames ("待办任务清单_本周.txt") that insert extra words.
+                    score += 2
+            if score or query.casefold() in name:
                 scored.append((score or 1, path))
         scored.sort(key=lambda item: (-item[0], -self._index[item[1]][1], item[1].name.casefold()))
         return [self._candidate(path) for _, path in scored[:limit]]

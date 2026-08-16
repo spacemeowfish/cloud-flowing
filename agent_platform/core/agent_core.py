@@ -69,10 +69,13 @@ def _capability_boundary(intent: str, request_text: str, arguments: dict[str, Js
 
     text = request_text.strip()
     action_words = ("创建", "预约", "打开", "删除", "修改", "取消", "添加", "完成")
+    question_markers = ("什么", "哪些", "如何", "怎么", "怎样", "多少", "是否", "几", "吗", "呢")
     local_state_words = ("文件", "文档", "项目", "周报", "会议", "日程", "提醒", "待办", "知识库", "本地")
     if intent == "general_chat" and any(word in text for word in local_state_words):
         return ("clarification", "这是本地文件、项目或日程相关请求，请明确要查找文件、查询文档内容还是操作本地记录")
-    if intent == "knowledge_query" and any(word in text for word in action_words):
+    if intent == "knowledge_query" and any(word in text for word in action_words) and not any(
+        marker in text for marker in question_markers
+    ):
         return ("unsupported", "知识问答只读取文档内容，不执行创建、预约、打开、删除、修改或取消动作")
     if intent == "file_open" and (
         re.search(r"(?:文档|周报|报告).*(?:中|写了|完成了|进展|内容|总结)", text)

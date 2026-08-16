@@ -132,6 +132,10 @@ class ApplicationContainer:
         await self.audit.purge_expired()
         await self.reminders.start_scheduler()
         await self.schedules.start_scheduler()
+        if self.settings.voice_enabled and self.settings.voice_model_dir.is_dir():
+            # Load the transcription model in the background so the first
+            # push-to-talk recording does not pay the one-time cold start.
+            self.spawn(asyncio.to_thread(self.voice.prewarm))
 
     def spawn(self, coroutine: Coroutine[object, object, object]) -> None:
         task = asyncio.create_task(coroutine)

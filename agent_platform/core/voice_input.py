@@ -127,6 +127,11 @@ class FasterWhisperTranscriber:
                 )
         return self._model
 
+    def prewarm(self) -> None:
+        """Load the model ahead of the first recording so users skip the cold start."""
+
+        self._load()
+
     def transcribe(self, samples: bytes | bytearray) -> str:
         try:
             import numpy as np
@@ -200,6 +205,20 @@ class VoiceInputService:
 
     def devices(self) -> list[VoiceDevice]:
         return self._backend.devices()
+
+    def prewarm(self) -> bool:
+        """Best-effort background model load; failures leave voice status untouched."""
+
+        if not (self._settings.voice_enabled and self._settings.voice_model_dir.is_dir()):
+            return False
+        loader = getattr(self._transcriber, "prewarm", None)
+        if loader is None:
+            return False
+        try:
+            loader()
+        except Exception:
+            return False
+        return True
 
     def start(self, session_id: str) -> VoiceRecording:
         if not self._settings.voice_enabled:

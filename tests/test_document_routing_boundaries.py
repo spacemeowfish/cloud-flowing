@@ -35,7 +35,12 @@ def test_boundary_fast_routes_only_use_specific_anchors(text: str, intent: str):
 
 def test_ambiguous_external_schedule_is_left_for_model_classification():
     assert pre_route_intent("本周有什么会议") is None
-    assert pre_route_intent("预约 A301 会议室") is None
+
+
+def test_meeting_room_booking_prefix_routes_to_local_schedule():
+    decision = pre_route_intent("预约 A301 会议室")
+    assert decision is not None
+    assert decision.intent == "schedule_manage"
 
 
 def test_classification_schema_has_terminal_results_without_registering_tools():
