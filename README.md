@@ -51,7 +51,14 @@ Set-Location '<项目目录>'
 python -m agent_platform.cli desktop
 ```
 
-打开 `http://127.0.0.1:8000/` 使用免登录普通任务页。页面底部锁形按钮使用仓库外的 `DEVELOPER_PASSWORD` 解锁 `/developer` 完整控制台；Swagger `/docs` 与 OpenAPI 同样只对已登录开发者开放。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。运行演示和评测：
+打开 `http://127.0.0.1:8000/` 使用免登录普通任务页。页面底部锁形按钮使用 `DEVELOPER_PASSWORD` 解锁 `/developer` 完整控制台；Swagger `/docs` 与 OpenAPI 同样只对已登录开发者开放。操作台的页面、测试流程和风险确认说明见 [`docs/操作台使用手册.md`](docs/操作台使用手册.md)。
+
+开发者密码按下述优先级读取，代码中没有默认值：
+
+1. 系统环境变量 `DEVELOPER_PASSWORD`；
+2. 项目根目录 `.env` 中的 `DEVELOPER_PASSWORD=你的密码`（`.env` 不入库，模板见 `.env.example`）。
+
+未配置时开发者登录接口返回 503（等同于控制台关闭），本机 `127.0.0.1` 普通任务页不受影响；若以 `AGENT_HOST=0.0.0.0` 等非回环地址监听，则必须配置非空密码，否则服务拒绝启动。密码仅保存在服务进程内存中，登录比对使用常量时间比较，退出或重启后令牌即失效，不会写入前端、日志或 Git。运行演示和评测：
 
 ```powershell
 python -m agent_platform.cli demo
