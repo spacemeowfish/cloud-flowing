@@ -22,6 +22,7 @@ from agent_platform.models import (
     ModelMessage,
     build_argument_extraction_schema,
     is_model_acceptance_schema,
+    TERMINAL_INTENT_NAMES,
 )
 
 
@@ -31,6 +32,7 @@ class InterpretationResult:
     route_source: str
     model_calls: int
     schema_repaired: bool
+    terminal_type: str | None = None
 
 
 class ModelGateway:
@@ -177,6 +179,20 @@ class ModelGateway:
             selected_intent = decision.intent
             selected_confidence = 1.0
             route_source = f"pre_route:{decision.rule}"
+
+        if selected_intent in TERMINAL_INTENT_NAMES:
+            return InterpretationResult(
+                intent=IntentResult(
+                    intent=selected_intent,
+                    arguments={},
+                    missing_fields=[],
+                    confidence=selected_confidence,
+                ),
+                route_source=route_source,
+                model_calls=model_calls,
+                schema_repaired=False,
+                terminal_type=selected_intent,
+            )
 
         selected_schema = build_argument_extraction_schema(response_schema, selected_intent)
         deterministic_arguments = (

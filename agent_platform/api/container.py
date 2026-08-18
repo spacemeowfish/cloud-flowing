@@ -57,7 +57,7 @@ class ApplicationContainer:
         )
         opener = SystemFileOpener() if settings.file_open_enabled else DisabledFileOpener()
         knowledge = KnowledgeBaseTool(
-            settings.knowledge_roots,
+            settings.document_roots,
             settings.database_path.with_name("knowledge.db"),
             classifier,
         )
@@ -66,14 +66,14 @@ class ApplicationContainer:
         schedules = ScheduleTool(settings.database_path.with_name("schedules.db"), settings.timezone, callback=windows_toast)
         registry = ToolRegistry()
         for tool in (
-            FileSearchTool(settings.authorized_file_roots, opener),
+            FileSearchTool(settings.document_roots, opener),
             knowledge,
             reminders,
             todos,
             schedules,
             GeneralChatTool(gateway),
             TextProcessingTool(gateway),
-            MeetingNotesTool(settings.authorized_file_roots, settings.meeting_output_dir, classifier),
+            MeetingNotesTool(settings.document_roots, settings.meeting_output_dir, classifier),
         ):
             registry.register(tool)
         registry.freeze()
@@ -132,6 +132,10 @@ class ApplicationContainer:
         await self.audit.purge_expired()
         await self.reminders.start_scheduler()
         await self.schedules.start_scheduler()
+        if self.settings.voice_enabled and self.settings.voice_model_dir.is_dir():
+            # Load the transcription model in the background so the first
+            # push-to-talk recording does not pay the one-time cold start.
+            self.spawn(asyncio.to_thread(self.voice.prewarm))
 
     def spawn(self, coroutine: Coroutine[object, object, object]) -> None:
         task = asyncio.create_task(coroutine)

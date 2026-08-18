@@ -19,8 +19,8 @@ def test_default_resource_roots_follow_checkout_when_started_elsewhere(tmp_path,
     settings = Settings(_env_file=None)
     checkout = Path(__file__).parents[1]
 
-    assert settings.authorized_file_roots[-1] == checkout / "demo_files"
-    assert settings.knowledge_roots[-1] == checkout / "demo_docs"
+    assert settings.authorized_file_roots[-1] == checkout / "demo_documents"
+    assert settings.knowledge_roots[-1] == checkout / "demo_documents"
     assert settings.database_path == checkout / "data" / "agent_platform.db"
 
 

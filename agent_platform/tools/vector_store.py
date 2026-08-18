@@ -113,6 +113,7 @@ class SearchHit:
     score: float
     mtime: float
     scope: str
+    path: str = ""
 
 
 class SQLiteVectorStore:
@@ -172,7 +173,17 @@ class SQLiteVectorStore:
         for document, position, text, vector_json, mtime, scope in rows:
             vector = json.loads(vector_json)
             score = sum(left * right for left, right in zip(query_vector, vector, strict=True))
-            hits.append(SearchHit(Path(document).name, int(position), text, score, float(mtime), str(scope)))
+            hits.append(
+                SearchHit(
+                    Path(document).name,
+                    int(position),
+                    text,
+                    score,
+                    float(mtime),
+                    str(scope),
+                    str(document),
+                )
+            )
         hits.sort(key=lambda item: item.score, reverse=True)
         return hits[:top_k]
 

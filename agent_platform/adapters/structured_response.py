@@ -24,7 +24,7 @@ from agent_platform.models import (
 _THINK_PREFIX = re.compile(r"\A\s*<think>.*?</think>\s*", re.DOTALL | re.IGNORECASE)
 _JSON_FENCE = re.compile(r"\A\s*```(?:json)?\s*(.*?)\s*```\s*\Z", re.DOTALL | re.IGNORECASE)
 _CONVERSATION_MARKER = "CURRENT_CONVERSATION_JSON:"
-INTENT_PROMPT_VERSION = "qwen2.5-3b-staged-v3.1"
+INTENT_PROMPT_VERSION = "qwen2.5-3b-staged-v4.0-document-boundaries"
 
 
 def is_intent_response_schema(schema: dict[str, JsonValue]) -> bool:
@@ -202,14 +202,18 @@ def _classification_system_prompt() -> str:
         "CONTRACT_KIND:intent_classification\n"
         "你只判断用户请求属于哪个意图，不提取参数。只能输出一个 JSON 对象："
         "{\"intent\":\"...\",\"confidence\":0.95}。不得输出 arguments、解释或 Markdown。\n"
-        "可选意图：file_open, general_chat, knowledge_query, meeting_process, reminder_create, todo_manage, schedule_manage, text_polish。\n"
+        "可选意图：file_open, general_chat, knowledge_query, meeting_process, reminder_create, todo_manage, schedule_manage, text_polish, clarify, unsupported。\n"
         "边界规则和对比示例：\n"
-        "- 找会议记录 -> file_open；整理会议纪要 C:/docs/周会.txt -> meeting_process。\n"
+        "- 查看/看看项目周报 -> file_open；项目周报中完成了什么 -> knowledge_query；总结项目周报 -> knowledge_query，不把文件名当作正文。\n"
+        "- 查询会议室使用规则 -> knowledge_query；预约 A301 会议室 -> schedule_manage（只创建本地日程，不代表房间锁定）。\n"
+        "- 找会议记录 -> file_open；整理会议纪要 C:/docs/周会.txt -> meeting_process，不能编造路径。\n"
         "- 待办：1小时后检查服务 -> reminder_create；添加待办 检查服务 -> todo_manage。\n"
         "- 每周一上午9点提醒我开会 -> reminder_create；创建日程 每周一上午9点开会 -> schedule_manage。\n"
         "- 取消日程 项目会 -> schedule_manage；取消提醒 12 -> reminder_create。\n"
-        "- 总结这段文字 -> text_polish；查询产品保修期 -> knowledge_query。\n"
-        "- 1+1等于多少、常识、闲聊、翻译，以及不属于其他工具的请求 -> general_chat。"
+        "- 总结这段：本季度完成三个项目 -> text_polish；提醒功能怎么用 -> knowledge_query；待办清单文件在哪 -> file_open。\n"
+        "- 日程管理制度是什么 -> knowledge_query；本周有什么会议 -> 只有存在真实本地日程数据时才 schedule_manage，否则 clarify。\n"
+        "- 多份周报未给日期或能力不足 -> clarify；真实会议室预约、外部系统连接等当前不支持 -> unsupported。\n"
+        "- 1+1等于多少、明确翻译、普通外部常识和闲聊 -> general_chat；不要因为问号或单个名词选择工具。"
     )
 
 
@@ -257,7 +261,7 @@ def _argument_extraction_system_prompt(
             "把你好翻译成英文 => {\"arguments\":{\"text\":\"把你好翻译成英文\"},\"missing_fields\":[]}",
         ],
         "knowledge_query": [
-            "查询产品保修期 => {\"arguments\":{\"query\":\"产品保修期\"},\"missing_fields\":[]}",
+            "项目周报中完成了什么 => {\"arguments\":{\"query\":\"项目周报中完成了什么\"},\"missing_fields\":[]}",
             "公司报销标准是什么 => {\"arguments\":{\"query\":\"公司报销标准是什么\"},\"missing_fields\":[]}",
         ],
         "meeting_process": [
@@ -274,6 +278,7 @@ def _argument_extraction_system_prompt(
             "删除待办 12 => {\"arguments\":{\"action\":\"delete\",\"id\":12},\"missing_fields\":[]}",
         ],
         "schedule_manage": [
+            "预约 A301 会议室 => {\"arguments\":{\"action\":\"create\",\"title\":\"会议\",\"location\":\"A301\",\"start_text\":\"今天\"},\"missing_fields\":[]}",
             "创建日程 明天下午2点项目会 => {\"arguments\":{\"action\":\"create\",\"title\":\"项目会\",\"start_text\":\"明天下午2点\"},\"missing_fields\":[]}",
             "今天下午有什么安排 => {\"arguments\":{\"action\":\"query\",\"range\":\"today\"},\"missing_fields\":[]}",
             "取消日程 12 => {\"arguments\":{\"action\":\"cancel\",\"id\":12},\"missing_fields\":[]}",
@@ -287,7 +292,7 @@ def _argument_extraction_system_prompt(
     special_rules = {
         "reminder_create": "action 必须是 create/query/cancel/complete/delete_all；create 不得使用 start_text/title。",
         "todo_manage": "action 必须是 create/query/update/complete/delete；按标题完成或删除使用 query + title_query。",
-        "schedule_manage": "action 必须是 create/query/cancel；创建必须包含 title 和 start_text；按标题取消先 query + title_query。",
+        "schedule_manage": "action 必须是 create/query/cancel；创建必须包含 title 和 start_text；location 只是本地记录，不代表房间锁定；按标题取消先 query + title_query。",
         "text_polish": "arguments 必须包含 operation 和 text；不得输出 tone:null。",
         "general_chat": "arguments 必须且只能包含非空 text；保留用户原始问题。",
     }

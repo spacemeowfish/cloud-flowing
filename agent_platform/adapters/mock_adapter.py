@@ -329,7 +329,9 @@ class MockModelAdapter(ModelAdapter):
                 "missing_fields": [],
                 "confidence": 0.97,
             }
-        elif is_knowledge_bound_request(text):
+        elif is_knowledge_bound_request(text) or any(
+            phrase in text for phrase in ("如何申请采购", "会议室规则", "会议室使用规则")
+        ):
             query = re.sub(r"^(请|帮我)?(?:查询|查一下|告诉我)[：:\s]*", "", text)
             result = {
                 "intent": "knowledge_query",

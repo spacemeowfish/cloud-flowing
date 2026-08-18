@@ -21,6 +21,8 @@ INTENT_NAMES = (
     "schedule_manage",
     "text_polish",
 )
+TERMINAL_INTENT_NAMES = ("clarify", "unsupported")
+CLASSIFICATION_INTENT_NAMES = (*INTENT_NAMES, *TERMINAL_INTENT_NAMES)
 
 # These aliases are valid only in model output. Parameter normalization must
 # convert them before strict ToolMetadata validation and tool execution.
@@ -46,7 +48,7 @@ INTENT_CLASSIFICATION_SCHEMA: dict[str, JsonValue] = {
     "$comment": _CLASSIFICATION_MARKER,
     "type": "object",
     "properties": {
-        "intent": {"type": "string", "enum": list(INTENT_NAMES)},
+        "intent": {"type": "string", "enum": list(CLASSIFICATION_INTENT_NAMES)},
         "confidence": {"type": "number", "minimum": 0, "maximum": 1},
     },
     "required": ["intent", "confidence"],
@@ -291,6 +293,8 @@ __all__ = [
     "build_argument_extraction_schema",
     "INTENT_CLASSIFICATION_SCHEMA",
     "INTENT_NAMES",
+    "TERMINAL_INTENT_NAMES",
+    "CLASSIFICATION_INTENT_NAMES",
     "MODEL_ARGUMENT_ALIASES",
     "MODEL_EXCLUDED_ARGUMENTS",
     "build_model_acceptance_schema",
