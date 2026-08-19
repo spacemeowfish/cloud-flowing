@@ -38,6 +38,7 @@ from agent_platform.models import (
     TaskRecord,
     TaskState,
     ToolCall,
+    ToolReceipt,
     build_model_acceptance_schema,
 )
 
@@ -45,6 +46,8 @@ from agent_platform.models import (
 def _confirmation_detail_lines(intent: str, details: dict[str, str]) -> list[str]:
     """Render the selected business record in a confirmation preview."""
 
+    if intent == "meeting_process" and details.get("source_path"):
+        return [f"文稿：{details['source_path']}"]
     if intent == "schedule_manage" and details.get("title"):
         line = f"日程：{details['title']}"
         if details.get("start_at"):
@@ -83,6 +86,20 @@ _MISSING_FIELD_MESSAGES = {
 }
 
 _REQUIRED_PROPERTY_ERROR = re.compile(r"^'([^']+)' is a required property$")
+
+
+_MEETING_SOURCE_SUFFIXES = {".txt", ".md"}
+_MEETING_COMMAND_WORDS = re.compile(
+    r"请帮我|帮我|请|生成|整理|总结|一下|的|会议纪要|会议记录|会议文稿|这份|这篇|根据|从|写"
+)
+
+
+def _meeting_topic_keyword(request_text: str) -> str:
+    """Strip command wording so the longest remaining segment is the topic."""
+
+    cleaned = _MEETING_COMMAND_WORDS.sub(" ", str(request_text))
+    segments = [segment for segment in re.split(r"[\s,，。;；:：、！？?!]+", cleaned) if segment]
+    return max(segments, key=len) if segments else ""
 
 
 def _missing_fields_message(fields: list[str]) -> str:
@@ -321,6 +338,11 @@ class AgentCore:
                 # 模型声称参数完整但工具 schema 判定缺必填字段时，先转入人工
                 # 补充闸门；无法推导出字段的 schema 错误维持严格失败。
                 derived_missing = _missing_fields_from_schema_errors(schema_errors)
+                if derived_missing is not None and intent.intent == "meeting_process":
+                    # meeting_process 的文稿路径由 _continue 的授权文件搜索
+                    # 兜底（模糊找文件），不用静态闸门拦截。
+                    remaining = [field for field in derived_missing if field != "source_path"]
+                    derived_missing = remaining or None
                 if derived_missing is not None and set(derived_missing) != set(missing_fields):
                     missing_fields = derived_missing
                     await self._audit.record(
@@ -395,6 +417,15 @@ class AgentCore:
             return await self.cancel(task_id, "confirmation_rejected")
         arguments = dict(task.context.get("arguments", {}))
         arguments.update(confirmation.arguments)
+        if task.context.get("intent") == "meeting_process" and "selected_path" in arguments:
+            # 候选闸门选中的文稿就是会议源文件；meeting 工具 schema 不接受
+            # selected_path 字段，映射回 source_path。
+            selected = str(arguments.pop("selected_path")).strip()
+            source = Path(str(arguments.get("source_path", "")))
+            if selected and not (
+                source.is_file() and source.suffix.casefold() in _MEETING_SOURCE_SUFFIXES
+            ):
+                arguments["source_path"] = selected
         if task.context.get("intent") == "reminder_create" and "when" in confirmation.arguments:
             # Confirmation supplies the missing time only. Preserve the model's
             # extracted reminder body; the tool sanitizes legacy command text.
@@ -438,6 +469,13 @@ class AgentCore:
         intent_name = str(task.context["intent"])
         arguments = dict(task.context.get("arguments", {}))
         missing_fields = list(task.context.get("missing_fields", []))
+        if intent_name == "meeting_process":
+            source = Path(str(arguments.get("source_path", "")))
+            if not source.is_file() or source.suffix.casefold() not in _MEETING_SOURCE_SUFFIXES:
+                resolved = await self._resolve_meeting_source(task, arguments, missing_fields)
+                if isinstance(resolved, TaskRecord):
+                    return resolved
+                arguments, missing_fields = resolved
         if missing_fields:
             return await self.tasks.transition(
                 task.id,
@@ -645,6 +683,83 @@ class AgentCore:
         )
         await self._audit.flush()
         return task
+
+    async def _resolve_meeting_source(
+        self,
+        task: TaskRecord,
+        arguments: dict[str, JsonValue],
+        missing_fields: list[str],
+    ) -> TaskRecord | tuple[dict[str, JsonValue], list[str]]:
+        """Fuzzy-locate the meeting transcript in authorized roots.
+
+        Zero hit keeps the honest clarification; a unique hit prefills the path
+        and still faces the R2 confirmation later; multiple hits reuse the
+        existing candidate gate.  The live ``file_open`` tool instance is
+        reused (never a second FileSearchTool) so index and authorization stay
+        single-sourced.
+        """
+
+        keyword = _meeting_topic_keyword(task.request_text)
+        candidates = self._meeting_source_candidates(keyword)
+        if not candidates:
+            task = await self.tasks.transition(task.id, TaskEvent.EXECUTE)
+            task = await self.tasks.transition(
+                task.id,
+                TaskEvent.DELIVER,
+                result={
+                    "type": "clarification",
+                    "message": "未在授权目录找到该文稿，请提供完整路径或换个说法",
+                    "candidates": [],
+                },
+            )
+            return await self.tasks.transition(task.id, TaskEvent.COMPLETE)
+        if len(candidates) == 1:
+            arguments = {**arguments, "source_path": str(candidates[0]["path"])}
+            missing_fields = [field for field in missing_fields if field != "source_path"]
+            await self._audit.record(
+                AuditEvent(
+                    task_id=task.id,
+                    event_type=AuditEventType.MODEL_OUTPUT,
+                    output_summary=f"source={candidates[0]['name']}",
+                    decision="meeting_process.source_fuzzy_matched",
+                    data_level=task.data_level,
+                )
+            )
+            return arguments, missing_fields
+        receipt = ToolReceipt(
+            tool_name="file_open",
+            actual_arguments={"query": keyword},
+            success=True,
+            output_summary=f"找到 {len(candidates)} 个候选文件，请确认",
+            output={"candidates": candidates, "requires_confirmation": True},
+            next_actions=["选择一个候选文稿后确认"],
+        )
+        await self._audit.record(
+            AuditEvent(
+                task_id=task.id,
+                event_type=AuditEventType.MODEL_OUTPUT,
+                output_summary=f"candidates={len(candidates)}",
+                decision="meeting_process.source_candidates",
+                data_level=task.data_level,
+            )
+        )
+        return await self.tasks.transition(
+            task.id,
+            TaskEvent.REQUIRE_CONFIRMATION,
+            result={"type": "candidate_confirmation", "receipt": receipt.model_dump(mode="json")},
+        )
+
+    def _meeting_source_candidates(self, keyword: str) -> list[dict[str, JsonValue]]:
+        if not keyword or not self._registry.contains("file_open"):
+            return []
+        search = getattr(self._registry.get("file_open"), "search", None)
+        if not callable(search):
+            return []
+        return [
+            candidate
+            for candidate in search(keyword)
+            if str(candidate.get("name", "")).casefold().endswith((".txt", ".md"))
+        ]
 
     async def _fail(self, task_id: UUID, exc: Exception) -> TaskRecord:
         task = await self.tasks.get(task_id)

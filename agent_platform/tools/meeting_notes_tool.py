@@ -41,6 +41,12 @@ class MeetingNotesTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"meeting:{hashlib.sha256(value.encode()).hexdigest()}"
 
+    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+        """Show the exact transcript file on the R2 confirmation page."""
+
+        source = Path(str(arguments.get("source_path", "")))
+        return {"source_path": source.name} if source.name else {}
+
     async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
         source = Path(str(arguments["source_path"])).resolve()
         if source.suffix.casefold() not in {".txt", ".md"} or not source.is_file():

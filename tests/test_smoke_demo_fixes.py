@@ -19,8 +19,8 @@ def _settings(tmp_path, **updates):
         "model_provider": "mock",
         "database_path": tmp_path / "agent.db",
         "audit_dir": tmp_path / "audit",
-        "authorized_file_roots": [tmp_path / "files"],
-        "knowledge_roots": [tmp_path / "knowledge"],
+        # 只设置 document_roots：同时显式设置 legacy 的 authorized_file_roots/
+        # knowledge_roots 会触发 settings 校验器用 legacy 值覆盖 document_roots。
         "document_roots": [tmp_path / "documents"],
         "meeting_output_dir": tmp_path / "meeting",
         "developer_password": "dev-pass-123",
@@ -358,3 +358,135 @@ async def test_presence_query_returns_honest_empty_result(tmp_path):
             assert task["state"] == "completed", task.get("error")
             assert task["result"]["output_summary"] == "查询到 0 个日程实例"
             assert task["context"]["intent"] == "schedule_manage"
+
+
+# ---------------------------------------------------------------------------
+# S2: meeting_process must fuzzy-locate transcripts in authorized roots.
+# ---------------------------------------------------------------------------
+
+_MEETING_TRANSCRIPT = (
+    "会议时间：2026-08-28 14:00\n与会人：张三、李四\n议题：数据分级边界方案讨论\n"
+    "结论：D2 数据默认不出内网。\n"
+)
+
+
+def _meeting_root(tmp_path):
+    root = tmp_path / "documents"
+    root.mkdir()
+    (root / "会前材料_数据分级边界讨论稿_20260828.txt").write_text(
+        _MEETING_TRANSCRIPT, encoding="utf-8"
+    )
+    (root / "项目周报_20260714.txt").write_text("本周完成平台联调。", encoding="utf-8")
+    (root / "项目周报_20260721.txt").write_text("本周完成安全评审。", encoding="utf-8")
+    (root / "无关文件.txt").write_text("无关内容", encoding="utf-8")
+    return root
+
+
+@pytest.mark.asyncio
+async def test_meeting_absolute_path_flow_unchanged(tmp_path):
+    root = _meeting_root(tmp_path)
+    transcript = root / "会前材料_数据分级边界讨论稿_20260828.txt"
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": f"整理会议纪要 {transcript}"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            assert task["result"]["type"] == "risk_confirmation"
+
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm", json={"approved": True, "arguments": {}}
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "completed", finished.get("error")
+            assert "会议纪要已生成" in finished["result"]["output_summary"]
+
+
+@pytest.mark.asyncio
+async def test_meeting_topic_unique_hit_prefills_and_stops_at_r2(tmp_path):
+    _meeting_root(tmp_path)
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post(
+                "/tasks", json={"text": "帮我生成数据分级边界讨论稿的会议纪要"}
+            )
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            assert task["risk_level"] == "R2"
+            assert task["result"]["type"] == "risk_confirmation"
+            assert "会前材料_数据分级边界讨论稿_20260828.txt" in task["result"]["confirmation"][
+                "content"
+            ]
+
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm", json={"approved": True, "arguments": {}}
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "completed", finished.get("error")
+            assert "会议纪要已生成" in finished["result"]["output_summary"]
+
+
+@pytest.mark.asyncio
+async def test_meeting_topic_multiple_hits_use_candidate_gate(tmp_path):
+    _meeting_root(tmp_path)
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我生成项目周报的会议纪要"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            result = task["result"]
+            assert result["type"] == "candidate_confirmation"
+            candidates = result["receipt"]["output"]["candidates"]
+            assert len(candidates) == 2
+
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm",
+                json={"approved": True, "arguments": {"selected_path": candidates[0]["path"]}},
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "completed", finished.get("error")
+            assert "会议纪要已生成" in finished["result"]["output_summary"]
+
+
+@pytest.mark.asyncio
+async def test_meeting_topic_zero_hits_clarifies(tmp_path):
+    _meeting_root(tmp_path)
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我生成季度战略复盘的会议纪要"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], {"completed", "failed"})
+            assert task["state"] == "completed", task.get("error")
+            assert task["result"]["type"] == "clarification"
+            assert task["result"]["message"] == "未在授权目录找到该文稿，请提供完整路径或换个说法"
+
+
+@pytest.mark.asyncio
+async def test_meeting_source_outside_roots_still_rejected(tmp_path):
+    _meeting_root(tmp_path)
+    outside = tmp_path / "outside_transcript.txt"
+    outside.write_text(_MEETING_TRANSCRIPT, encoding="utf-8")
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": f"整理会议纪要 {outside}"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm", json={"approved": True, "arguments": {}}
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "failed"
+            assert "PermissionDeniedError" in str(finished["error"])
