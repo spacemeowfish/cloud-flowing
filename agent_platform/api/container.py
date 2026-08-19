@@ -1,6 +1,7 @@
 """Composition root for the application and its replaceable modules."""
 
 import asyncio
+import logging
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 
@@ -22,6 +23,9 @@ from agent_platform.core.tool_executor import ToolExecutor
 from agent_platform.core.tool_registry import ToolRegistry
 from agent_platform.core.voice_input import VoiceInputService
 from agent_platform.tools import FileSearchTool, GeneralChatTool, KnowledgeBaseTool, MeetingNotesTool, ReminderTool, ScheduleTool, TextProcessingTool, TodoTool
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -77,7 +81,11 @@ class ApplicationContainer:
         ):
             registry.register(tool)
         registry.freeze()
-        executor = ToolExecutor(registry, idempotency_ttl_seconds=settings.idempotency_ttl_seconds)
+        executor = ToolExecutor(
+            registry,
+            idempotency_ttl_seconds=settings.idempotency_ttl_seconds,
+            mutation_idempotency_ttl_seconds=settings.mutation_idempotency_ttl_seconds,
+        )
         resources = ResourceMonitor(settings.resource_mode)
         agent = AgentCore(
             tasks=tasks,
@@ -140,7 +148,17 @@ class ApplicationContainer:
     def spawn(self, coroutine: Coroutine[object, object, object]) -> None:
         task = asyncio.create_task(coroutine)
         self.background_tasks.add(task)
-        task.add_done_callback(self.background_tasks.discard)
+        task.add_done_callback(self._finish_background_task)
+
+    def _finish_background_task(self, task: asyncio.Task[object]) -> None:
+        self.background_tasks.discard(task)
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is not None:
+            # Background processing errors (for example a task cancelled at
+            # the wrong moment) must at least leave a log trace.
+            logger.error("background task failed: %s: %s", type(exc).__name__, exc, exc_info=exc)
 
     async def close(self) -> None:
         if self.background_tasks:

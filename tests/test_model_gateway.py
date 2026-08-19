@@ -280,14 +280,29 @@ async def test_interpret_stops_after_one_failed_schema_repair():
 
 
 @pytest.mark.asyncio
-async def test_interpret_does_not_repair_malformed_json_model_error():
-    adapter = _RecordingAdapter(error=ModelError("invalid JSON"))
-    gateway = ModelGateway(adapter)
+async def test_interpret_regenerates_once_for_malformed_json_model_error():
+    class _ErrorSequenceAdapter:
+        def __init__(self, error):
+            self.error = error
+            self.calls = 0
 
+        async def generate(self, messages, response_schema, max_tokens=512):
+            del messages, response_schema, max_tokens
+            self.calls += 1
+            raise self.error
+
+        async def close(self):
+            return None
+
+    failing = _ErrorSequenceAdapter(ModelError("invalid JSON"))
+    gateway = ModelGateway(failing)
+
+    # A truncated-JSON parse failure gets one identical regeneration before
+    # the task fails; the error itself still surfaces when it persists.
     with pytest.raises(ModelError, match="invalid JSON"):
         await gateway.interpret("取消日程 12", build_model_acceptance_schema(_acceptance_registry()))
 
-    assert adapter.calls == 1
+    assert failing.calls == 2
 
 
 @pytest.mark.asyncio

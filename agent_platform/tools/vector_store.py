@@ -120,6 +120,11 @@ class SQLiteVectorStore:
     def __init__(self, path: Path, embedder: Embedder) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         self._connection = sqlite3.connect(path, check_same_thread=False)
+        # The admin reindex route opens a second connection against the same
+        # database file; without WAL any concurrent read/write pair fails with
+        # "database is locked" once the default 5s busy window is exhausted.
+        self._connection.execute("PRAGMA journal_mode=WAL")
+        self._connection.execute("PRAGMA busy_timeout=5000")
         self._embedder = embedder
         self._connection.executescript(
             """

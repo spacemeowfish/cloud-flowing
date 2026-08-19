@@ -18,9 +18,20 @@ class _CachedReceipt:
 
 
 class ToolExecutor:
-    def __init__(self, registry: ToolRegistry, *, idempotency_ttl_seconds: int = 3600) -> None:
+    def __init__(
+        self,
+        registry: ToolRegistry,
+        *,
+        idempotency_ttl_seconds: int = 3600,
+        mutation_idempotency_ttl_seconds: int = 120,
+    ) -> None:
         self._registry = registry
         self._ttl = idempotency_ttl_seconds
+        # Keys prefixed with "mutation:" come from tools that change local
+        # state.  A short window still absorbs double-click storms while not
+        # swallowing a user's repeated "remind me again in 30 minutes" intent
+        # an hour later.
+        self._mutation_ttl = mutation_idempotency_ttl_seconds
         self._cache: dict[str, _CachedReceipt] = {}
         self._cache_lock = asyncio.Lock()
 
@@ -91,8 +102,9 @@ class ToolExecutor:
             return item.receipt if item else None
 
     async def _store_cached(self, key: str, receipt: ToolReceipt) -> None:
+        ttl = self._mutation_ttl if key.startswith("mutation:") else self._ttl
         async with self._cache_lock:
-            self._cache[key] = _CachedReceipt(time.monotonic() + self._ttl, receipt)
+            self._cache[key] = _CachedReceipt(time.monotonic() + ttl, receipt)
 
 
 __all__ = ["ToolExecutor"]

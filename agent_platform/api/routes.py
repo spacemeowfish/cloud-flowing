@@ -78,6 +78,10 @@ async def cancel_task(task_id: UUID, payload: TaskCancel, request: Request) -> T
     task = await _container(request).tasks.get(task_id)
     if task.session_id != request.state.session_id:
         raise HTTPException(status_code=403, detail="Task belongs to another session")
+    if task.state in TERMINAL_STATES:
+        # Cancelling a finished task is idempotent: return the current record
+        # instead of failing with an invalid-transition error.
+        return task
     return await _container(request).agent.cancel(task_id, payload.reason)
 
 

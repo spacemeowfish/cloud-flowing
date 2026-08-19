@@ -10,7 +10,6 @@ from fastapi import APIRouter, Depends, Request
 from agent_platform.adapters.notifications import windows_toast
 from agent_platform.api.container import ApplicationContainer
 from agent_platform.api.auth import require_developer
-from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.desktop_settings import DesktopSettingsService, PassiveRestartController
 from agent_platform.models.admin import DesktopSettingsUpdate, DesktopSettingsView, RestartStatus
 from agent_platform.tools import KnowledgeBaseTool, KnowledgeDocumentImporter
@@ -44,31 +43,27 @@ async def restart_status(request: Request) -> RestartStatus:
     return controller.status()
 
 
-def _reindex(settings) -> dict[str, object]:
-    knowledge = KnowledgeBaseTool(
-        list(settings.knowledge_roots),
-        settings.database_path.with_name("knowledge.db"),
-        DataClassificationService(),
-    )
+def _reindex(knowledge: KnowledgeBaseTool) -> dict[str, object]:
+    # Reuse the container's live instance: it is built from
+    # settings.document_roots, so the rebuilt index can never diverge from
+    # what queries actually read (knowledge_roots may differ when
+    # AGENT_DOCUMENT_ROOTS is explicitly configured).
     aggregate = {"scanned": 0, "imported": 0, "skipped": 0, "failures": []}
-    try:
-        importer = KnowledgeDocumentImporter(knowledge)
-        for root in settings.knowledge_roots:
-            report = importer.import_directory(Path(root), force=True)
-            aggregate["scanned"] += report.scanned
-            aggregate["imported"] += report.imported
-            aggregate["skipped"] += report.skipped
-            aggregate["failures"].extend(
-                {"file": failure.file, "error": failure.error} for failure in report.failures
-            )
-        return aggregate
-    finally:
-        knowledge.close()
+    importer = KnowledgeDocumentImporter(knowledge)
+    for root in knowledge.roots:
+        report = importer.import_directory(Path(root), force=True)
+        aggregate["scanned"] += report.scanned
+        aggregate["imported"] += report.imported
+        aggregate["skipped"] += report.skipped
+        aggregate["failures"].extend(
+            {"file": failure.file, "error": failure.error} for failure in report.failures
+        )
+    return aggregate
 
 
 @router.post("/knowledge/reindex")
 async def reindex_knowledge(request: Request) -> dict[str, object]:
-    return await asyncio.to_thread(_reindex, _container(request).settings)
+    return await asyncio.to_thread(_reindex, _container(request).knowledge)
 
 
 @router.post("/notifications/test")

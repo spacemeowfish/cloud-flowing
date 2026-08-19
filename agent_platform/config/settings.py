@@ -90,10 +90,13 @@ class Settings(BaseSettings):
     model_timeout_seconds: float = Field(default=30.0, gt=0, validation_alias="MODEL_TIMEOUT_SECONDS")
 
     ollama_base_url: str = Field(default="http://127.0.0.1:11434", validation_alias="OLLAMA_BASE_URL")
-    ollama_timeout_seconds: float = Field(default=120.0, gt=0, validation_alias="OLLAMA_TIMEOUT_SECONDS")
+    ollama_timeout_seconds: float = Field(default=60.0, gt=0, validation_alias="OLLAMA_TIMEOUT_SECONDS")
     ollama_thinking_enabled: bool = Field(default=False, validation_alias="OLLAMA_THINKING_ENABLED")
     ollama_keep_alive: str = Field(default="10m", validation_alias="OLLAMA_KEEP_ALIVE")
     ollama_max_new_tokens: int = Field(default=512, ge=1, le=8192, validation_alias="OLLAMA_MAX_NEW_TOKENS")
+    intent_extraction_max_tokens: int = Field(
+        default=512, ge=192, le=8192, validation_alias="AGENT_INTENT_EXTRACTION_MAX_TOKENS"
+    )
 
     rkllm_server_url: str = Field(default="http://127.0.0.1:8080/v1", validation_alias="RKLLM_SERVER_URL")
     rkllm_model_name: str = Field(default="rkllm", validation_alias="RKLLM_MODEL_NAME")
@@ -177,6 +180,9 @@ class Settings(BaseSettings):
     network_available: bool = Field(default=True, validation_alias="AGENT_NETWORK_AVAILABLE")
     resource_mode: str = Field(default="normal", validation_alias="AGENT_RESOURCE_MODE")
     idempotency_ttl_seconds: int = Field(default=3600, ge=1, validation_alias="AGENT_IDEMPOTENCY_TTL_SECONDS")
+    mutation_idempotency_ttl_seconds: int = Field(
+        default=120, ge=1, validation_alias="AGENT_MUTATION_IDEMPOTENCY_TTL_SECONDS"
+    )
     audit_flush_size: int = Field(default=10, ge=1, le=1000, validation_alias="AGENT_AUDIT_FLUSH_SIZE")
 
     @model_validator(mode="after")

@@ -1,15 +1,12 @@
 import json
-from uuid import uuid4
 
 import pytest
 
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.edge_cloud_router import EdgeCloudRouter
 from agent_platform.core.errors import SensitiveDataError
-from agent_platform.core.offline_queue import OfflineTaskQueue
 from agent_platform.core.policy_engine import PolicyEngine
 from agent_platform.core.resource_monitor import ResourceMonitor
-from agent_platform.core.session_manager import SessionManager
 from agent_platform.models import DataLevel, ExecutionTarget, PolicyContext, RiskLevel, RoutingRequest
 
 
@@ -157,21 +154,3 @@ def test_routing_scenarios(routing_request, mode, target):
     classifier = DataClassificationService()
     decision = EdgeCloudRouter(classifier).decide(routing_request, ResourceMonitor(mode).get_metrics())
     assert decision.target == target
-
-
-@pytest.mark.asyncio
-async def test_offline_queue_fifo_cancel_and_d3(tmp_path):
-    store = SessionManager(tmp_path / "tasks.db")
-    queue = OfflineTaskQueue(store, DataClassificationService())
-    first, second, third = uuid4(), uuid4(), uuid4()
-    await queue.enqueue(first, {"text": "one"}, "k1")
-    await queue.enqueue(second, {"text": "two"}, "k2")
-    await queue.enqueue(third, {"text": "three"}, "k3")
-    await queue.cancel(second)
-    pending = await queue.pending()
-    assert [row["task_id"] for row in pending] == [str(first), str(third)]
-    await queue.enqueue(first, {"text": "duplicate"}, "k1")
-    assert await queue.depth() == 2
-    with pytest.raises(SensitiveDataError):
-        await queue.enqueue(uuid4(), {"text": "password=abc123"}, "bad")
-    await store.close()

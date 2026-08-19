@@ -1,86 +1,77 @@
 # Current Task
 
-- ID: `DOCUMENT-ROUTING-BOUNDARIES-001`
-- Title: `统一文档目录与意图边界优化`
+- ID: `PRE-DELIVERY-FIXES-001`
+- Title: `交付前修复（FIXPLAN 批次 A/B/C）`
 - Status: `handoff`
 - Owner: `ZCode`
 - Next owner: `spacemeowfish/reviewer`
 
 ## Goal
 
-将知识库和报告文件统一为一个文档来源，同时保留文件查找/打开与文档内容问答两种逻辑能力；收紧提醒、待办、日程、文本、文件、会议、知识问答和通用问答的路由边界。分类继续使用 Qwen2.5-3B 的“意图分类 -> 单工具参数提取”两阶段链路，并支持分类阶段的 `clarify`、`unsupported` 终止结果。
+按 `FIXPLAN.md`（生成于 2026-08-19，基于 main 624f751 与 455 项 pytest 基线）执行交付前修复：批次 A（演示阻塞项）、批次 B（真实 ollama qwen2.5:3b 链路健壮性，用户已确认演示使用 ollama qwen2.5 3B）、批次 C（数据与后台任务）。批次 D 与架构重构不在本任务范围。
 
-本任务从 `origin/main` 独立开发。PR#7（用户/开发者界面）当前仍未合并，因此本分支只接入当前 main 可承载的结果类型和文档边界，不复制 PR#7 的提交。TTS、ASR、唤醒词、RK3588 性能、真实会议室连接器和完整商业认证不在范围内。
+前置收尾：`DOCUMENT-ROUTING-BOUNDARIES-001` 已按 PR#8（de844b0）合并结果标记 `done`，归档至 `docs/tasks/2026-08-19-document-routing-boundaries.md`。
 
 ## Acceptance scenarios
 
-- [x] `AGENT_DOCUMENT_ROOTS` 默认包含 `data/documents` 和 `demo_documents`，旧目录配置仍兼容且新配置优先。
-- [x] 统一目录中的 txt/md/docx 同时可用于文件索引和内容索引，来源带文件名与日期元数据。
-- [x] `预约 A301 会议室` 路由到 `schedule_manage`，保留 location，并明确只是本地日程。（ZCode 复审修订：预约+会议室 是高置信表达，改由预路由确定性处理；无时间时走 missing_fields 确认流询问时刻，本地日程说明由工具补充。）
-- [x] `查询会议室使用规则` 路由到 `knowledge_query`；不得把预约动作送进知识问答。
-- [x] `查看项目周报` 返回文件候选；`项目周报中完成了什么` 走内容问答；多份未指定日期时返回澄清。（ZCode 复审修复：查询词清洗 + 文件名子序列匹配后，用户流程实测通过。）
-- [x] 明确日期的项目周报回答附带对应文件名和日期；无关制度文档不得命中。（ZCode 复审修复：提问句式不再被动作词守卫误杀后实测通过。）
-- [x] “提醒功能怎么用”走知识问答；“提醒我下午三点开会”创建提醒；“待办清单文件在哪”查找文件。
-- [x] “总结项目周报”不得把文件名当作正文；“本周有什么会议”无真实数据时不由通用模型虚构回答。
-- [x] `meeting_process` 不生成虚构路径；`clarification`/`unsupported` 正常完成，不调用工具；工具真实失败保持失败。
+- [x] A1 开发者 Cookie 下发任务不再 `unknown_role` 失败：`_POLICY_ROLE_MAP` 将 developer 映射为 admin 策略语义（单点：`agent_core.py` 构造 PolicyContext 处）。
+- [x] A2 提醒/日程 `_scheduler_loop` 对 poll 异常记日志并继续；toast `show()` 失败回退 console 不上抛；`poll_due` 回调按行 try/except，失败行仍 UPDATE+commit 不重复通知。
+- [x] A3 `SQLiteVectorStore` 连接后执行 `PRAGMA journal_mode=WAL` 与 `busy_timeout=5000`，管理端重建索引与查询并发不再 locked。
+- [x] A4 演示配置：`.env` 切换 `MODEL_PROVIDER=ollama`、`MODEL_NAME=qwen2.5:3b`、`OLLAMA_TIMEOUT_SECONDS=60`、补 `DEVELOPER_PASSWORD`（本地文件，不入 Git）；`.env.example` 同步新变量说明。
+- [x] B1 参数抽取阶段输出上限由 192 放宽到可配置 `AGENT_INTENT_EXTRACTION_MAX_TOKENS`（默认 512，仅对 argument-extraction schema 生效，分类/接受 schema 维持 192）；抽取阶段非重试 `ModelError`（截断 JSON）原样重生成一次。
+- [x] B2 意图分类阶段增加 `ModelSchemaError -> 修复 prompt -> 重试一次`（新增 `_classification_repair_message`，修复输出多余 arguments 字段等 3B 常见漂移）。
+- [x] B3 确定性预路由参数校验失败时记 warning 并回退模型抽取（不再直接抛 `ModelSchemaError`）；`start_text_from_request` 不再复制整句（见 Decisions 偏离说明）；text_polish 文本上游按 schema 上限 10000 截断。
+- [x] B4 `ModelGateway.generate` 对连接类可重试错误（非超时/限流/忙）同 adapter 重试 1 次；`OLLAMA_TIMEOUT_SECONDS` 默认 120→60。
+- [x] C1 路由 QUEUE 决策改为诚实失败（错误信息“离线且无云端执行能力，任务未排队”），不再进入永久 `waiting_network`；删除 `core/offline_queue.py` 与 `session_manager` 的 offline_queue 建表。
+- [x] C2 管理端 `/admin/knowledge/reindex` 复用容器内活实例（`container.knowledge`，其 roots 为 `document_roots`），删除第二套构造。
+- [x] C3 幂等缓存区分查询与变更：新设置 `AGENT_MUTATION_IDEMPOTENCY_TTL_SECONDS`（默认 120s）；reminder/schedule/todo 变更类 `idempotency_key` 加 `mutation:` 前缀；读取类维持 3600s。
+- [x] C4 取消终态任务返回 200 + 当前记录（幂等）；`AgentCore.process` 的 CancelledError 处理器加 task-unbound 与 `InvalidTransitionError` 守卫；`container.spawn` done-callback 记录后台任务异常日志。
 
 ## Invariants
 
-- 目录位置不决定能力类型，用户表达和模型意图决定文件索引或内容索引。
-- `general_chat` 不回答本地文件、项目、会议和日程状态；`knowledge_query` 不执行创建、预约、打开、删除或修改。
-- 文件访问只允许授权根目录；模型不能绕过 schema、确认、权限和结果校验。
-- 本地日程不等于真实会议室锁定；不引入外部会议室连接器。
-- 不把密码、密钥、Cookie、原始敏感任务内容或本机绝对路径写入日志、前端或 Git。
+- 默认 PC 模型仍为 `qwen2.5:3b`（ollama 本机 digest `357c53fb659c`，与历史报告一致）。
+- 确定性代码继续负责 Schema、授权、数据分级、确认、执行、幂等、取消、审计；B 批只增加模型调用的容错与预算，不放松任何 Schema 校验。
+- 不引入 mock fallback 冒充真实模型（B4 明确不做假答案回退）。
+- 不把密码、Cookie 或本机绝对路径写入 Git（`.env` 已被 ignore，密码仅本地）。
+- 455 项 pytest 基线只增不减；本次全量 474 项通过（+20 新增回归、−1 离线队列死代码测试）。
 
 ## Decisions
 
-- 新配置 `AGENT_DOCUMENT_ROOTS` 为规范来源，旧 `AGENT_KNOWLEDGE_ROOTS`/`AGENT_AUTHORIZED_FILE_ROOTS` 仅做兼容回退。
-- 先用现有文件名、日期、主题词筛选和 hashing/lexical 检索门禁，不引入大型向量模型。
-- `clarify` 与 `unsupported` 只属于分类阶段终止结果，不注册为工具、不进入参数抽取。
-- PR#7 未合并，当前分支从最新 `origin/main` 开始，避免混入用户/开发者界面提交。
-- （ZCode）`knowledge_query` 的动作词守卫增加提问句式豁免：文本含“什么/哪些/如何/怎么/怎样/多少/是否/几/吗/呢”时不按动作请求拒绝。“完成了什么”类内容提问不再误杀。
-- （ZCode）“预约/预订 + 会议室”前缀改由预路由到 `schedule_manage`（决策变更，修订 Codex 原先留给模型分类的设计）：该表达锚点明确；确定性参数保留 location；缺时间进入 missing_fields 确认流，安全且对 mock/真实模型行为一致。
-- （ZCode）`file_open` 查询词清洗：动词包装（打开/查找/查看/看看…）必选匹配 + 尾部“文件/在哪”类后缀剥离；无动词句式（“待办清单文件在哪”）用独立定位正则。文件名匹配增加中文子序列评分，口语化查询可命中含插入词的真实文件名。
-- （ZCode）语音输入在容器初始化时后台预加载 Faster-Whisper 模型（`voice.prewarm`），首次录音不再承担冷启动成本；失败静默不影响语音状态。
+- A1 采用映射法（`_POLICY_ROLE_MAP = {"developer": "admin"}`）而非在 policies.yaml 增加 developer 角色：后者会在高风险动作 `allowed_roles` 检查处再次被拒。
+- B3 `start_text` 偏离 FIXPLAN 字面方案：FIXPLAN 建议剥离时间线索后用剩余文本作 start_text，但 `schedule_tool` 只解析 `start_text` 的时间表达式，剥离会导致工具无法解析开始时间、所有带时间预约退化为询问时刻。实现改为：命中的时间线索本身作为 `start_text`（天然短、可解析、≤200），剩余文本剥离命令动词后仅在 title 为空时作 `title` 兜底（`schedule_manage.title_from_request`）。两个旧断言“整句复制”的测试已按新行为更新。
+- B4 只重试连接类错误（排除超时/限流/忙），避免超时重试让演示等待时间翻倍。
+- C3 变更识别用工具 `idempotency_key` 的 `mutation:` 前缀约定（计划中的兜底方案），未扩展 ToolMetadata 结构。
+- A1 回归测试放在新文件 `tests/test_pre_delivery_fixes.py`（与 FIXPLAN 建议的 test_developer_auth.py 等价覆盖，避免两处维护同一场景）。
+- `AGENT_DOCUMENT_ROOTS` 语义保持：构造参数显式传 legacy roots 时仍按原设计合并回退，环境变量始终优先（C2 测试用 monkeypatch.setenv 表达该语义）。
 
 ## Completed
 
-- 已确认 `origin/main` 为 `f857428`，工作区干净，并创建 `codex/document-routing-boundaries`。
-- 已读取项目规范、任务上下文和证据驱动开发要求。
-- 上一任务 `CLI-EVALUATION-PATH-001` 的评测路径修复已在原任务记录中交接；本任务不回滚其代码。
-- 已实现 `AGENT_DOCUMENT_ROOTS`、旧配置回退、统一文件/内容索引、周报日期筛选、来源文件名/日期和无关命中门禁。
-- 已将 `demo_docs` 与 `demo_files` 的演示资产归并到 `demo_documents`，并让文件搜索、知识问答、会议文本使用同一组根目录。
-- 已移除问号、单个名词、任意提醒/待办/日程和仅“总结”开头的宽松快速路由；分类阶段增加 `clarify`/`unsupported`，并在 AgentCore 增加能力门禁。
-- 已接入前端的澄清、不支持、来源日期和本地日程说明展示。
-- 已新增文档边界回归测试；全量 pytest 通过。
-- （ZCode 复审）按普通用户流程实测发现 4 个验收场景不通过，已在 `zcode/routing-boundary-fixes` 分支修复：提问句式误杀、文件查询词不清洗、文件名匹配过严、预约会议室不预路由；另修复 `.env` 旧变量指向空目录导致的文档功能整体失效（本地 `.env` 已迁移，`.env.example` 已补充说明）。
-- （ZCode 复审）ASR 耗时专项：实测纯转写热路径 1.81s、进程内全链路首次 5.30s、端到端（松开->文字）首次 6.84s / 热 1.83s、Ollama 生成争抢下 2.07-2.45s、麦克风打开 0.31s。20s 体感无法在当前代码复现，判定为此前旧服务进程/冷启动叠加；已增加容器启动预热，首次录音实测降至 2.10s。
+- 批次 A（A1-A4）、批次 B（B1-B4）、批次 C（C1-C4）全部实现，含回归测试 `tests/test_pre_delivery_fixes.py` 20 项。
+- 同步更新：`tests/test_model_gateway.py`（B1 行为变更：截断 JSON 重试一次后仍失败才报错）、`tests/test_parameter_normalizer.py`（B3 start_text 新行为）、`tests/test_policy_routing.py`（删除 offline_queue 测试）。
+- `.env.example` 新增/更新：`AGENT_INTENT_EXTRACTION_MAX_TOKENS`、`AGENT_MUTATION_IDEMPOTENCY_TTL_SECONDS`、`AGENT_IDEMPOTENCY_TTL_SECONDS` 说明、`OLLAMA_TIMEOUT_SECONDS=60`。
 
 ## Pending
 
-- 审查并合并 `zcode/routing-boundary-fixes`（PR#7 已于 2026-08-16 合并为 `ab665e1`；本分支已 rebase 到新 main 并解决 `.ai-team/TASK.md`、`agent_platform/config/settings.py`、`agent_platform/static/app.js` 三处冲突：保留 PR#7 的开发者模式门控与路由任务的澄清/候选/来源日期展示）。
-- 真实 Qwen2.5-3B 的会议预约参数抽取仍需后续优化（本分支未改模型链路）：无时间输入走 missing_fields 询问时刻属预期；带时间输入的 `start_text` 解析质量沿用原 Pending 记录，不计为真实模型质量验收通过。
-- “提醒功能怎么用”等口语化知识问答在 lexical 检索下可能命中含关键词但不相关的制度文档（实测命中考勤制度）；属检索质量已知局限，待后续引入更强检索或由真实模型改写查询。
+- 批次 D（D1-D12）与架构重构方向：交付后按 FIXPLAN 价值排序另立任务。
+- 人工冒烟清单（A4.4）剩余项：desktop 模式普通页过八类能力、ASR 按一次、ZipVoice 合成一次（服务端任务链路已由脚本冒烟覆盖）。
+- 真实 ollama 演示冷启动预留 ~10s（TASK 历史记录 qwen2.5:3b 冷 10.37s/热 0.94s）；建议演示前预热一次。3B 分类对无锚点问句（如“珠穆朗玛峰有多高”）可能落入知识问答，演示通用问答建议使用“什么是/为什么”句式（确定性预路由）。
 
 ## Next step
 
-审查 `zcode/routing-boundary-fixes` 的单独提交（相对 `codex/document-routing-boundaries` 仅含复审修复与测试）；合并后从最新 main 继续真实 Qwen2.5-3B 的预约参数回归，不与 PR#7 混合。
+- 审查并合并本 PR；合并后按 A4.4 清单人工冒烟（演示用 `.env` 已配置：ollama qwen2.5:3b + DEVELOPER_PASSWORD，密码在本地 `.env`，不入库）。
+- 反馈验收意见后由 ZCode 继续修订（用户约定：优化完成后由用户验收给反馈再修改）。
 
 ## Verification
 
-- [x] 聚焦路由、模型 schema、知识库、Agent API 回归测试
-- [x] `python -m pytest -q -p no:cacheprovider`：450 项通过（含新增 `tests/test_routing_boundary_fixes.py` 22 项）
-- [x] `python -m compileall -q agent_platform evaluation deployment scripts`
-- [x] `node --check agent_platform/static/app.js`
-- [x] `git diff --check`
-- [x] `node .ai-team/check.mjs --base origin/main`
-- [x] 本机 `qwen2.5:3b` 调用计时：冷 10.37 s / 2 calls，热 0.94 s / 2 calls；仅意图可靠，预约时间参数仍需修复。（Codex 原始记录，本分支未改模型链路）
-- [x] （ZCode）用户级 HTTP 全流程复测（mock，迁移后 `.env`）：会议室规则命中来源、带日期周报问答附文件名+日期、查看项目周报返回候选待确认、待办清单文件在哪直接命中文件、预约A301进入 missing_fields 询问时刻、多份周报无日期返回日期澄清、本周会议不虚构。
-- [x] （ZCode）ASR 预热验证：服务启动后首次录音（松开->文字）2.10s，转写内容正确。
-- [x] （ZCode）PR#7 合并后集成验证：455 项 pytest 全部通过；用户级实测双角色界面（匿名 403/错误密码 401/登录 200/登出后 403）与路由修复（预约A301 询问时刻、带日期周报问答带来源）共存正常。
+- [x] `.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider`：474 项全部通过（基线 455 + 20 新增 − 1 删除；exit 0）
+- [x] `.\.venv\Scripts\python.exe -m compileall -q agent_platform evaluation deployment scripts` 通过
+- [x] `node .ai-team/check.mjs --base origin/main`（TASK.md 与代码同 PR 更新后通过；本次会话首次运行为 blocked，系 TASK.md 尚未提交所致，已随本提交修复）
+- [x] 本机 `ollama list` 确认 `qwen2.5:3b`（357c53fb659c）已就绪
+- [x] 真实 ollama 冒烟（`agent_platform.cli serve` + `.env` 演示配置，脚本 `scripts/smoke_ollama_demo.py`，密码从环境读取）：健康检查 ok/ollama；预路由提醒（5分钟后喝水）完成；真实模型日程“明天下午3点开项目评审会”完成并正确创建 2026-08-20T15:00+08:00、标题“项目评审会”（历史 Pending 的预约时间参数问题在本次 B 批修复后实测通过）；通用问答“什么是人工智能”真实模型回答正常、“1+1等于多少”确定性回答正常；开发者登录（200）后同 Cookie 发提醒任务 completed（A1 实测）；completed 任务取消返回 200/completed（C4 实测）。“珠穆朗玛峰有多高”被 3B 分入知识问答返回未命中（分类质量已知局限，任务诚实完成，非本次回归；演示用“什么是…”句式可稳定走通用问答）。
+- [ ] 人工冒烟清单其余项（desktop 模式八类能力、ASR 按一次、ZipVoice 合成一次）：待本 PR 合并后人工执行并补记录
 
 ## Handoff note
 
 - From: `ZCode`
 - To: `spacemeowfish/reviewer`
-- Summary: 复审发现 4 个验收场景用户流程不通过并已修复（提问句式误杀、文件查询清洗与匹配、会议室预约预路由、.env 漂移），另按用户要求增加 ASR 模型启动预热（首次录音 6.84s→2.10s）。PR#7 已由仓库所有者决策先合并（ab665e1），本分支已 rebase 到新 main 并解决三处冲突，合并后 455 项测试与用户级双界面/路由抽查全部通过；决策变更（预约预路由）已在 Decisions 记录。真实模型预约参数与 lexical 检索质量仍为后续项。
+- Summary: FIXPLAN 批次 A/B/C 全部完成（A1 developer 角色映射、A2 调度与通知异常保护、A3 WAL、A4 演示配置；B1-B4 模型链路容错；C1-C4 死局/重建索引/幂等/取消守卫），`.env` 已切换 ollama qwen2.5:3b 并配置开发者密码（本地）。474 项 pytest 通过。B3 start_text 按工具解析语义做了等效偏离（见 Decisions）。批次 D 与人工冒烟待交付后/合并后执行。
