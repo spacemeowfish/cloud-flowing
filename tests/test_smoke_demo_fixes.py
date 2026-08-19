@@ -323,7 +323,7 @@ def test_presence_query_routes_to_schedule_with_today_range():
     assert decision.rule == "schedule_presence_query"
 
     arguments = deterministic_pre_route_arguments("schedule_manage", "帮我查一下今天有没有会议")
-    assert arguments == {"action": "query"}
+    assert arguments == {"action": "query", "range": "today"}
     normalized = normalize_arguments(
         intent="schedule_manage", arguments=arguments, request_text="帮我查一下今天有没有会议"
     )

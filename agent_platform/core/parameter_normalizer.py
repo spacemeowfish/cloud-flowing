@@ -274,9 +274,19 @@ def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[st
             }
     if intent == "schedule_manage":
         if _SCHEDULE_PRESENCE_QUERY.search(text):
-            # 日程存在性查询形态（路由规则 schedule_presence_query）只需
-            # action=query；normalize_arguments 会按“今天/明天/…”补 range。
-            return {"action": "query"}
+            # 日程存在性查询形态（路由规则 schedule_presence_query）给完整
+            # 确定性参数：range 直接推导，与评测基线的模型输出形态一致。
+            arguments: dict[str, JsonValue] = {"action": "query"}
+            for marker, range_value in (
+                ("今天", "today"),
+                ("明天", "tomorrow"),
+                ("本周", "this_week"),
+                ("下周", "next_week"),
+            ):
+                if marker in text:
+                    arguments["range"] = range_value
+                    break
+            return arguments
         booking = _MEETING_ROOM_BOOKING.fullmatch(text)
         if booking is not None:
             room = (booking.group(1) or "").strip()
