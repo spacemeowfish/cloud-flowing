@@ -13,6 +13,12 @@ from agent_platform.core.interfaces import FileOpener, Tool
 from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
 
 _CJK_RUN = re.compile(r"[\u4e00-\u9fff]")
+_CJK_ONLY = re.compile(r"[\u4e00-\u9fff]+")
+# 零命中降级时才剥离的修饰词与口语命令包装；正常命中路径不受影响。
+_SEARCH_NOISE = re.compile(
+    r"这周的|这周|本周的|最近的|最新|我的|查找并打开|找一下|查一下|"
+    r"帮我|一下|查找|打开|查看|看看|这个|请|找|这|的"
+)
 
 
 def _is_subsequence(term: str, target: str) -> bool:
@@ -67,6 +73,24 @@ class FileSearchTool(Tool):
     def search(self, query: str, limit: int = 20) -> list[dict[str, JsonValue]]:
         self.build_index()
         terms = [term.casefold() for term in re.split(r"[\s,，:：.、;;]+", query) if term]
+        scored = self._score_terms(terms, query)
+        if not scored:
+            # 零命中降级第一层：剥掉修饰词与口语命令包装后重打分。
+            relaxed = list(
+                dict.fromkeys(
+                    stripped
+                    for term in terms
+                    if (stripped := _SEARCH_NOISE.sub("", term).strip())
+                )
+            )
+            if relaxed and relaxed != terms:
+                scored = self._score_terms(relaxed, " ".join(relaxed))
+        if not scored:
+            scored = self._score_bigrams(terms)
+        scored.sort(key=lambda item: (-item[0], -self._index[item[1]][1], item[1].name.casefold()))
+        return [self._candidate(path) for _, path in scored[:limit]]
+
+    def _score_terms(self, terms: list[str], query: str) -> list[tuple[int, Path]]:
         scored: list[tuple[int, Path]] = []
         for path in self._index:
             searchable = f"{path.stem} {path.suffix.lstrip('.')} {path.parent.name}".casefold()
@@ -85,8 +109,28 @@ class FileSearchTool(Tool):
                     score += 2
             if score or query.casefold() in name:
                 scored.append((score or 1, path))
-        scored.sort(key=lambda item: (-item[0], -self._index[item[1]][1], item[1].name.casefold()))
-        return [self._candidate(path) for _, path in scored[:limit]]
+        return scored
+
+    def _score_bigrams(self, terms: list[str]) -> list[tuple[int, Path]]:
+        # 零命中降级第二层：≥3 字纯中文词按相邻二元组匹配（顺序不敏感），
+        # 文件名包含该词全部 bigram 才命中，按命中 bigram 数计分。
+        bigram_sets = [
+            {term[i : i + 2] for i in range(len(term) - 1)}
+            for term in terms
+            if len(term) >= 3 and _CJK_ONLY.fullmatch(term)
+        ]
+        if not bigram_sets:
+            return []
+        scored: list[tuple[int, Path]] = []
+        for path in self._index:
+            name = path.name.casefold()
+            score = 0
+            for bigrams in bigram_sets:
+                if all(bigram in name for bigram in bigrams):
+                    score += len(bigrams)
+            if score:
+                scored.append((score, path))
+        return scored
 
     def _candidate(self, path: Path) -> dict[str, JsonValue]:
         root = next(root for root in self._roots if path.is_relative_to(root))

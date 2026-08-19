@@ -1,6 +1,7 @@
 """Regression tests for the manual smoke defect fixes S1-S8 (SMOKE-FIXPLAN.md)."""
 
 import asyncio
+from pathlib import Path
 
 import httpx
 import pytest
@@ -80,3 +81,75 @@ async def test_file_open_summary_unchanged_when_opener_active(tmp_path):
 
     assert receipt.success is True
     assert receipt.output_summary == f"文件处理完成：{target.name}"
+
+
+# ---------------------------------------------------------------------------
+# S8: zero-hit file search must degrade instead of returning nothing.
+# ---------------------------------------------------------------------------
+
+
+def _weekly_report_root(tmp_path):
+    root = tmp_path / "documents"
+    root.mkdir()
+    names = [
+        "项目周报_20260714.txt",
+        "项目周报_20260721.txt",
+        "项目周报_20260728.txt",
+        "项目周报_20260804.txt",
+        "项目周报模板.txt",
+        "IT安全规范.md",
+    ]
+    for name in names:
+        (root / name).write_text("内容", encoding="utf-8")
+    return root
+
+
+def test_search_degrades_modified_keyword_to_hits(tmp_path):
+    root = _weekly_report_root(tmp_path)
+    tool = FileSearchTool([root], DisabledFileOpener())
+
+    hits = tool.search("这周的项目周报")
+
+    assert {Path(hit["path"]).name for hit in hits} == {
+        "项目周报_20260714.txt",
+        "项目周报_20260721.txt",
+        "项目周报_20260728.txt",
+        "项目周报_20260804.txt",
+        "项目周报模板.txt",
+    }
+
+
+def test_search_whole_sentence_wrapper_fallback(tmp_path):
+    root = _weekly_report_root(tmp_path)
+    tool = FileSearchTool([root], DisabledFileOpener())
+
+    hits = tool.search("帮我找一下周报")
+
+    assert len(hits) == 5
+    assert all("周报" in Path(hit["path"]).name for hit in hits)
+
+
+def test_search_bare_keyword_hits_unchanged(tmp_path):
+    root = _weekly_report_root(tmp_path)
+    tool = FileSearchTool([root], DisabledFileOpener())
+
+    hits = tool.search("周报")
+    bare_names = [Path(hit["path"]).name for hit in hits]
+
+    assert len(bare_names) == 5
+    assert "IT安全规范.md" not in bare_names
+    degraded = tool.search("这周的项目周报")
+    assert [Path(hit["path"]).name for hit in degraded] == bare_names
+
+
+def test_search_bigram_fallback_matches_scattered_pairs(tmp_path):
+    root = tmp_path / "documents"
+    root.mkdir()
+    (root / "分级据分数据.txt").write_text("内容", encoding="utf-8")
+    (root / "会议纪要_需求评审.txt").write_text("内容", encoding="utf-8")
+    tool = FileSearchTool([root], DisabledFileOpener())
+
+    # 顺序子序列匹配失败，但全部相邻二元组都在文件名中出现，bigram 兜底应命中。
+    hits = tool.search("数据分级")
+
+    assert [Path(hit["path"]).name for hit in hits] == ["分级据分数据.txt"]
