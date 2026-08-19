@@ -29,13 +29,19 @@ async def windows_toast(reminder: dict[str, Any]) -> None:
         logger.warning("winotify is not installed; falling back to console reminder output")
         await console_print({**reminder, "text": text})
         return
-    toast = Notification(
-        app_id="Agent Platform",
-        title="Agent 提醒",
-        msg=text,
-        duration="short",
-    )
-    toast.show()
+    try:
+        toast = Notification(
+            app_id="Agent Platform",
+            title="Agent 提醒",
+            msg=text,
+            duration="short",
+        )
+        toast.show()
+    except Exception:
+        # Notification delivery is best-effort: a failed toast must not
+        # propagate into the reminder/schedule scheduler loops.
+        logger.exception("windows toast notification failed; falling back to console")
+        await console_print({**reminder, "text": text})
 
 
 async def console_print(reminder: dict[str, Any]) -> None:

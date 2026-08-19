@@ -254,7 +254,9 @@ def test_schedule_create_restores_request_time_and_moves_model_range_end():
         request_text="创建日程：2026年8月8日上午9点到10点上线评审",
     )
 
-    assert result.arguments["start_text"] == "创建日程：2026年8月8日上午9点到10点上线评审"
+    # The matched time cue (not the whole request sentence) becomes the
+    # bounded start_text the schedule parser consumes.
+    assert result.arguments["start_text"] == "2026年8月8日上午9点到10点"
     assert result.arguments["end_text"] == "2026-08-08T10:00:00+08:00"
     assert "range_end" not in result.arguments
     assert result.applied_rules == [
@@ -317,7 +319,7 @@ def test_schedule_create_restores_uppercase_chinese_date_from_request():
         request_text="创建日程 二〇二六年八月八日上午九点到上午十点 产品评审",
     )
 
-    assert result.arguments["start_text"] == "创建日程 二〇二六年八月八日上午九点到上午十点 产品评审"
+    assert result.arguments["start_text"] == "二〇二六年八月八日上午九点到上午十点"
     assert result.applied_rules == ["schedule_manage.start_text_from_request"]
 
 

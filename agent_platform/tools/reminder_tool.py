@@ -4,6 +4,7 @@ import asyncio
 import calendar
 import hashlib
 import json
+import logging
 import re
 import sqlite3
 from datetime import UTC, datetime, timedelta
@@ -15,6 +16,9 @@ from pydantic import JsonValue
 
 from agent_platform.core.interfaces import Tool
 from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+
+
+logger = logging.getLogger(__name__)
 
 
 _WEEKDAYS = {"一": 0, "二": 1, "三": 2, "四": 3, "五": 4, "六": 5, "日": 6, "天": 6}
@@ -334,7 +338,7 @@ class ReminderTool(Tool):
             # result for the whole executor TTL after a create/delete action.
             return f"reminder:query:{datetime.now(UTC).isoformat()}"
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
-        return f"reminder:{hashlib.sha256(value.encode()).hexdigest()}"
+        return f"mutation:reminder:{hashlib.sha256(value.encode()).hexdigest()}"
 
     @staticmethod
     def _item(row: sqlite3.Row | dict[str, JsonValue]) -> dict[str, JsonValue]:
@@ -451,14 +455,19 @@ class ReminderTool(Tool):
             "SELECT * FROM reminders WHERE status = 'active' AND due_at <= ? ORDER BY due_at", (current.isoformat(),)
         ).fetchall()
         for row in rows:
-            await self._callback(self._item(row))
+            try:
+                await self._callback(self._item(row))
+            except Exception:
+                # A failed toast must not leave the row active, otherwise the
+                # next poll fires it again and the loop dies on the same error.
+                logger.exception("reminder notification callback failed: id=%s", row["id"])
             if row["repeat_rule"]:
                 _, weekday, hour, minute = str(row["repeat_rule"]).split(":")
                 due = datetime.fromisoformat(row["due_at"]) + timedelta(days=7)
                 self._connection.execute("UPDATE reminders SET due_at = ? WHERE id = ?", (due.isoformat(), row["id"]))
             else:
                 self._connection.execute("UPDATE reminders SET status = 'notified' WHERE id = ?", (row["id"],))
-        self._connection.commit()
+            self._connection.commit()
         return len(rows)
 
     async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
@@ -484,7 +493,15 @@ class ReminderTool(Tool):
 
     async def _scheduler_loop(self) -> None:
         while True:
-            await self.poll_due()
+            try:
+                await self.poll_due()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # One failed poll (locked database, broken callback, malformed
+                # row) must not kill the loop: every later reminder would be
+                # silently lost because this task is not supervised anywhere.
+                logger.exception("reminder scheduler poll failed; continuing loop")
             await asyncio.sleep(0.5)
 
     async def _log_callback(self, reminder: dict[str, JsonValue]) -> None:

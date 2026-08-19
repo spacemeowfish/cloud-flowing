@@ -35,6 +35,7 @@ class OllamaModelAdapter(ModelAdapter):
         thinking_enabled: bool = False,
         keep_alive: str = "10m",
         max_new_tokens: int = 512,
+        extraction_max_tokens: int = 512,
         client: httpx.AsyncClient | None = None,
     ) -> None:
         if not model.strip():
@@ -46,6 +47,7 @@ class OllamaModelAdapter(ModelAdapter):
         self._thinking_enabled = thinking_enabled
         self._keep_alive = keep_alive
         self._max_new_tokens = max_new_tokens
+        self._extraction_max_tokens = extraction_max_tokens
         self._owns_client = client is None
         self._client = client or httpx.AsyncClient(
             timeout=httpx.Timeout(timeout_seconds),
@@ -71,7 +73,9 @@ class OllamaModelAdapter(ModelAdapter):
             "keep_alive": self._keep_alive,
             "options": {
                 "temperature": 0,
-                "num_predict": effective_max_tokens(response_schema, max_tokens, self._max_new_tokens),
+                "num_predict": effective_max_tokens(
+                    response_schema, max_tokens, self._max_new_tokens, extraction_limit=self._extraction_max_tokens
+                ),
             },
         }
         try:

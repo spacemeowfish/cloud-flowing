@@ -12,7 +12,7 @@ from pydantic import JsonValue
 from agent_platform.core.audit_service import AuditService
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.edge_cloud_router import EdgeCloudRouter
-from agent_platform.core.errors import AgentPlatformError, PermissionDeniedError, SensitiveDataError
+from agent_platform.core.errors import AgentPlatformError, InvalidTransitionError, PermissionDeniedError, SensitiveDataError
 from agent_platform.core.intent_router import is_external_general_knowledge_request
 from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.core.parameter_normalizer import NormalizationResult, extract_text_payload, normalize_arguments
@@ -62,6 +62,13 @@ def _confirmation_detail_lines(intent: str, details: dict[str, str]) -> list[str
     if details.get("due_at"):
         lines.append(f"时间：{details['due_at']}")
     return lines
+
+
+# The browser session model exposes a developer console, while the policy
+# configuration only defines user/admin role semantics.  Developer requests
+# inherit admin policy so a logged-in developer console does not turn every
+# ordinary task on the same browser into an unknown_role failure.
+_POLICY_ROLE_MAP = {"developer": "admin"}
 
 
 def _capability_boundary(intent: str, request_text: str, arguments: dict[str, JsonValue]) -> tuple[str, str] | None:
@@ -156,8 +163,9 @@ class AgentCore:
 
     async def process(self, task_id: UUID, request: TaskCreate) -> TaskRecord:
         classification = self._classifier.classify(request.text)
-        task = await self.tasks.get(task_id)
+        task: TaskRecord | None = None
         try:
+            task = await self.tasks.get(task_id)
             task = await self.tasks.transition(
                 task.id,
                 TaskEvent.UNDERSTAND,
@@ -291,11 +299,20 @@ class AgentCore:
             )
             return await self._continue(task, confirmed=False)
         except asyncio.CancelledError:
+            if task is None:
+                raise
             current = await self.tasks.get(task.id)
             if current.state != TaskState.CANCELLED:
-                current = await self.tasks.cancel(task.id)
+                try:
+                    current = await self.tasks.cancel(task.id)
+                except InvalidTransitionError:
+                    # The task reached a terminal state concurrently; return
+                    # the persisted record instead of letting the error escape.
+                    current = await self.tasks.get(task.id)
             return current
         except Exception as exc:
+            if task is None:
+                raise
             return await self._fail(task.id, exc)
 
     async def confirm(self, task_id: UUID, confirmation: TaskConfirmation) -> TaskRecord:
@@ -386,7 +403,8 @@ class AgentCore:
             )
         )
 
-        role = str(task.context.get("role", "user"))
+        raw_role = str(task.context.get("role", "user"))
+        role = _POLICY_ROLE_MAP.get(raw_role, raw_role)
         domain = str(task.context.get("data_domain", "personal"))
         effective_risk = self._policy.resolve_risk(tool.metadata.name, arguments, tool.metadata.risk_level)
         policy = self._policy.evaluate(
@@ -455,7 +473,10 @@ class AgentCore:
             )
         )
         if decision.target == ExecutionTarget.QUEUE:
-            return await self.tasks.transition(task.id, TaskEvent.WAIT_NETWORK, result={"status": "waiting_network"})
+            # The offline queue was never wired to a real cloud executor, so a
+            # queued task would sit in waiting_network forever.  Fail honestly:
+            # there is no cloud capability in the current matrix.
+            raise AgentPlatformError("离线且无云端执行能力，任务未排队；请稍后重试")
         if decision.target == ExecutionTarget.REJECTED:
             raise SensitiveDataError(decision.reason)
 

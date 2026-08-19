@@ -116,7 +116,7 @@ class TodoTool(Tool):
             # Query results are time-sensitive and must not reuse a stale receipt.
             return f"todo:query:{datetime.now(UTC).isoformat()}"
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
-        return f"todo:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
+        return f"mutation:todo:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
     async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
         action = str(arguments["action"])

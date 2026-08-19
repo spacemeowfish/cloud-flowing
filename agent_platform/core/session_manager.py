@@ -69,6 +69,9 @@ class SessionManager(TaskStore):
         self._create_schema()
 
     def _create_schema(self) -> None:
+        # The legacy offline_queue table is intentionally not created anymore:
+        # the queue had no consumer and queued tasks waited forever.  The
+        # IF NOT EXISTS guard left in old databases is harmless.
         self._connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS tasks (
@@ -79,13 +82,6 @@ class SessionManager(TaskStore):
                 updated_at TEXT NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_tasks_state ON tasks(state);
-            CREATE TABLE IF NOT EXISTS offline_queue (
-                sequence INTEGER PRIMARY KEY AUTOINCREMENT,
-                task_id TEXT NOT NULL UNIQUE,
-                payload TEXT NOT NULL,
-                idempotency_key TEXT NOT NULL,
-                cancelled INTEGER NOT NULL DEFAULT 0
-            );
             """
         )
 

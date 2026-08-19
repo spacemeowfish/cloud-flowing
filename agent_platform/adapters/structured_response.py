@@ -36,10 +36,27 @@ def is_intent_response_schema(schema: dict[str, JsonValue]) -> bool:
     )
 
 
-def effective_max_tokens(schema: dict[str, JsonValue], requested: int, provider_limit: int | None = None) -> int:
-    """Apply the shared intent cap and an optional provider-specific ceiling."""
+# Argument extraction must echo long user text (text_polish inputs) back inside
+# the arguments JSON; the compact 192-token classification cap would truncate
+# that JSON mid-string and turn every long request into a parse failure.
+ARGUMENT_EXTRACTION_MAX_TOKENS = 512
 
-    limit = min(requested, 192) if is_intent_response_schema(schema) else requested
+
+def effective_max_tokens(
+    schema: dict[str, JsonValue],
+    requested: int,
+    provider_limit: int | None = None,
+    *,
+    extraction_limit: int = ARGUMENT_EXTRACTION_MAX_TOKENS,
+) -> int:
+    """Apply the shared intent caps and an optional provider-specific ceiling."""
+
+    if is_argument_extraction_schema(schema):
+        limit = min(requested, extraction_limit)
+    elif is_intent_response_schema(schema):
+        limit = min(requested, 192)
+    else:
+        limit = requested
     return min(limit, provider_limit) if provider_limit is not None else limit
 
 
@@ -310,6 +327,7 @@ def _argument_extraction_system_prompt(
 
 
 __all__ = [
+    "ARGUMENT_EXTRACTION_MAX_TOKENS",
     "INTENT_PROMPT_VERSION",
     "build_structured_system_prompt",
     "effective_max_tokens",

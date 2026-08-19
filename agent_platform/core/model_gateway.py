@@ -1,6 +1,7 @@
 """Provider-independent model gateway."""
 
 import json
+import logging
 from collections.abc import Sequence
 from dataclasses import dataclass
 
@@ -9,7 +10,14 @@ from pydantic import JsonValue
 
 from agent_platform.adapters import CloudModelAdapter, LlamaCppModelAdapter, MockModelAdapter, OllamaModelAdapter, RKLLMModelAdapter
 from agent_platform.config import Settings
-from agent_platform.core.errors import ConfigurationError, ModelError, ModelSchemaError
+from agent_platform.core.errors import (
+    ConfigurationError,
+    ModelBusyError,
+    ModelError,
+    ModelRateLimitError,
+    ModelSchemaError,
+    ModelTimeoutError,
+)
 from agent_platform.core.interfaces import ModelAdapter
 from agent_platform.core.intent_router import pre_route_intent
 from agent_platform.core.parameter_normalizer import deterministic_pre_route_arguments
@@ -24,6 +32,9 @@ from agent_platform.models import (
     is_model_acceptance_schema,
     TERMINAL_INTENT_NAMES,
 )
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -75,6 +86,7 @@ class ModelGateway:
                 thinking_enabled=settings.ollama_thinking_enabled,
                 keep_alive=settings.ollama_keep_alive,
                 max_new_tokens=settings.ollama_max_new_tokens,
+                extraction_max_tokens=settings.intent_extraction_max_tokens,
             )
         elif provider == "rkllm":
             adapter = RKLLMModelAdapter(
@@ -118,6 +130,14 @@ class ModelGateway:
             result = await self._adapter.generate(messages, response_schema, max_tokens)
             return self._validate_result(result, response_schema)
         except ModelError as exc:
+            if self._is_connection_error(exc):
+                # One same-adapter retry absorbs a dropped local-model socket
+                # (for example Ollama restarting) without masking a real outage.
+                try:
+                    result = await self._adapter.generate(messages, response_schema, max_tokens)
+                    return self._validate_result(result, response_schema)
+                except ModelError:
+                    pass
             can_fallback = (
                 self._fallback_adapter is not None
                 and exc.retryable
@@ -128,6 +148,12 @@ class ModelGateway:
                 raise
             result = await self._fallback_adapter.generate(messages, response_schema, max_tokens)
             return self._validate_result(result, response_schema)
+
+    @staticmethod
+    def _is_connection_error(exc: ModelError) -> bool:
+        """Transient connection failures only: timeouts and rate limits already carry their own semantics."""
+
+        return exc.retryable and not isinstance(exc, (ModelTimeoutError, ModelRateLimitError, ModelBusyError))
 
     async def generate_text(
         self,
@@ -164,13 +190,32 @@ class ModelGateway:
             raise ValueError("interpret requires a model acceptance schema")
         decision = pre_route_intent(request_text)
         model_calls = 0
+        schema_repaired = False
         if decision is None:
-            classified = await self.generate(
-                [ModelMessage(role=MessageRole.USER, content=request_text)],
-                INTENT_CLASSIFICATION_SCHEMA,
-                data_level=data_level,
-            )
-            model_calls += 1
+            classification_messages = [ModelMessage(role=MessageRole.USER, content=request_text)]
+            try:
+                classified = await self.generate(
+                    classification_messages,
+                    INTENT_CLASSIFICATION_SCHEMA,
+                    data_level=data_level,
+                )
+                model_calls += 1
+            except ModelSchemaError as exc:
+                # Small local models sometimes attach extra fields (for example
+                # arguments) to the classification output; one repair round
+                # keeps the task alive instead of failing it outright.
+                model_calls += 1
+                repair = self._classification_repair_message(request_text, exc)
+                classified = await self.generate(
+                    [
+                        *classification_messages,
+                        ModelMessage(role=MessageRole.USER, content=repair),
+                    ],
+                    INTENT_CLASSIFICATION_SCHEMA,
+                    data_level=data_level,
+                )
+                model_calls += 1
+                schema_repaired = True
             classification = IntentClassificationResult.model_validate(classified)
             selected_intent = classification.intent
             selected_confidence = classification.confidence
@@ -199,23 +244,33 @@ class ModelGateway:
             deterministic_pre_route_arguments(selected_intent, request_text) if decision is not None else None
         )
         if deterministic_arguments is not None:
-            raw = self._validate_result(
-                {"arguments": deterministic_arguments, "missing_fields": []},
-                selected_schema,
-            )
-            return InterpretationResult(
-                intent=IntentResult(
-                    intent=selected_intent,
-                    arguments=dict(raw["arguments"]),
-                    missing_fields=[],
-                    confidence=selected_confidence,
-                ),
-                route_source=f"{route_source}:deterministic_arguments",
-                model_calls=0,
-                schema_repaired=False,
-            )
+            try:
+                raw = self._validate_result(
+                    {"arguments": deterministic_arguments, "missing_fields": []},
+                    selected_schema,
+                )
+            except ModelSchemaError:
+                # Deterministic arguments are a fast path, not a contract.  When
+                # they violate the schema (for example an over-long start_text),
+                # consult the model instead of failing the task outright.
+                logger.warning(
+                    "deterministic pre-route arguments for intent %s failed schema validation; "
+                    "falling back to model extraction",
+                    selected_intent,
+                )
+            else:
+                return InterpretationResult(
+                    intent=IntentResult(
+                        intent=selected_intent,
+                        arguments=dict(raw["arguments"]),
+                        missing_fields=[],
+                        confidence=selected_confidence,
+                    ),
+                    route_source=f"{route_source}:deterministic_arguments",
+                    model_calls=0,
+                    schema_repaired=False,
+                )
         messages = [ModelMessage(role=MessageRole.USER, content=request_text)]
-        schema_repaired = False
         try:
             raw = await self.generate(messages, selected_schema, data_level=data_level)
             model_calls += 1
@@ -227,6 +282,15 @@ class ModelGateway:
                 selected_schema,
                 data_level=data_level,
             )
+            model_calls += 1
+            schema_repaired = True
+        except ModelError as exc:
+            if exc.retryable:
+                raise
+            # A JSON truncated by the token limit fails as a plain ModelError.
+            # One identical regeneration is cheaper than failing the task.
+            model_calls += 1
+            raw = await self.generate(messages, selected_schema, data_level=data_level)
             model_calls += 1
             schema_repaired = True
         intent_result = IntentResult(
@@ -257,6 +321,17 @@ class ModelGateway:
             "Model output did not match the requested schema",
             raw_result=dict(result),
             validation_errors=messages,
+        )
+
+    @staticmethod
+    def _classification_repair_message(request_text: str, error: ModelSchemaError) -> str:
+        return (
+            "上一次输出是完整 JSON，但违反意图分类 Schema。只输出 {\"intent\":\"...\",\"confidence\":0.95}，"
+            "不得包含 arguments、missing_fields 或其他字段。\n"
+            f"原始请求：{request_text}\n"
+            f"校验错误：{' | '.join(error.validation_errors)}\n"
+            f"上次输出：{json.dumps(error.raw_result, ensure_ascii=False, separators=(',', ':'))}\n"
+            "重新输出一个符合相同 Schema 的 JSON 对象。"
         )
 
     @staticmethod

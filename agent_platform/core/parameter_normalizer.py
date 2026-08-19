@@ -113,6 +113,15 @@ _SCHEDULE_TIME_CUE = re.compile(
     r"|\d{1,2}月\d{1,2}日|今天|明天|后天|每周|每月)"
     r".*(?:上午|下午|晚上)?\s*(?:\d{1,2}|[零〇一二两三四五六七八九十]+)\s*(?::\s*\d{2}|点(?:半)?)"
 )
+# schedule_manage.start_text is capped at 200 chars by the tool schema and is
+# the only field the tool parses for the start time; text_polish.text allows
+# 10000.  Deterministic fallbacks must stay inside those limits.
+_SCHEDULE_TEXT_MAX_CHARS = 200
+_TEXT_PAYLOAD_MAX_CHARS = 10000
+_SCHEDULE_COMMAND_PREFIX = re.compile(
+    r"^\s*(?:请|帮我|请帮我|我要|麻烦)?\s*"
+    r"(?:预约|预订|安排|创建日程|新建日程|添加日程|创建|新建|添加)\s*[：:,，]?\s*"
+)
 _FILE_COMMAND_WRAPPER = re.compile(
     r"^\s*(?:请|帮我|请帮我)?\s*"
     r"(?:查找并打开|打开|查找|找一下|找|查看|看看)"
@@ -157,7 +166,17 @@ def extract_text_payload(request_text: str) -> str:
     """Strip the operation command so a local text tool receives original facts."""
 
     payload = _TEXT_OPERATION_PREFIX.sub("", str(request_text).strip(), count=1)
-    return payload.strip() or str(request_text).strip()
+    payload = payload.strip() or str(request_text).strip()
+    return payload[:_TEXT_PAYLOAD_MAX_CHARS]
+
+
+def _schedule_event_description(request_text: str) -> str:
+    """Strip command verbs and matched time cues; keep a bounded event description."""
+
+    text = _SCHEDULE_COMMAND_PREFIX.sub("", str(request_text).strip(), count=1)
+    text = _SCHEDULE_TIME_CUE.sub("", text)
+    text = re.sub(r"\s{2,}", " ", text).strip(" ，,、；;。")
+    return text[:_SCHEDULE_TEXT_MAX_CHARS]
 
 
 def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[str, JsonValue] | None:
@@ -429,13 +448,24 @@ def normalize_arguments(
             current_start = str(normalized.get("start_text", "")).strip()
             request_has_date = _SCHEDULE_DATE_CUE.search(request_text) is not None
             model_has_date = _SCHEDULE_DATE_CUE.search(current_start) is not None
-            if _SCHEDULE_TIME_CUE.search(request_text) and (
+            time_cue = _SCHEDULE_TIME_CUE.search(request_text)
+            if time_cue is not None and (
                 not current_start
                 or current_start not in request_text
                 or (request_has_date and not model_has_date)
             ):
-                normalized["start_text"] = request_text.strip()
-                applied_rules.append("schedule_manage.start_text_from_request")
+                # The tool parses only start_text for the start time, so the
+                # matched cue itself becomes the bounded start_text instead of
+                # copying the whole (possibly over-long) request sentence.
+                cue_text = time_cue.group(0).strip()[:_SCHEDULE_TEXT_MAX_CHARS]
+                if cue_text:
+                    normalized["start_text"] = cue_text
+                    applied_rules.append("schedule_manage.start_text_from_request")
+                if not str(normalized.get("title", "")).strip():
+                    description = _schedule_event_description(request_text)
+                    if description:
+                        normalized["title"] = description
+                        applied_rules.append("schedule_manage.title_from_request")
         cancel_match = _CANCEL_SCHEDULE.fullmatch(request_text)
         if cancel_match is not None:
             normalized["action"] = "cancel"
@@ -467,6 +497,13 @@ def normalize_arguments(
                     break
 
     elif intent == "text_polish":
+        text_value = normalized.get("text")
+        if isinstance(text_value, str) and len(text_value) > _TEXT_PAYLOAD_MAX_CHARS:
+            # Long inputs are accepted up to 20000 chars at the API boundary;
+            # clamp the echoed payload to the tool schema limit so the task
+            # does not die on strict validation.
+            normalized["text"] = text_value[:_TEXT_PAYLOAD_MAX_CHARS]
+            applied_rules.append("text_polish.clamp_text_length")
         operation = normalized.get("operation")
         stripped = request_text.lstrip()
         if stripped.startswith(_SUMMARIZE_PREFIXES) and operation in {None, "polish"}:

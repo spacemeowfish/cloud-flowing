@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import re
 import sqlite3
 from datetime import UTC, datetime, timedelta
@@ -17,6 +18,8 @@ from agent_platform.core.interfaces import Tool
 from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
 from agent_platform.tools.reminder_tool import ChineseTimeParser
 
+
+logger = logging.getLogger(__name__)
 
 _MAX_RANGE_DAYS = 31
 _MAX_OCCURRENCES = 500
@@ -128,7 +131,7 @@ class ScheduleTool(Tool):
         if arguments.get("action") == "query":
             return f"schedule:query:{datetime.now(UTC).isoformat()}"
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
-        return f"schedule:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
+        return f"mutation:schedule:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
     async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
         action = str(arguments["action"])
@@ -464,7 +467,14 @@ class ScheduleTool(Tool):
 
     async def _scheduler_loop(self) -> None:
         while True:
-            await self.poll_due()
+            try:
+                await self.poll_due()
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                # Same supervision gap as the reminder loop: an unhandled poll
+                # error would silently disable all later schedule notifications.
+                logger.exception("schedule scheduler poll failed; continuing loop")
             await asyncio.sleep(0.5)
 
     async def _log_callback(self, occurrence: dict[str, JsonValue]) -> None:
