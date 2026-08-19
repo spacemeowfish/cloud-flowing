@@ -428,11 +428,12 @@ function renderLiveTask(task) {
   const structured = task.state==="completed" ? renderStructuredOutput(task,result,output) : "";
   const terminal = result.type==="clarification" || result.type==="unsupported";
   const notice = output.notice || result.notice;
-  const candidateMarkup = terminal && Array.isArray(result.candidates) && result.candidates.length ? `<div class="sources">${result.candidates.map(s=>`<span class="source-chip">${esc(s.name||s.file||"候选")} · ${esc(s.date||s.path_summary||"")}</span>`).join("")}</div>` : "";
+  const candidateMarkup = terminal && Array.isArray(result.candidates) && result.candidates.length ? `<div class="sources">${result.candidates.map(s=>{const name=String(s.name||s.file||"候选");const date=String(s.date||"").replace(/\D/g,"");const question=date?`${name.includes("项目周报")?"项目周报":"周报"}_${date} 的进展内容`:`${name.replace(/\.[a-z0-9]+$/i,"")} 的进展内容`;return `<button type="button" class="source-chip" style="cursor:pointer" data-clarity-question="${esc(question)}" title="点击填入问句">${esc(name)} · ${esc(s.date||s.path_summary||"")}</button>`;}).join("")}</div>` : "";
   const resultBody = `${content ? `<strong>${terminal?"说明":task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${notice?`<div class="callout">${esc(notice)}</div>`:""}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.date || s.section || s.position || "全文")}</span>`).join("")}</div>`:""}${candidateMarkup}` : ""}${structured}${speechControls(task)}`;
   const inspectorAction = appMode === "developer" ? `<button class="button small" data-inspect-task>在检查器中查看</button>` : "";
   area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已完成":task.context?.intent?`正在处理：${esc(task.context.intent)}`:"正在处理任务"}</p></div>${inspectorAction}</header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
   $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); const inspect=$("[data-inspect-task]",area); if(inspect)inspect.onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);
+  $$('[data-clarity-question]',area).forEach(btn=>btn.onclick=()=>{const question=btn.dataset.clarityQuestion,input=$("#consoleText"); if(question&&input){input.value=question; input.focus();}});
 }
 const FIELD_LABELS={when:"具体时间",start_text:"开始时间",end_text:"结束时间",title:"标题",source_path:"文稿路径",selected_path:"文件",query:"关键词",text:"正文",id:"编号"};
 function renderConfirmation(task) {

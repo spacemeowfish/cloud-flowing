@@ -490,3 +490,47 @@ async def test_meeting_source_outside_roots_still_rejected(tmp_path):
             finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
             assert finished["state"] == "failed"
             assert "PermissionDeniedError" in str(finished["error"])
+
+
+# ---------------------------------------------------------------------------
+# S3: knowledge clarification candidates become clickable suggested questions.
+# The frontend template is `项目周报_<8位日期> 的进展内容`; this test pins the
+# backend behaviour the template depends on.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_clarification_candidates_and_suggested_question_flow(tmp_path):
+    root = tmp_path / "documents"
+    root.mkdir()
+    for date in ("20260714", "20260721", "20260728", "20260804"):
+        (root / f"项目周报_{date}.txt").write_text(
+            f"{date} 本周完成平台联调与安全评审，风险全部收敛。", encoding="utf-8"
+        )
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我总结下这次的项目周报"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], {"completed", "failed"})
+            assert task["state"] == "completed", task.get("error")
+            result = task["result"]
+            assert result["type"] == "clarification"
+            assert len(result["candidates"]) == 4
+            assert {candidate["date"] for candidate in result["candidates"]} == {
+                "2026-07-14",
+                "2026-07-21",
+                "2026-07-28",
+                "2026-08-04",
+            }
+
+            # 前端点选候选取 8 位日期拼成建议问句；该问句必须稳定命中对应周报。
+            suggested = await client.post("/tasks", json={"text": "项目周报_20260804 的进展内容"})
+            assert suggested.status_code == 201
+            answered = await _wait_for_state(
+                client, suggested.json()["id"], {"completed", "failed"}
+            )
+            assert answered["state"] == "completed", answered.get("error")
+            sources = answered["result"]["output"]["sources"]
+            assert [source["file"] for source in sources] == ["项目周报_20260804.txt"]
