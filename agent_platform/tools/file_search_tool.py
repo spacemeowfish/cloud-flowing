@@ -110,11 +110,16 @@ class FileSearchTool(Tool):
             if not self._authorized(path):
                 raise PermissionDeniedError("Selected file is outside the authorized index")
             platform_receipt = await self._opener.open(path)
+            output_summary = (
+                "文件打开功能当前已在配置中禁用（AGENT_FILE_OPEN_ENABLED=false），未执行系统打开"
+                if platform_receipt.get("process_status") == "disabled_by_configuration"
+                else f"文件处理完成：{path.name}"
+            )
             return ToolReceipt(
                 tool_name=self.metadata.name,
                 actual_arguments=arguments,
                 success=True,
-                output_summary=f"文件处理完成：{path.name}",
+                output_summary=output_summary,
                 output=platform_receipt,
             )
 
