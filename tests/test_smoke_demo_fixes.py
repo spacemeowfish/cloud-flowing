@@ -153,3 +153,153 @@ def test_search_bigram_fallback_matches_scattered_pairs(tmp_path):
     hits = tool.search("数据分级")
 
     assert [Path(hit["path"]).name for hit in hits] == ["分级据分数据.txt"]
+
+
+# ---------------------------------------------------------------------------
+# S4: missing required tool arguments must become a Chinese clarification gate.
+# ---------------------------------------------------------------------------
+
+
+class _ScriptedAdapter:
+    """Return canned results, recording every call."""
+
+    def __init__(self, script):
+        self.script = list(script)
+        self.calls = []
+
+    async def generate(self, messages, response_schema, max_tokens=512):
+        self.calls.append(list(messages))
+        item = self.script.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    async def close(self):
+        return None
+
+
+@pytest.mark.asyncio
+async def test_booking_without_time_asks_for_start_text_in_chinese(tmp_path):
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我预约下会议室"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            result = task["result"]
+            assert result["type"] == "missing_fields"
+            assert "start_text" in result["fields"]
+            assert "开始时间" in result["message"]
+            assert "schema" not in result["message"].lower()
+
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm",
+                json={"approved": True, "arguments": {"start_text": "明天下午3点"}},
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "completed", finished.get("error")
+            assert "已创建日程" in finished["result"]["output_summary"]
+            assert "T15:00:00" in finished["result"]["output"]["item"]["start_at"]
+
+
+@pytest.mark.asyncio
+async def test_booking_with_a_classifier_wording_also_clarifies(tmp_path):
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我预约一个会议室"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            assert "start_text" in task["result"]["fields"]
+
+
+@pytest.mark.asyncio
+async def test_booking_with_full_time_still_completes(tmp_path):
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "添加日程 项目评审会 明天下午3点"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], {"completed", "failed"})
+            assert task["state"] == "completed", task.get("error")
+
+
+@pytest.mark.asyncio
+async def test_model_path_missing_start_text_becomes_chinese_gate(tmp_path, monkeypatch):
+    from agent_platform.core.model_gateway import ModelGateway
+
+    adapter = _ScriptedAdapter(
+        [
+            {"intent": "schedule_manage", "confidence": 0.9},
+            {"arguments": {"action": "create", "title": "项目评审会"}, "missing_fields": []},
+        ]
+    )
+    scripted = ModelGateway(adapter)
+    monkeypatch.setattr(
+        ModelGateway, "from_settings", classmethod(lambda cls, settings: scripted)
+    )
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮团队预约一次项目评审时间再定"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], "awaiting_confirmation")
+            result = task["result"]
+            assert result["type"] == "missing_fields"
+            assert result["fields"] == ["start_text"]
+            assert result["message"] == "请补充开始时间，例如：明天下午3点"
+
+            confirmed = await client.post(
+                f"/tasks/{task['id']}/confirm",
+                json={"approved": True, "arguments": {"start_text": "明天下午3点"}},
+            )
+            assert confirmed.status_code == 200
+            finished = await _wait_for_state(client, task["id"], {"completed", "failed"})
+            assert finished["state"] == "completed", finished.get("error")
+
+
+def test_schema_error_derivation_rejects_non_missing_errors():
+    from jsonschema import Draft202012Validator
+
+    from agent_platform.core.agent_core import _missing_fields_from_schema_errors
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "action": {"type": "string"},
+            "title": {"type": "string", "minLength": 1},
+            "start_text": {"type": "string", "minLength": 1},
+            "weekdays": {"type": "array", "items": {"type": "integer"}, "uniqueItems": True},
+        },
+        "required": ["action"],
+        "allOf": [
+            {
+                "if": {"properties": {"action": {"const": "create"}}, "required": ["action"]},
+                "then": {"required": ["title", "start_text"]},
+            }
+        ],
+        "additionalProperties": False,
+    }
+    missing = list(
+        Draft202012Validator(schema).iter_errors({"action": "create", "title": "项目评审会"})
+    )
+    assert _missing_fields_from_schema_errors(missing) == ["start_text"]
+
+    empty_title = list(
+        Draft202012Validator(schema).iter_errors(
+            {"action": "create", "title": "", "start_text": "明天下午3点"}
+        )
+    )
+    assert _missing_fields_from_schema_errors(empty_title) == ["title"]
+
+    duplicate_days = list(
+        Draft202012Validator(schema).iter_errors(
+            {"action": "create", "title": "会", "start_text": "明天下午3点", "weekdays": [1, 1]}
+        )
+    )
+    assert _missing_fields_from_schema_errors(duplicate_days) is None

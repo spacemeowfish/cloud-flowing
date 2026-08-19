@@ -144,7 +144,7 @@ def _strip_file_command(text: str) -> str:
         return located.group(1).strip() or text
     return text
 _MEETING_ROOM_BOOKING = re.compile(
-    r"^\s*(?:请|帮我|请帮我)?(?:预约|预订)\s*"
+    r"^\s*(?:请|帮我|请帮我)?(?:预约|预订)(?:下|一下|一个|个)?\s*"
     r"([A-Za-z][A-Za-z0-9\-]{0,9}\s*)?会议室\s*$"
 )
 _KNOWLEDGE_WRAPPER = re.compile(
@@ -276,10 +276,12 @@ def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[st
             arguments: dict[str, JsonValue] = {
                 "action": "create",
                 "title": f"{room + ' ' if room else ''}会议室预约".replace("  ", " "),
-                "start_text": text,
             }
             if room:
                 arguments["location"] = room
+            # 裸“预约会议室”句式不含时刻；缺 start_text 由 agent_core 的
+            # schema 预检转入中文补充闸门，而不是把整句塞进 start_text
+            # 让工具解析失败后再问一次。
             return arguments
         if (title_cancel := _CANCEL_SCHEDULE_TITLE.fullmatch(text)) is not None:
             title = title_cancel.group(1).strip()

@@ -6,7 +6,7 @@ import re
 from pathlib import Path
 from uuid import UUID
 
-from jsonschema import Draft202012Validator
+from jsonschema import Draft202012Validator, ValidationError as JsonSchemaValidationError
 from pydantic import JsonValue
 
 from agent_platform.core.audit_service import AuditService
@@ -69,6 +69,51 @@ def _confirmation_detail_lines(intent: str, details: dict[str, str]) -> list[str
 # inherit admin policy so a logged-in developer console does not turn every
 # ordinary task on the same browser into an unknown_role failure.
 _POLICY_ROLE_MAP = {"developer": "admin"}
+
+# 人工补充缺失参数时给用户的中文提示；字段名同时供前端闸门标题映射使用。
+_MISSING_FIELD_MESSAGES = {
+    "start_text": "请补充开始时间，例如：明天下午3点",
+    "end_text": "请补充结束时间，例如：下午5点",
+    "title": "请补充标题，例如：项目评审会",
+    "source_path": "请提供会议文稿的完整路径或文稿名，例如：C:/demo/周会.txt",
+    "text": "请补充具体内容",
+    "when": "请补充具体时间，例如：15:00",
+    "query": "请补充要查询的关键词",
+    "id": "请提供要操作的数字编号",
+}
+
+_REQUIRED_PROPERTY_ERROR = re.compile(r"^'([^']+)' is a required property$")
+
+
+def _missing_fields_message(fields: list[str]) -> str:
+    return "；".join(_MISSING_FIELD_MESSAGES.get(field, f"请补充 {field}") for field in fields)
+
+
+def _missing_fields_from_schema_errors(errors: list[JsonSchemaValidationError]) -> list[str] | None:
+    """Derive missing/empty required fields from tool-schema errors.
+
+    Returns None when any error is not a missing-required or empty-string
+    violation; other schema errors must keep failing validation honestly
+    instead of turning into a clarification loop.
+    """
+
+    derived: list[str] = []
+    for error in errors:
+        if error.validator == "required":
+            match = _REQUIRED_PROPERTY_ERROR.match(error.message)
+            if match is None:
+                return None
+            derived.append(match.group(1))
+        elif (
+            error.validator == "minLength"
+            and isinstance(error.instance, str)
+            and not error.instance.strip()
+            and len(error.absolute_path) == 1
+        ):
+            derived.append(str(error.absolute_path[-1]))
+        else:
+            return None
+    return list(dict.fromkeys(derived)) or None
 
 
 def _capability_boundary(intent: str, request_text: str, arguments: dict[str, JsonValue]) -> tuple[str, str] | None:
@@ -256,7 +301,11 @@ class AgentCore:
                     )
                 ]
             tool_schema = self._registry.get(intent.intent).metadata.parameters_schema
-            if Draft202012Validator(tool_schema).is_valid(normalization.arguments):
+            schema_errors = sorted(
+                Draft202012Validator(tool_schema).iter_errors(normalization.arguments),
+                key=lambda item: list(item.absolute_path),
+            )
+            if not schema_errors:
                 if missing_fields:
                     await self._audit.record(
                         AuditEvent(
@@ -268,6 +317,21 @@ class AgentCore:
                         )
                     )
                 missing_fields = []
+            else:
+                # 模型声称参数完整但工具 schema 判定缺必填字段时，先转入人工
+                # 补充闸门；无法推导出字段的 schema 错误维持严格失败。
+                derived_missing = _missing_fields_from_schema_errors(schema_errors)
+                if derived_missing is not None and set(derived_missing) != set(missing_fields):
+                    missing_fields = derived_missing
+                    await self._audit.record(
+                        AuditEvent(
+                            task_id=task.id,
+                            event_type=AuditEventType.MODEL_OUTPUT,
+                            output_summary=f"derived={','.join(derived_missing)}",
+                            decision="schema_missing_fields_derived",
+                            data_level=classification.level,
+                        )
+                    )
             if normalization.applied_rules:
                 before_fields = ",".join(sorted(intent.arguments)) or "-"
                 after_fields = ",".join(sorted(normalization.arguments)) or "-"
@@ -378,7 +442,11 @@ class AgentCore:
             return await self.tasks.transition(
                 task.id,
                 TaskEvent.REQUIRE_CONFIRMATION,
-                result={"type": "missing_fields", "fields": missing_fields},
+                result={
+                    "type": "missing_fields",
+                    "fields": missing_fields,
+                    "message": _missing_fields_message(missing_fields),
+                },
             )
 
         boundary = _capability_boundary(intent_name, task.request_text, arguments)
