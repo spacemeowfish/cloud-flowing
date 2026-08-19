@@ -92,6 +92,9 @@ _REMINDER_DELAY_TASK = re.compile(
 _CANCEL_SCHEDULE = re.compile(r"^\s*取消日程\s*([1-9]\d*)\s*$")
 _CANCEL_SCHEDULE_TITLE = re.compile(r"^\s*取消日程\s+(.+?)\s*$")
 _QUERY_SCHEDULE_TITLE = re.compile(r"^\s*(?:查看|查询|查找)日程(?:事项)?[：:\s]+(.+?)\s*$")
+_SCHEDULE_PRESENCE_QUERY = re.compile(
+    r"(?:今天|明天|后天|本周|下周).*(?:有没有|有什么|有哪些).*(?:会议|安排|日程)"
+)
 _QUERY_REMINDERS = re.compile(
     r"^\s*(?:请|帮我|请帮我)?\s*(?:查看|查询|列出)\s*"
     r"(?:(未来\s*(?:7|七)\s*天|过期|逾期)(?:的)?)?\s*提醒\s*$"
@@ -270,6 +273,10 @@ def deterministic_pre_route_arguments(intent: str, request_text: str) -> dict[st
                 "when": delayed.group(1).strip(),
             }
     if intent == "schedule_manage":
+        if _SCHEDULE_PRESENCE_QUERY.search(text):
+            # 日程存在性查询形态（路由规则 schedule_presence_query）只需
+            # action=query；normalize_arguments 会按“今天/明天/…”补 range。
+            return {"action": "query"}
         booking = _MEETING_ROOM_BOOKING.fullmatch(text)
         if booking is not None:
             room = (booking.group(1) or "").strip()

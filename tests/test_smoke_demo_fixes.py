@@ -303,3 +303,58 @@ def test_schema_error_derivation_rejects_non_missing_errors():
         )
     )
     assert _missing_fields_from_schema_errors(duplicate_days) is None
+
+
+# ---------------------------------------------------------------------------
+# S7: schedule presence queries must route deterministically.
+# ---------------------------------------------------------------------------
+
+
+def test_presence_query_routes_to_schedule_with_today_range():
+    from agent_platform.core.intent_router import pre_route_intent
+    from agent_platform.core.parameter_normalizer import (
+        deterministic_pre_route_arguments,
+        normalize_arguments,
+    )
+
+    decision = pre_route_intent("帮我查一下今天有没有会议")
+    assert decision is not None
+    assert decision.intent == "schedule_manage"
+    assert decision.rule == "schedule_presence_query"
+
+    arguments = deterministic_pre_route_arguments("schedule_manage", "帮我查一下今天有没有会议")
+    assert arguments == {"action": "query"}
+    normalized = normalize_arguments(
+        intent="schedule_manage", arguments=arguments, request_text="帮我查一下今天有没有会议"
+    )
+    assert normalized.arguments["range"] == "today"
+
+
+def test_arrangement_query_wording_keeps_original_rule():
+    from agent_platform.core.intent_router import pre_route_intent
+
+    decision = pre_route_intent("今天有什么安排")
+    assert decision is not None
+    assert decision.intent == "schedule_manage"
+    assert decision.rule == "schedule_arrangement_query"
+
+
+def test_meeting_document_requests_not_hijacked_by_presence_rule():
+    from agent_platform.core.intent_router import pre_route_intent
+
+    decision = pre_route_intent("帮我生成数据分级边界讨论稿的会议纪要")
+    assert decision is None or decision.rule != "schedule_presence_query"
+
+
+@pytest.mark.asyncio
+async def test_presence_query_returns_honest_empty_result(tmp_path):
+    app = create_app(_settings(tmp_path))
+    async with app.router.lifespan_context(app):
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            created = await client.post("/tasks", json={"text": "帮我查一下今天有没有会议"})
+            assert created.status_code == 201
+            task = await _wait_for_state(client, created.json()["id"], {"completed", "failed"})
+            assert task["state"] == "completed", task.get("error")
+            assert task["result"]["output_summary"] == "查询到 0 个日程实例"
+            assert task["context"]["intent"] == "schedule_manage"
