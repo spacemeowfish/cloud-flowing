@@ -81,7 +81,7 @@ PC 安装：JDK 17、MySQL 8、Redis（Windows 版，如 tporadowski/redis 或 W
 
 ### Phase 2：摸清令牌机制，冻结对接契约（1～2 天）
 
-阅读若依源码（只读不改），核实并写入契约文档 `docs/contracts/auth-gateway.md`：
+阅读若依源码（只读不改），核实并写入契约文档 `docs/contracts/ruoyi-auth-gateway.md`：
 
 1. `com.ruoyi.framework.web.service.TokenService`：确认签名算法（预期 HS512）、`token.secret` 配置项路径、过期时长（预期默认 720 分钟）与自动续期行为（临近过期会刷新，影响"禁用即时生效"的测试方法）。
 2. 确认 JWT claims 结构：预期含 `login_user_key`（uuid，用于拼 Redis key）与用户名字段（版本有差异，以源码为准）。
