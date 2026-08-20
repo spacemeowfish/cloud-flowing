@@ -5,6 +5,8 @@ import logging
 from collections.abc import Coroutine
 from dataclasses import dataclass, field
 
+import redis.asyncio as aioredis
+
 from agent_platform.adapters import DisabledFileOpener, MockWeatherConnector, SystemFileOpener, ZipVoiceReference, ZipVoiceSpeechSynthesizer
 from agent_platform.adapters.notifications import windows_toast
 from agent_platform.config import Settings
@@ -16,6 +18,7 @@ from agent_platform.core.edge_cloud_router import EdgeCloudRouter
 from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.core.policy_engine import PolicyEngine
 from agent_platform.core.resource_monitor import ResourceMonitor
+from agent_platform.core.ruoyi_auth import RedisRuoYiSessionStore, RuoYiAuthenticator, RuoYiTokenVerifier
 from agent_platform.core.session_manager import SessionManager
 from agent_platform.core.speech_output import DisabledSpeechSynthesizer, SpeechOutputService
 from agent_platform.core.task_api import TaskAPI
@@ -45,6 +48,7 @@ class ApplicationContainer:
     schedules: ScheduleTool
     speech: SpeechOutputService
     voice: VoiceInputService
+    ruoyi_auth: RuoYiAuthenticator
     background_tasks: set[asyncio.Task[object]] = field(default_factory=set)
 
     @classmethod
@@ -121,6 +125,7 @@ class ApplicationContainer:
                 num_threads=settings.zipvoice_num_threads,
                 speed=settings.zipvoice_speed,
                 num_steps=settings.zipvoice_num_steps,
+                postprocess=settings.zipvoice_postprocess,
             )
         else:
             synthesizer = DisabledSpeechSynthesizer()
@@ -132,7 +137,24 @@ class ApplicationContainer:
             keep_versions=settings.tts_keep_versions,
         )
         voice = VoiceInputService(settings)
-        return cls(settings, store, tasks, gateway, classifier, audit, registry, agent, connections, knowledge, reminders, todos, schedules, speech, voice)
+        # RuoYi gateway auth (contract: docs/contracts/ruoyi-auth-gateway.md).
+        # The Redis client is read-only for login_tokens:* keys; short socket
+        # timeouts keep an unreachable Redis failing closed fast.
+        redis_client = aioredis.from_url(
+            settings.ruoyi_redis_url,
+            socket_timeout=2.0,
+            socket_connect_timeout=2.0,
+        )
+        verifier = RuoYiTokenVerifier(settings.ruoyi_jwt_secret)
+        if not verifier.configured:
+            logger.warning(
+                "RUOYI_JWT_SECRET is not configured; every authenticated request will be rejected (fail-closed)"
+            )
+        ruoyi_auth = RuoYiAuthenticator(verifier, RedisRuoYiSessionStore(redis_client))
+        return cls(
+            settings, store, tasks, gateway, classifier, audit, registry, agent, connections,
+            knowledge, reminders, todos, schedules, speech, voice, ruoyi_auth,
+        )
 
     async def initialize(self) -> None:
         await self.tasks.initialize()
@@ -178,6 +200,7 @@ class ApplicationContainer:
         await self.gateway.close()
         await self.speech.close()
         await self.voice.close()
+        await self.ruoyi_auth.close()
         await self.store.close()
 
 

@@ -40,6 +40,7 @@ from agent_platform.models import (
 )
 from agent_platform.tools.reminder_tool import ReminderTool
 from agent_platform.tools.vector_store import HashingEmbedder, SQLiteVectorStore
+from ruoyi_support import enable_gateway
 
 
 def _settings(tmp_path, **updates):
@@ -52,7 +53,6 @@ def _settings(tmp_path, **updates):
         "knowledge_roots": [tmp_path / "knowledge"],
         "document_roots": [tmp_path / "documents"],
         "meeting_output_dir": tmp_path / "meeting",
-        "developer_password": "dev-pass-123",
         "audit_flush_size": 1,
     }
     values.update(updates)
@@ -81,10 +81,10 @@ async def _wait_for_state(client, task_id, expected, timeout=3.0):
 async def test_task_created_after_developer_login_completes(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            login = await client.post("/auth/developer/login", json={"password": "dev-pass-123"})
-            assert login.status_code == 200
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
+            gateway.promote(client)
             created = await client.post("/tasks", json={"text": "提醒我30分钟后喝水"})
             assert created.status_code == 201
             task = await _wait_for_state(client, created.json()["id"], {"completed", "failed"})
@@ -409,8 +409,9 @@ async def test_gateway_gives_up_quickly_when_model_stays_down(error):
 async def test_offline_throttled_task_fails_with_readable_error(tmp_path):
     app = create_app(_settings(tmp_path, network_available=False, resource_mode="throttled"))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post("/tasks", json={"text": "提醒我30分钟后喝水"})
             task = await _wait_for_state(client, created.json()["id"], {"failed", "waiting_network"})
             assert task["state"] == "failed"
@@ -434,9 +435,10 @@ async def test_admin_reindex_uses_document_roots_of_live_tool(tmp_path, monkeypa
     monkeypatch.setenv("AGENT_DOCUMENT_ROOTS", json.dumps([str(documents)]))
     app = create_app(_settings(tmp_path, knowledge_roots=[legacy]))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-            await client.post("/auth/developer/login", json={"password": "dev-pass-123"})
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
+            gateway.promote(client)
             response = await client.post("/admin/knowledge/reindex")
             assert response.status_code == 200
             report = response.json()
@@ -478,7 +480,7 @@ class _CountingStateTool:
         digest = hashlib.sha256(json.dumps(arguments, sort_keys=True).encode()).hexdigest()
         return f"{self.key_prefix}:{digest}"
 
-    async def execute(self, arguments):
+    async def execute(self, arguments, context=None):
         self.count += 1
         return ToolReceipt(
             tool_name=self.tool_name, actual_arguments=arguments, success=True, output_summary="ok"
@@ -533,8 +535,9 @@ def test_state_changing_tools_prefix_mutation_keys(tmp_path):
 async def test_cancel_completed_task_returns_current_record(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post("/tasks", json={"text": "1+1等于多少？"})
             task_id = created.json()["id"]
             await _wait_for_state(client, task_id, "completed")

@@ -30,6 +30,7 @@ class KnowledgeDocumentImporter:
         self,
         directory: Path,
         *,
+        owner: str,
         force: bool = False,
         progress: Callable[[str], None] | None = None,
     ) -> ImportReport:
@@ -46,7 +47,7 @@ class KnowledgeDocumentImporter:
         for path in documents:
             report.scanned += 1
             try:
-                changed = self._knowledge.ingest_document(path, force=force)
+                changed = self._knowledge.ingest_document(path, owner=owner, force=force)
                 if changed:
                     report.imported += 1
                     message = f"已导入 {path.name}"

@@ -1,28 +1,22 @@
-"""Developer login routes and authorization dependency."""
+"""Authentication view and developer authorization dependency.
+
+Login itself lives in RuoYi; the gateway middleware verifies the bearer token
+before any route runs, so this module only exposes the already-verified
+identity and gates developer routes.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from agent_platform.core.developer_auth import DeveloperSessionService
-
-
-BROWSER_SESSION_COOKIE = "agent_browser_session"
-DEVELOPER_SESSION_COOKIE = "agent_developer_session"
-
-
-class DeveloperLogin(BaseModel):
-    password: str = Field(..., min_length=1, max_length=1024)
+__all__ = ["AuthenticationView", "require_developer", "router"]
 
 
 class AuthenticationView(BaseModel):
-    role: str
-    developer_configured: bool
-
-
-def _auth(request: Request) -> DeveloperSessionService:
-    return request.app.state.developer_sessions
+    role: str = Field(..., description="Verified role: user or developer")
+    username: str = Field(..., description="RuoYi username (display/audit identity)")
+    user_id: int = Field(..., ge=0, description="RuoYi userId owning this account's data space")
 
 
 def require_developer(request: Request) -> None:
@@ -35,39 +29,8 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.get("/me", response_model=AuthenticationView)
 async def authentication_status(request: Request) -> AuthenticationView:
-    return AuthenticationView(role=request.state.role, developer_configured=_auth(request).configured)
-
-
-@router.post("/developer/login", response_model=AuthenticationView)
-async def developer_login(payload: DeveloperLogin, request: Request, response: Response) -> AuthenticationView:
-    auth = _auth(request)
-    if not auth.configured:
-        raise HTTPException(status_code=503, detail="Developer password is not configured")
-    token = auth.login(payload.password)
-    if token is None:
-        raise HTTPException(status_code=401, detail="Invalid developer password")
-    response.set_cookie(
-        DEVELOPER_SESSION_COOKIE,
-        token,
-        httponly=True,
-        samesite="strict",
-        secure=False,
-        path="/",
+    return AuthenticationView(
+        role=str(getattr(request.state, "role", "user")),
+        username=str(getattr(request.state, "username", "")),
+        user_id=int(getattr(request.state, "user_id", 0)),
     )
-    return AuthenticationView(role="developer", developer_configured=True)
-
-
-@router.post("/logout", response_model=AuthenticationView)
-async def logout(request: Request, response: Response) -> AuthenticationView:
-    auth = _auth(request)
-    auth.logout(request.cookies.get(DEVELOPER_SESSION_COOKIE))
-    response.delete_cookie(DEVELOPER_SESSION_COOKIE, path="/", httponly=True, samesite="strict")
-    return AuthenticationView(role="user", developer_configured=auth.configured)
-
-
-__all__ = [
-    "BROWSER_SESSION_COOKIE",
-    "DEVELOPER_SESSION_COOKIE",
-    "require_developer",
-    "router",
-]

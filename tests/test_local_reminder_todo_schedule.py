@@ -19,6 +19,11 @@ from agent_platform.tools.reminder_tool import ChineseTimeParser, ReminderTool, 
 from agent_platform.tools.schedule_tool import ScheduleTool
 from agent_platform.tools.todo_tool import TodoTool
 
+from agent_platform.models import ToolContext
+
+CTX = ToolContext(owner="default")
+OWNER = "default"
+
 
 TZ = ZoneInfo("Asia/Shanghai")
 
@@ -32,7 +37,7 @@ async def test_reminder_query_cache_does_not_hide_new_or_deleted_rows(tmp_path: 
     executor = ToolExecutor(registry)
 
     async def call(arguments: dict[str, object]):
-        return await executor.execute(ToolCall(task_id=uuid4(), tool_name="reminder_create", arguments=arguments))
+        return await executor.execute(ToolCall(task_id=uuid4(), tool_name="reminder_create", arguments=arguments), context=CTX)
 
     assert (await call({"action": "query"})).output["items"] == []
     first = await call({"action": "create", "text": "提醒我1分钟后甲"})
@@ -129,7 +134,7 @@ async def test_agent_reminder_completion_and_confirmation_previews_are_readable(
         assert completed.state.value == "completed"
         assert completed.result["output"]["item"]["status"] == "completed"
 
-        todo = await container.todos.execute({"action": "create", "title": "删除前可读"})
+        todo = await container.todos.execute({"action": "create", "title": "删除前可读"}, context=CTX)
         todo_id = int(todo.output["item"]["id"])
         delete_task = await container.agent.submit(TaskCreate(text=f"删除待办 {todo_id}"))
         assert delete_task.state.value == "awaiting_confirmation"
@@ -143,26 +148,26 @@ async def test_agent_reminder_completion_and_confirmation_previews_are_readable(
 @pytest.mark.asyncio
 async def test_todo_status_queries_and_update_return_business_content(tmp_path: Path) -> None:
     tool = TodoTool(tmp_path / "todos.db")
-    first = await tool.execute({"action": "create", "title": "提交报告"})
-    second = await tool.execute({"action": "create", "title": "部署服务"})
+    first = await tool.execute({"action": "create", "title": "提交报告"}, context=CTX)
+    second = await tool.execute({"action": "create", "title": "部署服务"}, context=CTX)
     first_id = int(first.output["item"]["id"])
     second_id = int(second.output["item"]["id"])
-    await tool.execute({"action": "update", "id": first_id, "status": "in_progress"})
-    await tool.execute({"action": "complete", "id": second_id})
+    await tool.execute({"action": "update", "id": first_id, "status": "in_progress"}, context=CTX)
+    await tool.execute({"action": "complete", "id": second_id}, context=CTX)
 
-    active = await tool.execute({"action": "query", "status": "进行中"})
-    completed = await tool.execute({"action": "query", "status": "已完成"})
-    pending = await tool.execute({"action": "query", "status": "待处理"})
+    active = await tool.execute({"action": "query", "status": "进行中"}, context=CTX)
+    completed = await tool.execute({"action": "query", "status": "已完成"}, context=CTX)
+    pending = await tool.execute({"action": "query", "status": "待处理"}, context=CTX)
     assert [item["title"] for item in active.output["items"]] == ["提交报告"]
     assert [item["title"] for item in completed.output["items"]] == ["部署服务"]
     assert pending.output["items"] == []
 
-    updated = await tool.execute({"action": "update", "id": first_id, "priority": "high"})
+    updated = await tool.execute({"action": "update", "id": first_id, "priority": "high"}, context=CTX)
     assert updated.output["item"]["title"] == "提交报告"
     assert "提交报告" in updated.output_summary
-    completed_summary = await tool.execute({"action": "complete", "id": first_id})
+    completed_summary = await tool.execute({"action": "complete", "id": first_id}, context=CTX)
     assert "提交报告" in completed_summary.output_summary
-    deleted = await tool.execute({"action": "delete", "id": second_id})
+    deleted = await tool.execute({"action": "delete", "id": second_id}, context=CTX)
     assert "部署服务" in deleted.output_summary
     tool.close()
 
@@ -227,7 +232,7 @@ async def test_schedule_uppercase_date_and_chinese_end_time_are_queryable(tmp_pa
             "title": "项目例会",
             "start_text": "贰零贰陆年捌月捌日上午玖点到十点",
         }
-    )
+    , context=CTX)
     item = created.output["item"]
     assert item["start_at"] == "2026-08-08T09:00:00+08:00"
     assert item["end_at"] == "2026-08-08T10:00:00+08:00"
@@ -239,7 +244,7 @@ async def test_schedule_uppercase_date_and_chinese_end_time_are_queryable(tmp_pa
             "range_end": "2026-08-10T00:00:00+08:00",
         },
         now=datetime(2026, 8, 6, 8, 0, tzinfo=TZ),
-    )
+     owner=OWNER)
     assert [entry["schedule_id"] for entry in queried.output["items"]] == [item["id"]]
     tool.close()
 

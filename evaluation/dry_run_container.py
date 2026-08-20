@@ -103,7 +103,7 @@ class DryRunTool:
         encoded = json.dumps(arguments, ensure_ascii=False, sort_keys=True).encode("utf-8")
         return f"dry-run:{self.metadata.name}:{hashlib.sha256(encoded).hexdigest()}"
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context=None) -> ToolReceipt:
         self._executions.append(self.metadata.name)
         return ToolReceipt(
             tool_name=self.metadata.name,

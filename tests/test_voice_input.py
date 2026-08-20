@@ -17,6 +17,7 @@ from agent_platform.core.errors import (
 )
 from agent_platform.core.voice_input import VoiceInputService, normalize_transcript
 from agent_platform.models.voice import VoiceDevice
+from ruoyi_support import enable_gateway
 
 
 class _Stream:
@@ -164,10 +165,13 @@ async def test_voice_api_enforces_browser_session(tmp_path: Path) -> None:
     backend = _Backend([_tone()])
     service = VoiceInputService(settings, backend=backend, transcriber=_Transcriber("一加一等于二"))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         app.state.container.voice = service
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
-            transport=transport, base_url="http://test"
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers()
+        ) as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers(username="other", user_id=200)
         ) as other:
             started = await owner.post("/voice/recordings")
             assert started.status_code == 201

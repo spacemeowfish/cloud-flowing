@@ -22,6 +22,11 @@ from agent_platform.tools.reminder_tool import ChineseTimeParser, ReminderTool
 from agent_platform.tools.text_processing_tool import TextProcessingTool
 from agent_platform.tools.todo_tool import TodoTool
 
+from agent_platform.models import ToolContext
+
+CTX = ToolContext(owner="default")
+OWNER = "default"
+
 
 def test_file_index_search_candidates_and_authorization(tmp_path):
     root = tmp_path / "allowed"
@@ -41,13 +46,13 @@ async def test_file_multiple_candidates_and_open_disabled(tmp_path):
     (root / "plan-a.txt").write_text("a", encoding="utf-8")
     (root / "plan-b.txt").write_text("b", encoding="utf-8")
     tool = FileSearchTool([root], DisabledFileOpener())
-    receipt = await tool.execute({"query": "plan"})
+    receipt = await tool.execute({"query": "plan"}, context=CTX)
     assert receipt.output["requires_confirmation"] is True
     selected = receipt.output["candidates"][0]["path"]
-    opened = await tool.execute({"query": "plan", "selected_path": selected})
+    opened = await tool.execute({"query": "plan", "selected_path": selected}, context=CTX)
     assert opened.output["process_status"] == "disabled_by_configuration"
     with pytest.raises(PermissionDeniedError):
-        await tool.execute({"query": "x", "selected_path": str(tmp_path / "outside.txt")})
+        await tool.execute({"query": "x", "selected_path": str(tmp_path / "outside.txt")}, context=CTX)
 
 
 @pytest.mark.asyncio
@@ -63,8 +68,8 @@ async def test_knowledge_import_txt_md_docx_update_and_no_answer(tmp_path):
     doc.add_paragraph("售后服务时间为工作日九点到十八点。")
     doc.save(root / "service.docx")
     tool = KnowledgeBaseTool([root], tmp_path / "knowledge.db", DataClassificationService())
-    assert tool.sync_documents() == 3
-    receipt = await tool.execute({"query": "X 产品保修期"})
+    assert tool.sync_documents(OWNER) == 3
+    receipt = await tool.execute({"query": "X 产品保修期"}, context=CTX)
     assert "三年" in receipt.output["answer"]
     assert receipt.output["sources"]
     source = receipt.output["sources"][0]
@@ -73,17 +78,17 @@ async def test_knowledge_import_txt_md_docx_update_and_no_answer(tmp_path):
     assert len(source["snippet"]) <= 100
     assert source["scope"] == "未声明"
     assert "document" not in source
-    missing = await tool.execute({"query": "火星基地价格"})
+    missing = await tool.execute({"query": "火星基地价格"}, context=CTX)
     assert missing.output["answer"] == "未找到相关信息"
     assert missing.output["sources"] == []
     (root / "warranty.txt").write_text("X 产品的保修期是五年。", encoding="utf-8")
     updated_mtime = (root / "warranty.txt").stat().st_mtime + 5
     os.utime(root / "warranty.txt", (updated_mtime, updated_mtime))
-    assert tool.sync_documents() == 1
-    updated = await tool.execute({"query": "X 产品保修期"})
+    assert tool.sync_documents(OWNER) == 1
+    updated = await tool.execute({"query": "X 产品保修期"}, context=CTX)
     assert "五年" in updated.output["answer"]
     assert updated.output["sources"][0]["updated_at"] != source["updated_at"]
-    manual = await tool.execute({"query": "设备重启"})
+    manual = await tool.execute({"query": "设备重启"}, context=CTX)
     assert manual.output["sources"][0]["scope"] == "设备维护"
     tool.close()
 
@@ -99,18 +104,18 @@ async def test_bulk_import_utf8_bom_gb18030_idempotency_and_queries(tmp_path):
     (root / "旧版差旅标准.txt").write_bytes("出差住宿标准为每晚五百元。".encode("gb18030"))
     tool = KnowledgeBaseTool([root], tmp_path / "knowledge.db", DataClassificationService())
     importer = KnowledgeDocumentImporter(tool)
-    first = importer.import_directory(root)
+    first = importer.import_directory(root, owner=OWNER)
     assert first.imported == 3
     assert not first.failures
-    second = importer.import_directory(root)
+    second = importer.import_directory(root, owner=OWNER)
     assert second.imported == 0
     assert second.skipped == 3
-    forced = importer.import_directory(root, force=True)
+    forced = importer.import_directory(root, force=True, owner=OWNER)
     assert forced.imported == 3
-    warranty = await tool.execute({"query": "产品保修期多久"})
-    leave = await tool.execute({"query": "年假有几天"})
-    travel = await tool.execute({"query": "出差住宿标准"})
-    missing = await tool.execute({"query": "火星基地股票代码"})
+    warranty = await tool.execute({"query": "产品保修期多久"}, context=CTX)
+    leave = await tool.execute({"query": "年假有几天"}, context=CTX)
+    travel = await tool.execute({"query": "出差住宿标准"}, context=CTX)
+    missing = await tool.execute({"query": "火星基地股票代码"}, context=CTX)
     assert "两年" in warranty.output["answer"]
     assert "十天" in leave.output["answer"]
     assert "五百元" in travel.output["answer"]
@@ -160,15 +165,15 @@ async def test_reminder_create_query_cancel_and_notify(tmp_path):
         notified.append(item)
 
     tool = ReminderTool(tmp_path / "reminders.db", callback=callback)
-    receipt = await tool.execute({"action": "create", "text": "30分钟后检查服务"})
+    receipt = await tool.execute({"action": "create", "text": "30分钟后检查服务"}, context=CTX)
     reminder_id = receipt.output["id"]
-    assert tool.query("next_7_days")
-    await tool.execute({"action": "cancel", "id": reminder_id})
-    assert not tool.query("next_7_days")
+    assert tool.query("next_7_days", owner=OWNER)
+    await tool.execute({"action": "cancel", "id": reminder_id}, context=CTX)
+    assert not tool.query("next_7_days", owner=OWNER)
     past = datetime.now(ZoneInfo("Asia/Shanghai")) - timedelta(minutes=1)
     tool._connection.execute(
-        "INSERT INTO reminders(text,due_at,status,created_at) VALUES (?,?,?,?)",
-        ("due", past.isoformat(), "active", datetime.now(UTC).isoformat()),
+        "INSERT INTO reminders(text,due_at,status,owner,created_at) VALUES (?,?,?,?,?)",
+        ("due", past.isoformat(), "active", OWNER, datetime.now(UTC).isoformat()),
     )
     tool._connection.commit()
     assert await tool.poll_due() == 1
@@ -183,15 +188,15 @@ async def test_reminder_restart_restores_active_once_and_skips_cancelled(tmp_pat
     created_at = datetime.now(UTC).isoformat()
     original = ReminderTool(database)
     first = original._connection.execute(
-        "INSERT INTO reminders(text,due_at,status,created_at) VALUES (?,?,?,?)",
-        ("检查服务", due_at.isoformat(), "active", created_at),
+        "INSERT INTO reminders(text,due_at,status,owner,created_at) VALUES (?,?,?,?,?)",
+        ("检查服务", due_at.isoformat(), "active", OWNER, created_at),
     ).lastrowid
     second = original._connection.execute(
-        "INSERT INTO reminders(text,due_at,status,created_at) VALUES (?,?,?,?)",
-        ("不应通知", due_at.isoformat(), "active", created_at),
+        "INSERT INTO reminders(text,due_at,status,owner,created_at) VALUES (?,?,?,?,?)",
+        ("不应通知", due_at.isoformat(), "active", OWNER, created_at),
     ).lastrowid
     original._connection.commit()
-    await original.execute({"action": "cancel", "id": second})
+    await original.execute({"action": "cancel", "id": second}, context=CTX)
     original.close()
 
     notified = []
@@ -221,22 +226,22 @@ async def test_todo_create_query_update_complete_and_persistence(tmp_path, monke
             "tags": ["工作", "工作", "本周"],
             "due_text": "明天上午九点半",
         }
-    )
+    , context=CTX)
     todo_id = created.output["item"]["id"]
     assert created.output["item"]["due_at"] == fixed_due.isoformat()
     assert created.output["item"]["tags"] == ["工作", "本周"]
 
-    without_due = await tool.execute({"action": "create", "title": "整理桌面"})
+    without_due = await tool.execute({"action": "create", "title": "整理桌面"}, context=CTX)
     assert without_due.output["item"]["due_at"] is None
-    assert [item["id"] for item in (await tool.execute({"action": "query", "tag": "工作"})).output["items"]] == [todo_id]
-    assert (await tool.execute({"action": "query", "priority": "high"})).output["items"][0]["id"] == todo_id
+    assert [item["id"] for item in (await tool.execute({"action": "query", "tag": "工作"}, context=CTX)).output["items"]] == [todo_id]
+    assert (await tool.execute({"action": "query", "priority": "high"}, context=CTX)).output["items"][0]["id"] == todo_id
 
-    updated = await tool.execute({"action": "update", "id": todo_id, "status": "in_progress"})
+    updated = await tool.execute({"action": "update", "id": todo_id, "status": "in_progress"}, context=CTX)
     assert updated.output["item"]["status"] == "in_progress"
-    completed = await tool.execute({"action": "complete", "id": todo_id})
+    completed = await tool.execute({"action": "complete", "id": todo_id}, context=CTX)
     assert completed.output["item"]["status"] == "completed"
-    assert (await tool.execute({"action": "query"})).output["items"] == [without_due.output["item"]]
-    assert (await tool.execute({"action": "update", "id": 99999, "title": "不存在"})).output["updated"] is False
+    assert (await tool.execute({"action": "query"}, context=CTX)).output["items"] == [without_due.output["item"]]
+    assert (await tool.execute({"action": "update", "id": 99999, "title": "不存在"}, context=CTX)).output["updated"] is False
 
     assert tool._connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
     with pytest.raises(sqlite3.IntegrityError):
@@ -244,7 +249,7 @@ async def test_todo_create_query_update_complete_and_persistence(tmp_path, monke
     tool.close()
 
     reopened = TodoTool(tmp_path / "todos.db")
-    persisted = await reopened.execute({"action": "query", "status": "completed"})
+    persisted = await reopened.execute({"action": "query", "status": "completed"}, context=CTX)
     assert persisted.output["items"][0]["id"] == todo_id
     reopened.close()
 
@@ -258,7 +263,7 @@ async def test_todo_contract_requires_id_and_unknown_delete_has_no_side_effect(t
         SchemaValidator.validate({"action": "complete"}, tool.metadata.parameters_schema)
     with pytest.raises(SchemaValidationError):
         SchemaValidator.validate({"action": "delete"}, tool.metadata.parameters_schema)
-    absent = await tool.execute({"action": "delete", "id": 12345})
+    absent = await tool.execute({"action": "delete", "id": 12345}, context=CTX)
     assert absent.output == {"updated": False, "id": 12345}
     tool.close()
 
@@ -266,7 +271,7 @@ async def test_todo_contract_requires_id_and_unknown_delete_has_no_side_effect(t
 @pytest.mark.asyncio
 async def test_todo_unparseable_due_time_requests_clarification_without_writing(tmp_path):
     tool = TodoTool(tmp_path / "todos.db")
-    result = await tool.execute({"action": "create", "title": "交报告", "due_text": "下周"})
+    result = await tool.execute({"action": "create", "title": "交报告", "due_text": "下周"}, context=CTX)
     assert result.output["requires_confirmation"] is True
     assert result.output["fields"] == ["due_text"]
     assert tool._connection.execute("SELECT count(*) FROM todos").fetchone()[0] == 0
@@ -286,7 +291,7 @@ async def test_text_draft_preserves_facts():
     tool = TextProcessingTool(ModelGateway(MockModelAdapter()))
     receipt = await tool.execute(
         {"operation": "polish", "text": "项目预算300万元，日期2026年8月1日，电话13800138000。"}
-    )
+    , context=CTX)
     text = receipt.output["text"]
     assert not text.startswith("【草稿】")
     assert "300万元" in text
@@ -306,7 +311,7 @@ async def test_text_draft_preserves_facts():
 )
 async def test_mock_text_processing_does_not_return_the_instruction_prompt(operation, extra, prompt_fragment):
     tool = TextProcessingTool(ModelGateway(MockModelAdapter()))
-    receipt = await tool.execute({"operation": operation, "text": "项目将在2026年8月1日上线。", **extra})
+    receipt = await tool.execute({"operation": operation, "text": "项目将在2026年8月1日上线。", **extra}, context=CTX)
     result = str(receipt.output["text"])
     assert not result.startswith("【草稿】")
     assert prompt_fragment not in result
@@ -340,7 +345,7 @@ async def test_each_text_operation_executes_and_preserves_protected_facts(operat
     if operation == "summarize":
         arguments["target_length"] = 20
 
-    receipt = await tool.execute(arguments)
+    receipt = await tool.execute(arguments, context=CTX)
 
     assert receipt.success is True
     assert receipt.output["status"] == "draft"
@@ -383,7 +388,7 @@ class _FailingTextAdapter:
 @pytest.mark.parametrize("bad_output", ["请尽快提交相关材料，以确保流程的", "<FACT_0>", "<占位符>请尽快提交资料"])
 async def test_text_processing_quality_gate_falls_back_without_leaking_markers(bad_output):
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter(bad_output)))
-    receipt = await tool.execute({"operation": "polish", "text": "请尽快提交资料"})
+    receipt = await tool.execute({"operation": "polish", "text": "请尽快提交资料"}, context=CTX)
     text = str(receipt.output["text"])
     assert text == "请尽快提交资料"
     assert "【草稿】" not in text
@@ -423,7 +428,7 @@ async def test_text_processing_quality_gate_falls_back_without_leaking_markers(b
 )
 async def test_text_processing_removes_instruction_echo_and_language_drift(operation, model_output, expected):
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter(model_output)))
-    receipt = await tool.execute({"operation": operation, "text": "请尽快提交材料。" if operation == "polish" and "Please" in model_output else "本季度完成了三个项目。"})
+    receipt = await tool.execute({"operation": operation, "text": "请尽快提交材料。" if operation == "polish" and "Please" in model_output else "本季度完成了三个项目。"}, context=CTX)
     assert receipt.output["text"] == expected
     assert "占位符" not in receipt.output["text"]
     assert "FACT" not in receipt.output["text"]
@@ -434,7 +439,7 @@ async def test_text_processing_casual_tone_has_a_deterministic_short_text_fallba
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter("请尽快提交材料。")))
     receipt = await tool.execute(
         {"operation": "tone_adjust", "tone": "casual", "text": "请尽快提交材料。"}
-    )
+    , context=CTX)
     assert receipt.output["text"] == "麻烦尽快把材料交一下。"
 
 
@@ -444,7 +449,7 @@ async def test_text_processing_protects_count_and_enumerated_business_entities()
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter(model_output)))
     source = "本季度完成了三个项目，分别覆盖知识库、工作流和接口验证。"
 
-    receipt = await tool.execute({"operation": "polish", "text": source})
+    receipt = await tool.execute({"operation": "polish", "text": source}, context=CTX)
 
     assert receipt.output["text"] == source
     assert set(receipt.output["facts_preserved"]) >= {"三个项目", "知识库", "工作流", "接口验证"}
@@ -455,7 +460,7 @@ async def test_text_processing_casual_fallback_changes_fact_statement_without_fa
     source = "项目将在2026年8月1日上线，预算为300万元。"
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter(source)))
 
-    receipt = await tool.execute({"operation": "tone_adjust", "tone": "casual", "text": source})
+    receipt = await tool.execute({"operation": "tone_adjust", "tone": "casual", "text": source}, context=CTX)
 
     assert receipt.output["text"] != source
     assert "2026年8月1日" in receipt.output["text"]
@@ -468,7 +473,7 @@ async def test_text_processing_retries_invalid_model_json_once_then_uses_safe_dr
     adapter = _FailingTextAdapter(ModelError("invalid JSON"))
     tool = TextProcessingTool(ModelGateway(adapter))
 
-    receipt = await tool.execute({"operation": "draft", "text": source})
+    receipt = await tool.execute({"operation": "draft", "text": source}, context=CTX)
 
     assert adapter.calls == 2
     assert receipt.output["text"] == f"通知：{source}"
@@ -481,7 +486,7 @@ async def test_text_processing_does_not_hide_retryable_model_outage():
     tool = TextProcessingTool(ModelGateway(adapter))
 
     with pytest.raises(ModelTimeoutError):
-        await tool.execute({"operation": "polish", "text": "请尽快提交材料。"})
+        await tool.execute({"operation": "polish", "text": "请尽快提交材料。"}, context=CTX)
 
     assert adapter.calls == 1
 
@@ -489,7 +494,7 @@ async def test_text_processing_does_not_hide_retryable_model_outage():
 @pytest.mark.asyncio
 async def test_text_processing_summary_does_not_hard_truncate_short_text():
     tool = TextProcessingTool(ModelGateway(_BadTextAdapter("请尽快提交所有")))
-    receipt = await tool.execute({"operation": "summarize", "text": "请尽快提交资料"})
+    receipt = await tool.execute({"operation": "summarize", "text": "请尽快提交资料"}, context=CTX)
     assert receipt.output["text"] == "请尽快提交资料"
 
 
@@ -503,7 +508,7 @@ async def test_meeting_minutes_traceability_and_redaction(tmp_path):
         encoding="utf-8",
     )
     tool = MeetingNotesTool([root], tmp_path / "output", DataClassificationService())
-    receipt = await tool.execute({"source_path": str(source)})
+    receipt = await tool.execute({"source_path": str(source)}, context=CTX)
     output = Path(receipt.output["output_path"])
     markdown = output.read_text(encoding="utf-8")
     assert "## 主要讨论点" in markdown

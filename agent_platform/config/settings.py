@@ -1,11 +1,13 @@
 """Typed configuration loaded once from environment and .env."""
 
+import base64
+import binascii
 import json
 import os
-from ipaddress import ip_address
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
@@ -130,7 +132,8 @@ class Settings(BaseSettings):
 
     host: str = Field(default="127.0.0.1", validation_alias="AGENT_HOST")
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="AGENT_PORT")
-    developer_password: str = Field(default="", repr=False, validation_alias="DEVELOPER_PASSWORD")
+    ruoyi_jwt_secret: str = Field(default="", repr=False, validation_alias="RUOYI_JWT_SECRET")
+    ruoyi_redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="RUOYI_REDIS_URL")
     database_path: Path = Field(default=Path("data/agent_platform.db"), validation_alias="AGENT_DATABASE_PATH")
     audit_dir: Path = Field(default=Path("logs/audit"), validation_alias="AGENT_AUDIT_DIR")
     retention_days: int = Field(default=30, ge=1, validation_alias="AGENT_RETENTION_DAYS")
@@ -154,7 +157,8 @@ class Settings(BaseSettings):
     zipvoice_default_voice_id: str = Field(default="default", validation_alias="ZIPVOICE_DEFAULT_VOICE_ID")
     zipvoice_num_threads: int = Field(default=4, ge=1, le=32, validation_alias="ZIPVOICE_NUM_THREADS")
     zipvoice_speed: float = Field(default=1.0, ge=0.5, le=2.0, validation_alias="ZIPVOICE_SPEED")
-    zipvoice_num_steps: int = Field(default=4, ge=1, le=16, validation_alias="ZIPVOICE_NUM_STEPS")
+    zipvoice_num_steps: int = Field(default=8, ge=1, le=16, validation_alias="ZIPVOICE_NUM_STEPS")
+    zipvoice_postprocess: bool = Field(default=True, validation_alias="ZIPVOICE_POSTPROCESS")
     voice_enabled: bool = Field(default=False, validation_alias="VOICE_ENABLED")
     voice_input_device: str = Field(default="", validation_alias="VOICE_INPUT_DEVICE")
     voice_model_dir: Path = Field(
@@ -222,14 +226,37 @@ class Settings(BaseSettings):
             )
             for voice in self.zipvoice_voices
         ]
-        host = self.host.strip().strip("[]")
-        try:
-            loopback = ip_address(host).is_loopback
-        except ValueError:
-            loopback = host.casefold() == "localhost"
-        if not loopback and not self.developer_password:
-            raise ValueError("DEVELOPER_PASSWORD is required when AGENT_HOST is not a loopback address")
         return self
+
+    @field_validator("ruoyi_jwt_secret")
+    @classmethod
+    def valid_ruoyi_jwt_secret(cls, value: str) -> str:
+        """The shared RuoYi secret must be empty (unset) or a usable HS512 key.
+
+        jjwt 0.9.1 treats ``token.secret`` as base64 text; the decoded bytes
+        are the HMAC key. PyJWT rejects HS512 keys shorter than the digest
+        size (64 bytes), so an undecodable or too-short value must fail at
+        startup instead of every request failing closed at runtime.
+        """
+
+        stripped = value.strip()
+        if not stripped:
+            return ""
+        try:
+            decoded = base64.b64decode(stripped, validate=True)
+        except (ValueError, binascii.Error) as exc:
+            raise ValueError("RUOYI_JWT_SECRET must be standard-alphabet base64 text") from exc
+        if len(decoded) < 64:
+            raise ValueError("RUOYI_JWT_SECRET must decode to at least 64 bytes for HS512")
+        return stripped
+
+    @field_validator("ruoyi_redis_url")
+    @classmethod
+    def valid_ruoyi_redis_url(cls, value: str) -> str:
+        parsed = urlparse(value.strip())
+        if parsed.scheme != "redis" or not parsed.hostname:
+            raise ValueError("RUOYI_REDIS_URL must look like redis://host:port/db")
+        return value.strip()
 
     @field_validator("timezone")
     @classmethod

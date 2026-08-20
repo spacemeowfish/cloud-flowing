@@ -129,16 +129,19 @@ class SQLiteVectorStore:
         self._connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS documents(
-                path TEXT PRIMARY KEY,
+                owner TEXT NOT NULL DEFAULT '',
+                path TEXT NOT NULL,
                 mtime REAL NOT NULL,
-                scope TEXT NOT NULL DEFAULT '未声明'
+                scope TEXT NOT NULL DEFAULT '未声明',
+                PRIMARY KEY(owner, path)
             );
             CREATE TABLE IF NOT EXISTS chunks(
+                owner TEXT NOT NULL DEFAULT '',
                 document TEXT NOT NULL,
                 position INTEGER NOT NULL,
                 text TEXT NOT NULL,
                 vector TEXT NOT NULL,
-                PRIMARY KEY(document, position)
+                PRIMARY KEY(owner, document, position)
             );
             """
         )
@@ -146,33 +149,70 @@ class SQLiteVectorStore:
         if "scope" not in columns:
             self._connection.execute("ALTER TABLE documents ADD COLUMN scope TEXT NOT NULL DEFAULT '未声明'")
             self._connection.commit()
+        if "owner" not in columns:
+            # Primary keys gain the owner dimension, which SQLite cannot do in
+            # place: rebuild both tables. Legacy rows keep owner='' and are
+            # invisible to every account space.
+            self._connection.executescript(
+                """
+                ALTER TABLE documents RENAME TO documents_legacy;
+                CREATE TABLE documents(
+                    owner TEXT NOT NULL DEFAULT '',
+                    path TEXT NOT NULL,
+                    mtime REAL NOT NULL,
+                    scope TEXT NOT NULL DEFAULT '未声明',
+                    PRIMARY KEY(owner, path)
+                );
+                INSERT INTO documents(owner, path, mtime, scope) SELECT '', path, mtime, scope FROM documents_legacy;
+                DROP TABLE documents_legacy;
+                ALTER TABLE chunks RENAME TO chunks_legacy;
+                CREATE TABLE chunks(
+                    owner TEXT NOT NULL DEFAULT '',
+                    document TEXT NOT NULL,
+                    position INTEGER NOT NULL,
+                    text TEXT NOT NULL,
+                    vector TEXT NOT NULL,
+                    PRIMARY KEY(owner, document, position)
+                );
+                INSERT INTO chunks(owner, document, position, text, vector)
+                SELECT '', document, position, text, vector FROM chunks_legacy;
+                DROP TABLE chunks_legacy;
+                """
+            )
+            self._connection.commit()
 
-    def indexed_mtime(self, path: Path) -> float | None:
-        row = self._connection.execute("SELECT mtime FROM documents WHERE path = ?", (str(path),)).fetchone()
+    def indexed_mtime(self, path: Path, owner: str = "") -> float | None:
+        row = self._connection.execute(
+            "SELECT mtime FROM documents WHERE owner = ? AND path = ?", (owner, str(path))
+        ).fetchone()
         return float(row[0]) if row else None
 
-    def replace_document(self, path: Path, mtime: float, chunks: list[str], *, scope: str) -> None:
+    def replace_document(self, path: Path, mtime: float, chunks: list[str], *, scope: str, owner: str = "") -> None:
         vectors = self._embedder.embed(chunks)
         with self._connection:
-            self._connection.execute("DELETE FROM chunks WHERE document = ?", (str(path),))
             self._connection.execute(
-                """INSERT INTO documents(path, mtime, scope) VALUES (?, ?, ?)
-                ON CONFLICT(path) DO UPDATE SET mtime=excluded.mtime, scope=excluded.scope""",
-                (str(path), mtime, scope),
+                "DELETE FROM chunks WHERE owner = ? AND document = ?", (owner, str(path))
+            )
+            self._connection.execute(
+                """INSERT INTO documents(owner, path, mtime, scope) VALUES (?, ?, ?, ?)
+                ON CONFLICT(owner, path) DO UPDATE SET mtime=excluded.mtime, scope=excluded.scope""",
+                (owner, str(path), mtime, scope),
             )
             self._connection.executemany(
-                "INSERT INTO chunks(document, position, text, vector) VALUES (?, ?, ?, ?)",
+                "INSERT INTO chunks(owner, document, position, text, vector) VALUES (?, ?, ?, ?, ?)",
                 [
-                    (str(path), index, chunk, json.dumps(vector))
+                    (owner, str(path), index, chunk, json.dumps(vector))
                     for index, (chunk, vector) in enumerate(zip(chunks, vectors, strict=True))
                 ],
             )
 
-    def search(self, query: str, top_k: int = 5) -> list[SearchHit]:
+    def search(self, query: str, top_k: int = 5, owner: str = "") -> list[SearchHit]:
         query_vector = self._embedder.embed([query])[0]
         rows = self._connection.execute(
             """SELECT chunks.document, chunks.position, chunks.text, chunks.vector, documents.mtime, documents.scope
-            FROM chunks JOIN documents ON documents.path = chunks.document"""
+            FROM chunks JOIN documents ON documents.path = chunks.document AND documents.owner = chunks.owner
+            WHERE documents.owner = ?""",
+            (owner,),
         ).fetchall()
         hits = []
         for document, position, text, vector_json, mtime, scope in rows:

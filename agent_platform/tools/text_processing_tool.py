@@ -9,7 +9,7 @@ from pydantic import JsonValue
 from agent_platform.core.errors import ModelError
 from agent_platform.core.interfaces import Tool
 from agent_platform.core.model_gateway import ModelGateway
-from agent_platform.models import DataLevel, MessageRole, ModelMessage, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, MessageRole, ModelMessage, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 
 
 _FACT_PATTERN = re.compile(
@@ -153,7 +153,7 @@ class TextProcessingTool(Tool):
             return cls._casual_fallback(text)
         return text.strip()
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
         operation = str(arguments["operation"])
         original = str(arguments["text"])
         if operation == "confirm_send":

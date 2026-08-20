@@ -38,6 +38,7 @@ from agent_platform.models import (
     TaskRecord,
     TaskState,
     ToolCall,
+    ToolContext,
     build_model_acceptance_schema,
 )
 
@@ -394,6 +395,7 @@ class AgentCore:
 
         tool = self._registry.get(intent_name)
         SchemaValidator.validate(arguments, tool.metadata.parameters_schema)
+        owner_context = ToolContext(owner=str(task.session_id))
         await self._audit.record(
             AuditEvent(
                 task_id=task.id,
@@ -431,7 +433,7 @@ class AgentCore:
         if policy.requires_confirmation and not confirmed:
             preview = getattr(tool, "confirmation_context", None)
             if callable(preview) and policy.confirmation is not None:
-                details = await preview(arguments)
+                details = await preview(arguments, owner_context)
                 if details:
                     detail_lines = _confirmation_detail_lines(intent_name, details)
                     content = policy.confirmation.content
@@ -488,6 +490,7 @@ class AgentCore:
         receipt = await self._executor.execute(
             ToolCall(task_id=task.id, tool_name=tool.metadata.name, arguments=arguments),
             self.tasks.cancellation_event(task.id),
+            context=owner_context,
         )
         await self._audit.record(
             AuditEvent(
@@ -530,6 +533,7 @@ class AgentCore:
             receipt = await self._executor.execute(
                 ToolCall(task_id=task.id, tool_name="general_chat", arguments={"text": task.request_text}),
                 self.tasks.cancellation_event(task.id),
+                context=owner_context,
             )
             await self._audit.record(
                 AuditEvent(

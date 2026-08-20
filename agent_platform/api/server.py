@@ -17,7 +17,6 @@ from agent_platform.api.middleware import AuthenticationContextMiddleware, regis
 from agent_platform.api.routes import router
 from agent_platform.api.voice_routes import router as voice_router
 from agent_platform.config import Settings, get_settings
-from agent_platform.core.developer_auth import DeveloperSessionService
 from agent_platform.core.desktop_settings import PassiveRestartController, RestartController
 from agent_platform.core.recent_logs import RecentLogHandler
 
@@ -29,8 +28,7 @@ def create_app(
 ) -> FastAPI:
     application_settings = settings or get_settings()
     controller = restart_controller or PassiveRestartController()
-    developer_sessions = DeveloperSessionService(application_settings.developer_password)
-    recent_logs = RecentLogHandler(secrets=(application_settings.developer_password,))
+    recent_logs = RecentLogHandler(secrets=(application_settings.ruoyi_jwt_secret,))
     access_logger = logging.getLogger("agent_platform.api.access")
     access_logger.setLevel(logging.INFO)
 
@@ -38,6 +36,7 @@ def create_app(
     async def lifespan(app: FastAPI):
         container = ApplicationContainer.build(application_settings)
         app.state.container = container
+        app.state.ruoyi_authenticator = container.ruoyi_auth
         logging.getLogger().addHandler(recent_logs)
         await container.initialize()
         try:
@@ -58,7 +57,6 @@ def create_app(
     app.add_middleware(AuthenticationContextMiddleware)
     register_error_handlers(app)
     app.state.restart_controller = controller
-    app.state.developer_sessions = developer_sessions
     app.state.recent_logs = recent_logs
     app.include_router(auth_router)
     app.include_router(router)

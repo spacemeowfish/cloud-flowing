@@ -9,7 +9,7 @@ from pydantic import JsonValue
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.errors import PermissionDeniedError
 from agent_platform.core.interfaces import Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 from agent_platform.tools.meeting_processor import MeetingProcessor
 
 
@@ -41,7 +41,7 @@ class MeetingNotesTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"meeting:{hashlib.sha256(value.encode()).hexdigest()}"
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
         source = Path(str(arguments["source_path"])).resolve()
         if source.suffix.casefold() not in {".txt", ".md"} or not source.is_file():
             raise PermissionDeniedError("Meeting source must be an existing TXT or MD file")

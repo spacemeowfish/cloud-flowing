@@ -20,6 +20,16 @@ class ToolMetadata(StrictModel):
     requires_network: bool = Field(default=False, description="Whether execution requires network")
 
 
+class ToolContext(StrictModel):
+    """Per-request execution context: the data-owner identity behind a tool call.
+
+    ``owner`` is the authenticated account key (``user:{userId}`` under the
+    RuoYi gateway) and namespaces both data storage and idempotency caching.
+    """
+
+    owner: str = Field(..., min_length=1, max_length=128, description="Data-owner identity key")
+
+
 class ToolCall(StrictModel):
     task_id: UUID = Field(..., description="Owning task identifier")
     tool_name: str = Field(..., description="Registered tool name")
@@ -41,4 +51,4 @@ class ToolReceipt(StrictModel):
 
 IdempotencyKeyFactory = Callable[[dict[str, JsonValue]], str]
 
-__all__ = ["IdempotencyKeyFactory", "ToolCall", "ToolMetadata", "ToolReceipt"]
+__all__ = ["IdempotencyKeyFactory", "ToolCall", "ToolContext", "ToolMetadata", "ToolReceipt"]
