@@ -10,7 +10,7 @@
 
 按 `SMOKE-FIXPLAN.md`（2026-08-20，基于 556744b 与 474 项 pytest 基线）修复人工冒烟发现的 7 个演示阻塞缺陷，共 8 个修复项 S1-S8。目标是真实 ollama qwen2.5:3b desktop 演示链路逐条可用：ASR 连续转写、日程存在性查询、带修饰词文件搜索、缺参中文澄清、文件打开禁用如实反馈、知识库澄清可点选、会议纪要模糊找文件。
 
-前置：PRE-DELIVERY-FIXES-001 代码已推送为 PR #9（556744b 尚未合并进 main）；本任务基于 556744b 新分支 `zcode/smoke-demo-fixes`，PR base 指向 `zcode/pre-delivery-fixes`，PR #9 合并后改 base 为 main。旧任务归档至 `docs/tasks/2026-08-19-pre-delivery-fixes.md`。
+前置：PRE-DELIVERY-FIXES-001 已推送为 PR #9 并于 2026-08-19 以真合并（`a19f3c4`）进入 main；本任务基于 556744b 新分支 `zcode/smoke-demo-fixes`，PR #10 base 已于 2026-08-20 改为 main（smoke 分支相对 main 恰好只含本任务 10 个提交，无需清理提交栈）。旧任务归档至 `docs/tasks/2026-08-19-pre-delivery-fixes.md`。
 
 ## Acceptance scenarios
 
@@ -40,6 +40,7 @@
 - mock 适配器 meeting 无路径分支由 `{"source_path": ""}`（违反抽取 schema minLength）改为合法 partial 形态 `{"arguments": {}, "missing_fields": ["source_path"]}`，与真实模型行为对齐；评测集 60 用例全部带绝对路径，不受影响。
 - 测试容器配置只设 `document_roots`：同时显式设 legacy `authorized_file_roots`/`knowledge_roots` 会触发 settings 校验器用 legacy 合并值覆盖 `document_roots`（PR#7 既有语义）。
 - 真实 ollama 冒烟使用独立端口 8010 + 独立主库，但 schedules/knowledge 等伴生库按 `database_path.with_name(...)` 派生规则与 desktop 实例共享了 `data/schedules.db`；冒烟插入的 1 条"会议室预约"（id 5）已精确删除，用户原有 4 条数据未动。后续冒烟如需完全隔离应把 AGENT_DATABASE_PATH 指向独立子目录。
+- 2026-08-20 用户决定：PR #10 base 改为 main（PR #9 已真合并 `a19f3c4`，smoke 分支无 pre-delivery 残留提交，无需清理提交栈）；本任务后续开发内容暂不实施，未完成项整体暂缓保留（见 Pending），留到后续任务接手。
 
 ## Completed
 
@@ -49,13 +50,14 @@
 
 ## Pending
 
-- 人工冒烟剩余项：ASR 连续两段转写拼接（S5 前端，需真机麦克风）；如演示需真实打开文件，本地 `.env` 置 `AGENT_FILE_OPEN_ENABLED=true` 重启 desktop（已知 FIXPLAN D1 风险由演示负责人决定）。
-- PR #9 合并后：本 PR 重定 base 到 main 并清理提交栈。
-- 澄清挂起 + resume、三闸门收敛、FIXPLAN 批次 D：按 SMOKE-FIXPLAN"范围外"另立任务。
+- 暂缓项（2026-08-20 用户决定：后续开发内容暂不实施，留到后面做；后续任务接手时从本清单恢复）：
+  - 人工冒烟剩余项：ASR 连续两段转写拼接（S5 前端，需真机麦克风）；如演示需真实打开文件，本地 `.env` 置 `AGENT_FILE_OPEN_ENABLED=true` 重启 desktop（已知 FIXPLAN D1 风险由演示负责人决定）。
+  - desktop 模式全量人工冒烟清单：待 PR 合并后人工执行。
+  - 澄清挂起 + resume、三闸门收敛、FIXPLAN 批次 D：按 SMOKE-FIXPLAN"范围外"另立任务。
 
 ## Next step
 
-- 评审并合并 PR #9（pre-delivery），随后评审合并本 PR（重定 base 后）；合并后按 A4.4 清单做剩余人工冒烟（ASR/ZipVoice/desktop 八类）。
+- 评审并合并本 PR（base 已于 2026-08-20 改为 main）；合并后剩余人工冒烟与范围外开发按用户决定整体暂缓，后续任务接手（RUOYI-AUTH-GATEWAY-001 的 TASK.md 已完整并入本清单，作为跨任务保留点）。
 
 ## Verification
 
@@ -77,4 +79,4 @@
 
 - From: `ZCode`
 - To: `spacemeowfish/reviewer`
-- Summary: SMOKE-FIXPLAN S1-S8 全部完成（8 项验收全勾），495 项 pytest 通过（+21 回归），四类静态检查通过，真实 ollama qwen2.5:3b 冒烟 6/7 条实测通过（唯一剩余为需真机的 ASR 双段转写）。分支基于 556744b（PR #9 未合并，本 PR base 指向 `zcode/pre-delivery-fixes`，PR #9 合并后需重定 base）。关键决策与偏离均记录于 Decisions（预约 start_text 行为变更、"本周有什么会议"路由边界变更、mock partial 形态对齐、冒烟共享库清理）。
+- Summary: SMOKE-FIXPLAN S1-S8 全部完成（8 项验收全勾），495 项 pytest 通过（+21 回归），四类静态检查通过，真实 ollama qwen2.5:3b 冒烟 6/7 条实测通过（唯一剩余为需真机的 ASR 双段转写）。分支基于 556744b；PR #9 已真合并进 main，本 PR base 已于 2026-08-20 改为 main（无需清理提交栈）。剩余人工冒烟与范围外开发按用户 2026-08-20 决定整体暂缓（见 Pending）。关键决策与偏离均记录于 Decisions（预约 start_text 行为变更、"本周有什么会议"路由边界变更、mock partial 形态对齐、冒烟共享库清理）。
