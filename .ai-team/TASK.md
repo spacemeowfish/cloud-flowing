@@ -1,77 +1,70 @@
 # Current Task
 
-- ID: `PRE-DELIVERY-FIXES-001`
-- Title: `交付前修复（FIXPLAN 批次 A/B/C）`
-- Status: `handoff`
+- ID: `RUOYI-AUTH-GATEWAY-001`
+- Title: `公网访问前置改造：若依认证网关`
+- Status: `active`
 - Owner: `ZCode`
 - Next owner: `spacemeowfish/reviewer`
 
 ## Goal
 
-按 `FIXPLAN.md`（生成于 2026-08-19，基于 main 624f751 与 455 项 pytest 基线）执行交付前修复：批次 A（演示阻塞项）、批次 B（真实 ollama qwen2.5:3b 链路健壮性，用户已确认演示使用 ollama qwen2.5 3B）、批次 C（数据与后台任务）。批次 D 与架构重构不在本任务范围。
+按 `docs/tasks/2026-08-20-ruoyi-auth-gateway-plan.md`（计划文档，第 8 节答案已于 2026-08-20 回填）完成公网访问前置认证改造：若依（RuoYi-Vue `springboot3` 分支）统一登录门 + FastAPI JWT 闸机（未认证一律 401，白名单仅 `/health`）+ 数据按账号隔离 + 自签 HTTPS 部署包（手册+脚本交付老板执行，开发者远程支援）。Phase 0～6 全部在 Windows PC 完成并留 PC 证据；Phase 7 板端验收由部署人执行。
 
-前置收尾：`DOCUMENT-ROUTING-BOUNDARIES-001` 已按 PR#8（de844b0）合并结果标记 `done`，归档至 `docs/tasks/2026-08-19-document-routing-boundaries.md`。
+前置收尾：`PRE-DELIVERY-FIXES-001` 归档至 `docs/tasks/2026-08-19-pre-delivery-fixes.md`（与 PR #10 分支内容逐字节一致）。`SMOKE-DEMO-FIXES-001` 在 PR #10（base 已于 2026-08-20 改为 main）评审中，其未完成项以"前置任务暂缓项"并入本文件保留。
 
 ## Acceptance scenarios
 
-- [x] A1 开发者 Cookie 下发任务不再 `unknown_role` 失败：`_POLICY_ROLE_MAP` 将 developer 映射为 admin 策略语义（单点：`agent_core.py` 构造 PolicyContext 处）。
-- [x] A2 提醒/日程 `_scheduler_loop` 对 poll 异常记日志并继续；toast `show()` 失败回退 console 不上抛；`poll_due` 回调按行 try/except，失败行仍 UPDATE+commit 不重复通知。
-- [x] A3 `SQLiteVectorStore` 连接后执行 `PRAGMA journal_mode=WAL` 与 `busy_timeout=5000`，管理端重建索引与查询并发不再 locked。
-- [x] A4 演示配置：`.env` 切换 `MODEL_PROVIDER=ollama`、`MODEL_NAME=qwen2.5:3b`、`OLLAMA_TIMEOUT_SECONDS=60`、补 `DEVELOPER_PASSWORD`（本地文件，不入 Git）；`.env.example` 同步新变量说明。
-- [x] B1 参数抽取阶段输出上限由 192 放宽到可配置 `AGENT_INTENT_EXTRACTION_MAX_TOKENS`（默认 512，仅对 argument-extraction schema 生效，分类/接受 schema 维持 192）；抽取阶段非重试 `ModelError`（截断 JSON）原样重生成一次。
-- [x] B2 意图分类阶段增加 `ModelSchemaError -> 修复 prompt -> 重试一次`（新增 `_classification_repair_message`，修复输出多余 arguments 字段等 3B 常见漂移）。
-- [x] B3 确定性预路由参数校验失败时记 warning 并回退模型抽取（不再直接抛 `ModelSchemaError`）；`start_text_from_request` 不再复制整句（见 Decisions 偏离说明）；text_polish 文本上游按 schema 上限 10000 截断。
-- [x] B4 `ModelGateway.generate` 对连接类可重试错误（非超时/限流/忙）同 adapter 重试 1 次；`OLLAMA_TIMEOUT_SECONDS` 默认 120→60。
-- [x] C1 路由 QUEUE 决策改为诚实失败（错误信息“离线且无云端执行能力，任务未排队”），不再进入永久 `waiting_network`；删除 `core/offline_queue.py` 与 `session_manager` 的 offline_queue 建表。
-- [x] C2 管理端 `/admin/knowledge/reindex` 复用容器内活实例（`container.knowledge`，其 roots 为 `document_roots`），删除第二套构造。
-- [x] C3 幂等缓存区分查询与变更：新设置 `AGENT_MUTATION_IDEMPOTENCY_TTL_SECONDS`（默认 120s）；reminder/schedule/todo 变更类 `idempotency_key` 加 `mutation:` 前缀；读取类维持 3600s。
-- [x] C4 取消终态任务返回 200 + 当前记录（幂等）；`AgentCore.process` 的 CancelledError 处理器加 task-unbound 与 `InvalidTransitionError` 守卫；`container.spawn` done-callback 记录后台任务异常日志。
+- [ ] Phase 1 本地跑通若依：JDK 17 + MySQL 8 + Redis + Node 18 环境就绪；能在若依界面建用户/分角色（普通用户、developer）；F12 可见 Bearer 三段式 JWT。
+- [ ] Phase 2 契约冻结：`docs/contracts/auth-gateway.md` 定稿（签名算法、claims 结构、Redis key、前端令牌存储、环境变量名），并用真实 token 手动解码验证理解正确。
+- [ ] Phase 3 FastAPI 闸机：全部路由默认校验（白名单仅 `/health`），非法/缺失/过期/吊销统一 401；数据按账号隔离（用户名为数据归属，跨设备同账号同数据）；开发者入口改判若依角色，旧环境变量密码门退役；Mock 签发器测试覆盖放行/各 401 路径与角色映射；curl 实测无 token 401、带真实若依 token 200。
+- [ ] Phase 4 前端登录对接：读不到有效 token 跳若依登录页；登录后回跳进操作台，API 统一附加 `Authorization: Bearer` 头；普通用户不见控制台；登出清理并回登录页。
+- [ ] Phase 5 本地全链路（Nginx 三条 location）：未登录 401/跳登录、普通用户控制台不可见且直调开发者接口被拒、developer 可用、若依禁用账号立即 401、伪造 token 401；剧本截图/录屏归档并标注为 PC 证据。
+- [ ] Phase 6 部署包：`deployment/ruoyi-gateway/` 下 nginx.conf、systemd unit ×3、ARM64 安装脚本、自签证书脚本、部署手册、安全验收清单，文档走查通过。
+- [ ] Phase 7 板端验收（部署人执行）：公网可达出登录页、端口收敛仅 443、认证闭环（禁用立即失效）、`free -h` 资源实测不 OOM、重启后三个 systemd 服务自动恢复、带认证链路语音冒烟；证据归档后本任务标记 `done`。
+- [ ] 最终门禁：计划文档第 7 节五条安全清单（HTTPS、端口收敛、默认账号已改、防爆破、闸机纵深）全部有真实证据。
 
 ## Invariants
 
-- 默认 PC 模型仍为 `qwen2.5:3b`（ollama 本机 digest `357c53fb659c`，与历史报告一致）。
-- 确定性代码继续负责 Schema、授权、数据分级、确认、执行、幂等、取消、审计；B 批只增加模型调用的容错与预算，不放松任何 Schema 校验。
-- 不引入 mock fallback 冒充真实模型（B4 明确不做假答案回退）。
-- 不把密码、Cookie 或本机绝对路径写入 Git（`.env` 已被 ignore，密码仅本地）。
-- 455 项 pytest 基线只增不减；本次全量 474 项通过（+20 新增回归、−1 离线队列死代码测试）。
+- 计划文档第 3 节冻结决策整体纳入本任务，不重新讨论；如确需推翻，先在本文件 Decisions 记录理由。
+- 若依源码当黑盒：只改配置，不改其 Java 源码；使用最新版 RuoYi-Vue `springboot3` 分支（JDK 17 + Vue2 前端）。
+- 白名单仅 `/health`；SSE、语音、文件、设置、Swagger 文档一律在登录后。
+- 密钥（`token.secret` 等）走环境变量/仓库外配置，绝不进 Git（仓库既有铁律）。
+- PC 开发全程监听回环地址；本任务不包含把 PC 监听改为非回环的行为变更。
+- PC 证据不冒充板端结论：Phase 6 为止是 PC 证据，板端内存/性能/公网连通性只在 Phase 7 验收。
+- 不提供生产可用的"关闭认证"开关；测试用 Mock 而非开关。
+- 仓库命令基线（pytest / compileall / node --check）全绿才推进下一 Phase；每个 Phase 结束在本文件记录进度与证据。
 
 ## Decisions
 
-- A1 采用映射法（`_POLICY_ROLE_MAP = {"developer": "admin"}`）而非在 policies.yaml 增加 developer 角色：后者会在高风险动作 `allowed_roles` 检查处再次被拒。
-- B3 `start_text` 偏离 FIXPLAN 字面方案：FIXPLAN 建议剥离时间线索后用剩余文本作 start_text，但 `schedule_tool` 只解析 `start_text` 的时间表达式，剥离会导致工具无法解析开始时间、所有带时间预约退化为询问时刻。实现改为：命中的时间线索本身作为 `start_text`（天然短、可解析、≤200），剩余文本剥离命令动词后仅在 title 为空时作 `title` 兜底（`schedule_manage.title_from_request`）。两个旧断言“整句复制”的测试已按新行为更新。
-- B4 只重试连接类错误（排除超时/限流/忙），避免超时重试让演示等待时间翻倍。
-- C3 变更识别用工具 `idempotency_key` 的 `mutation:` 前缀约定（计划中的兜底方案），未扩展 ToolMetadata 结构。
-- A1 回归测试放在新文件 `tests/test_pre_delivery_fixes.py`（与 FIXPLAN 建议的 test_developer_auth.py 等价覆盖，避免两处维护同一场景）。
-- `AGENT_DOCUMENT_ROOTS` 语义保持：构造参数显式传 legacy roots 时仍按原设计合并回退，环境变量始终优先（C2 测试用 monkeypatch.setenv 表达该语义）。
+- 2026-08-20 老板确认计划文档第 8 节 12 题答案（详见该文档回填处）：1～3 网络环境问题暂缓至部署期；板上同跑 3B 模型与若依（不挪云，Phase 7 实测，8G 不足按第 6 节预案兜底）；账户分离=数据按账号隔离；先按"普通用户 + developer"两类角色；账号手动建、不开放注册；全员必须登录；自签证书；手册+脚本交付、老板执行；上线尽快。
+- 证书路线确定为自签：属第 3 节决策表内"备选路径"的选定而非推翻，Phase 6 只交付自签脚本，不再核实 ZeroSSL/acme.sh 政策。
+- PR #10 base 已于 2026-08-20 改为 main（PR #9 已真合并 `a19f3c4`，smoke 分支无残留提交、无需清理）；冒烟任务后续开发按用户决定暂缓，未完成项整体并入本文件"前置任务暂缓项"，任何合并顺序下不丢失（TASK.md 冲突取本文件版本即可）。
 
 ## Completed
 
-- 批次 A（A1-A4）、批次 B（B1-B4）、批次 C（C1-C4）全部实现，含回归测试 `tests/test_pre_delivery_fixes.py` 20 项。
-- 同步更新：`tests/test_model_gateway.py`（B1 行为变更：截断 JSON 重试一次后仍失败才报错）、`tests/test_parameter_normalizer.py`（B3 start_text 新行为）、`tests/test_policy_routing.py`（删除 offline_queue 测试）。
-- `.env.example` 新增/更新：`AGENT_INTENT_EXTRACTION_MAX_TOKENS`、`AGENT_MUTATION_IDEMPOTENCY_TTL_SECONDS`、`AGENT_IDEMPOTENCY_TTL_SECONDS` 说明、`OLLAMA_TIMEOUT_SECONDS=60`。
+- Phase 0（2026-08-20）：计划文档第 8 节答案回填并同步正文（账户分离含义、Phase 3 会话映射按账号隔离、Phase 6 证书脚本定自签）；`PRE-DELIVERY-FIXES-001` 归档补齐至 `docs/tasks/2026-08-19-pre-delivery-fixes.md`；本 TASK.md 建立；PROJECT.md 认证模型描述修订。
+
+## 前置任务暂缓项（SMOKE-DEMO-FIXES-001 遗留，2026-08-20 用户决定暂不实施）
+
+- 人工冒烟剩余项：ASR 连续两段转写拼接（S5 前端，需真机麦克风）；如演示需真实打开文件，本地 `.env` 置 `AGENT_FILE_OPEN_ENABLED=true` 重启 desktop（已知 FIXPLAN D1 风险由演示负责人决定）。
+- desktop 模式全量人工冒烟清单：待 PR #10 合并后人工执行。
+- 澄清挂起 + resume、三闸门收敛、FIXPLAN 批次 D：按 SMOKE-FIXPLAN"范围外"另立任务。
 
 ## Pending
 
-- 批次 D（D1-D12）与架构重构方向：交付后按 FIXPLAN 价值排序另立任务。
-- 人工冒烟清单（A4.4）剩余项：desktop 模式普通页过八类能力、ASR 按一次、ZipVoice 合成一次（服务端任务链路已由脚本冒烟覆盖）。
-- 真实 ollama 演示冷启动预留 ~10s（TASK 历史记录 qwen2.5:3b 冷 10.37s/热 0.94s）；建议演示前预热一次。3B 分类对无锚点问句（如“珠穆朗玛峰有多高”）可能落入知识问答，演示通用问答建议使用“什么是/为什么”句式（确定性预路由）。
+- Phase 1～7 全部未开始（逐项见 Acceptance scenarios）。
 
 ## Next step
 
-- 审查并合并本 PR；合并后按 A4.4 清单人工冒烟（演示用 `.env` 已配置：ollama qwen2.5:3b + DEVELOPER_PASSWORD，密码在本地 `.env`，不入库）。
-- 反馈验收意见后由 ZCode 继续修订（用户约定：优化完成后由用户验收给反馈再修改）。
+- Phase 1：PC 安装 JDK 17、MySQL 8、Redis、Node.js 18+，本地跑通若依（clone RuoYi-Vue `springboot3` 分支、建库导 SQL、配置 `application-druid.yml`/`application.yml`、启动前后端、建"普通用户/developer"角色与测试账号、立即改 admin 默认密码、F12 确认 Bearer token）。启动前先生成强随机 `token.secret`（环境变量思路，不入库），为 Phase 3 复用做准备。
 
 ## Verification
 
-- [x] `.\.venv\Scripts\python.exe -m pytest -q -p no:cacheprovider`：474 项全部通过（基线 455 + 20 新增 − 1 删除；exit 0）
-- [x] `.\.venv\Scripts\python.exe -m compileall -q agent_platform evaluation deployment scripts` 通过
-- [x] `node .ai-team/check.mjs --base origin/main`（TASK.md 与代码同 PR 更新后通过；本次会话首次运行为 blocked，系 TASK.md 尚未提交所致，已随本提交修复）
-- [x] 本机 `ollama list` 确认 `qwen2.5:3b`（357c53fb659c）已就绪
-- [x] 真实 ollama 冒烟（`agent_platform.cli serve` + `.env` 演示配置，脚本 `scripts/smoke_ollama_demo.py`，密码从环境读取）：健康检查 ok/ollama；预路由提醒（5分钟后喝水）完成；真实模型日程“明天下午3点开项目评审会”完成并正确创建 2026-08-20T15:00+08:00、标题“项目评审会”（历史 Pending 的预约时间参数问题在本次 B 批修复后实测通过）；通用问答“什么是人工智能”真实模型回答正常、“1+1等于多少”确定性回答正常；开发者登录（200）后同 Cookie 发提醒任务 completed（A1 实测）；completed 任务取消返回 200/completed（C4 实测）。“珠穆朗玛峰有多高”被 3B 分入知识问答返回未命中（分类质量已知局限，任务诚实完成，非本次回归；演示用“什么是…”句式可稳定走通用问答）。
-- [ ] 人工冒烟清单其余项（desktop 模式八类能力、ASR 按一次、ZipVoice 合成一次）：待本 PR 合并后人工执行并补记录
+- [x] Phase 0（2026-08-20，纯文档变更）：`node .ai-team/check.mjs --base origin/main` 通过（Result: valid）；全量 `pytest -q -p no:cacheprovider` 474 项全部通过（分支自 origin/main `a19f3c4`，无代码变更，作基线留证；系统 pytest-current 临时目录权限故障，改用 `--basetemp` 独立目录运行）。
+- [ ] Phase 1 起各 Phase 验收证据逐项补录。
 
 ## Handoff note
 
 - From: `ZCode`
 - To: `spacemeowfish/reviewer`
-- Summary: FIXPLAN 批次 A/B/C 全部完成（A1 developer 角色映射、A2 调度与通知异常保护、A3 WAL、A4 演示配置；B1-B4 模型链路容错；C1-C4 死局/重建索引/幂等/取消守卫），`.env` 已切换 ollama qwen2.5:3b 并配置开发者密码（本地）。474 项 pytest 通过。B3 start_text 按工具解析语义做了等效偏离（见 Decisions）。批次 D 与人工冒烟待交付后/合并后执行。
+- Summary: Phase 0 立项完成——计划文档第 8 节 12 题答案回填（1～3 暂缓至部署期、自签证书路线选定、数据按账号隔离），TASK.md/PROJECT.md 建立或修订，PRE-DELIVERY 归档补齐，冒烟任务未完成项以"前置任务暂缓项"并入本文件保留。下一动作：Phase 1 本地跑通若依。
