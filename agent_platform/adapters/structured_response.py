@@ -228,7 +228,7 @@ def _classification_system_prompt() -> str:
         "- 每周一上午9点提醒我开会 -> reminder_create；创建日程 每周一上午9点开会 -> schedule_manage。\n"
         "- 取消日程 项目会 -> schedule_manage；取消提醒 12 -> reminder_create。\n"
         "- 总结这段：本季度完成三个项目 -> text_polish；提醒功能怎么用 -> knowledge_query；待办清单文件在哪 -> file_open。\n"
-        "- 日程管理制度是什么 -> knowledge_query；本周有什么会议 -> 只有存在真实本地日程数据时才 schedule_manage，否则 clarify。\n"
+        "- 日程管理制度是什么 -> knowledge_query；帮我查一下今天有没有会议 -> schedule_manage；本周有什么会议 -> 只有存在真实本地日程数据时才 schedule_manage，否则 clarify。\n"
         "- 多份周报未给日期或能力不足 -> clarify；真实会议室预约、外部系统连接等当前不支持 -> unsupported。\n"
         "- 1+1等于多少、明确翻译、普通外部常识和闲聊 -> general_chat；不要因为问号或单个名词选择工具。"
     )

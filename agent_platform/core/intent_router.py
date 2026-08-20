@@ -66,6 +66,15 @@ def pre_route_intent(text: str) -> PreRouteDecision | None:
         return PreRouteDecision("schedule_manage", "meeting_room_booking")
     if re.search(r"(?:今天|明天|后天|本周|下周).*(?:有什么|有哪些).*安排", normalized):
         return PreRouteDecision("schedule_manage", "schedule_arrangement_query")
+    if (
+        re.search(r"(?:今天|明天|后天|本周|下周)", normalized)
+        and re.search(r"(?:有没有|有什么|有哪些)", normalized)
+        and re.search(r"(?:会议|安排|日程)", normalized)
+        and not re.search(r"(?:会议纪要|会议记录|通知|议程)", normalized)
+    ):
+        # “查一下今天有没有会议”是本地日程存在性查询；排除词防止劫持
+        # 会议文档类请求（纪要/记录/通知/议程）。
+        return PreRouteDecision("schedule_manage", "schedule_presence_query")
     if re.match(r"^(?:请|帮我|请帮我)?(?:添加|创建|完成|删除|取消|查看|查询)(?:一个)?(?:待办|待处理)", normalized):
         return PreRouteDecision("todo_manage", "explicit_todo")
 

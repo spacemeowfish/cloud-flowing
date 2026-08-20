@@ -221,7 +221,7 @@ async function beginVoiceRecording() {
 }
 async function finishVoiceRecording() {
   if(state.voiceStartPromise&&!state.voiceRecording){state.voiceStopRequested=true;return;} const recording=state.voiceRecording; if(!recording)return; state.voiceStopRequested=false; clearInterval(state.voicePoll);clearTimeout(state.voiceAutoStop);state.voicePoll=null;state.voiceAutoStop=null; updateVoiceUi("正在转写，请稍候",-90,false);
-  try { const result=await API.post(`/voice/recordings/${recording.id}/stop`,{}); $("#consoleText").value=result.transcript||""; $("#consoleText").focus(); updateVoiceUi(result.limit_reached?"已达到最长录音时限，已回填识别内容":"转写完成，可修改后提交"); }
+  try { const result=await API.post(`/voice/recordings/${recording.id}/stop`,{}); const previous=$("#consoleText").value.trim(),transcript=result.transcript||""; $("#consoleText").value=previous?previous+transcript:transcript; $("#consoleText").focus(); updateVoiceUi(result.limit_reached?"已达到最长录音时限，已回填识别内容":"转写完成，可修改后提交"); }
   catch(error) { const code=error.body?.code; updateVoiceUi(voiceErrors[code]||error.message); toast(voiceErrors[code]||error.message,true); }
   finally { state.voiceRecording=null; }
 }
@@ -428,18 +428,22 @@ function renderLiveTask(task) {
   const structured = task.state==="completed" ? renderStructuredOutput(task,result,output) : "";
   const terminal = result.type==="clarification" || result.type==="unsupported";
   const notice = output.notice || result.notice;
-  const candidateMarkup = terminal && Array.isArray(result.candidates) && result.candidates.length ? `<div class="sources">${result.candidates.map(s=>`<span class="source-chip">${esc(s.name||s.file||"候选")} · ${esc(s.date||s.path_summary||"")}</span>`).join("")}</div>` : "";
+  const candidateMarkup = terminal && Array.isArray(result.candidates) && result.candidates.length ? `<div class="sources">${result.candidates.map(s=>{const name=String(s.name||s.file||"候选");const date=String(s.date||"").replace(/\D/g,"");const question=date?`${name.includes("项目周报")?"项目周报":"周报"}_${date} 的进展内容`:`${name.replace(/\.[a-z0-9]+$/i,"")} 的进展内容`;return `<button type="button" class="source-chip" style="cursor:pointer" data-clarity-question="${esc(question)}" title="点击填入问句">${esc(name)} · ${esc(s.date||s.path_summary||"")}</button>`;}).join("")}</div>` : "";
   const resultBody = `${content ? `<strong>${terminal?"说明":task.state==="completed"?"执行结果":"错误"}</strong>${esc(content)}${notice?`<div class="callout">${esc(notice)}</div>`:""}${sources.length?`<div class="sources">${sources.map(s=>`<span class="source-chip">${esc(s.file||s.document||"来源")} · ${esc(s.date || s.section || s.position || "全文")}</span>`).join("")}</div>`:""}${candidateMarkup}` : ""}${structured}${speechControls(task)}`;
   const inspectorAction = appMode === "developer" ? `<button class="button small" data-inspect-task>在检查器中查看</button>` : "";
   area.innerHTML=`<section class="panel task-card"><header class="panel-head"><div><h3><span class="state-pill ${task.state}">${meta[0]}</span> · ${shortId(task.id)}</h3><p class="task-summary">${task.state==="completed"?"任务已完成":task.context?.intent?`正在处理：${esc(task.context.intent)}`:"正在处理任务"}</p></div>${inspectorAction}</header>${rail(task)}${renderConfirmation(task)}${resultBody?`<div class="task-result">${resultBody}</div>`:""}</section>`;
   $("#miniRail") && ($("#miniRail").innerHTML=rail(task)); const inspect=$("[data-inspect-task]",area); if(inspect)inspect.onclick=()=>openInspector(); bindConfirmation(task,area); bindResultActions(area); bindSpeechControls(task,area);
+  $$('[data-clarity-question]',area).forEach(btn=>btn.onclick=()=>{const question=btn.dataset.clarityQuestion,input=$("#consoleText"); if(question&&input){input.value=question; input.focus();}});
 }
+const FIELD_LABELS={when:"具体时间",start_text:"开始时间",end_text:"结束时间",title:"标题",source_path:"文稿路径",selected_path:"文件",query:"关键词",text:"正文",id:"编号"};
 function renderConfirmation(task) {
   if(task.state!=="awaiting_confirmation")return""; const data=task.result||{}; const type=data.type; let body="";
-  if(type==="missing_fields") body=`<p>${esc(data.message||"请补充缺失参数")}</p>${(data.fields||[]).map(name=>field(`confirm-${name}`,name==="when"?"具体时间":name,"text",name==="when"?"例如：15:00":"请输入内容","full")).join("")}`;
+  if(type==="missing_fields") body=`<p>${esc(data.message||"请补充缺失参数")}</p>${(data.fields||[]).map(name=>field(`confirm-${name}`,FIELD_LABELS[name]||name,"text",name==="when"?"例如：15:00":"请输入内容","full")).join("")}`;
   else if(type==="candidate_confirmation") { const candidates=data.receipt?.output?.candidates||[]; body=`<p>选择一个候选文件后继续：</p>${candidates.map((f,i)=>`<label class="candidate"><input type="radio" name="candidate" value="${esc(f.path)}" ${i===0?"checked":""}><span><b>${esc(f.name)}</b><small>${esc(f.path_summary||f.path)} · ${fmt(f.modified_at)}</small></span></label>`).join("")}`; }
   else { const info=data.confirmation||{}; body=`<p>${esc(info.content||data.message||"此操作需要人工确认")}</p><div>${esc(info.impact||"")}</div>`; }
-  return `<div class="confirmation"><h4>人工确认闸门 · ${esc(task.risk_level)}</h4>${body}<div class="form-actions"><button class="button danger small" data-reject>拒绝</button><button class="button primary small" data-confirm>确认并继续</button></div></div>`;
+  const missing=(data.fields||[]).map(name=>FIELD_LABELS[name]||name).join("、");
+  const title=type==="missing_fields"?`请补充信息${missing?` · ${missing}`:""}`:type==="candidate_confirmation"?"请选择一个选项":`人工确认闸门 · ${task.risk_level}`;
+  return `<div class="confirmation"><h4>${esc(title)}</h4>${body}<div class="form-actions"><button class="button danger small" data-reject>拒绝</button><button class="button primary small" data-confirm>确认并继续</button></div></div>`;
 }
 function bindConfirmation(task,root) {
   const confirm=$("[data-confirm]",root), reject=$("[data-reject]",root); if(!confirm)return;

@@ -96,7 +96,8 @@ class TestMeetingRoomBooking:
         assert arguments is not None
         assert arguments["action"] == "create"
         assert arguments["location"] == "A301"
-        assert arguments["start_text"] == "预约 A301 会议室"
+        # 裸预约句式无时刻，start_text 留空交给 schema 预检转中文补充闸门。
+        assert "start_text" not in arguments
 
     def test_roomless_booking_has_no_location(self):
         arguments = deterministic_pre_route_arguments("schedule_manage", "帮我预约会议室")

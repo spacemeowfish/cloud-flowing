@@ -252,9 +252,12 @@ class MockModelAdapter(ModelAdapter):
             }
         elif any(word in text for word in ("会议纪要", "会议记录", "整理会议", "会议文稿")):
             match = self._path_pattern.search(text)
+            # 空字符串 source_path 违反抽取 schema 的 minLength；无路径时
+            # 返回合法的 partial 形态（空参数 + missing_fields），与真实
+            # 模型的行为对齐。
             result = {
                 "intent": "meeting_process",
-                "arguments": {"source_path": match.group(0).strip() if match else ""},
+                "arguments": {"source_path": match.group(0).strip()} if match else {},
                 "missing_fields": [] if match else ["source_path"],
                 "confidence": 0.96,
             }

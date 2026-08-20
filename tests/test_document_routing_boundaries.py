@@ -34,7 +34,9 @@ def test_boundary_fast_routes_only_use_specific_anchors(text: str, intent: str):
 
 
 def test_ambiguous_external_schedule_is_left_for_model_classification():
-    assert pre_route_intent("本周有什么会议") is None
+    # 无日期锚点的模糊问法仍留给模型；带“今天/本周…”锚点的存在性查询
+    # 由 schedule_presence_query 确定性规则接管（SMOKE-FIXPLAN S7）。
+    assert pre_route_intent("有什么会议") is None
 
 
 def test_meeting_room_booking_prefix_routes_to_local_schedule():
