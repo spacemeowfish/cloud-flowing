@@ -2,9 +2,9 @@
 
 - ID: `RUOYI-AUTH-GATEWAY-001`
 - Title: `公网访问前置改造：若依认证网关`
-- Status: `active`
+- Status: `handoff`
 - Owner: `ZCode`
-- Next owner: `spacemeowfish/reviewer`
+- Next owner: `spacemeowfish/reviewer 或后续开发 AI（DeepSeek 等）`
 
 ## Goal
 
