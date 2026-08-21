@@ -18,7 +18,7 @@
 - [x] Phase 2 契约冻结：`docs/contracts/ruoyi-auth-gateway.md` 定稿（2026-08-20 附录 A 真实样本已贴入并经双模型交叉评审修正；签名算法、claims 结构、Redis key/值结构与提取路径、前端令牌存储、环境变量名全部冻结），真实 token 解码 + Redis 原始值取证完成。
 - [x] Phase 3 FastAPI 闸机（2026-08-21 完成，验收证据见 Verification）：全部路由默认校验（白名单仅 `GET /health` + 静态页面资源），非法/缺失/吊销/Redis 故障统一 401 `auth_required`（fail-closed）；数据按账号隔离（userId 归属，跨设备同账号同数据）；开发者入口改判若依角色，旧环境变量密码门退役；Mock 签发器测试覆盖放行/各 401 路径与角色映射；curl 实测无 token 401、带真实若依 token 200。
 - [x] Phase 4 前端登录对接（2026-08-21 完成，证据 `docs/tasks/2026-08-21-phase4-frontend-login.md`）：同源代理（若依前端 8081 根 + `/agent-api` → FastAPI）；无有效 `Admin-Token` 被登录闸机拦（弹窗到若依登录页 + 轮询自动回跳）；所有 API（含 SSE，fetch+ReadableStream）统一附加 `Authorization: Bearer`；普通用户不见控制台入口且直访 `/developer` 被前端弹回；登出走若依 `/logout` 吊销服务端会话后清 cookie 回登录页；旧密码门 UI（锁形按钮+对话框+`bindUserLogin`）删除。
-- [ ] Phase 5 本地全链路（Nginx 三条 location）：未登录 401/跳登录、普通用户控制台不可见且直调开发者接口被拒、developer 可用、若依禁用账号立即 401、伪造 token 401；剧本截图/录屏归档并标注为 PC 证据。
+- [x] Phase 5 本地全链路（2026-08-21 完成，证据 `docs/tasks/2026-08-21-phase5-nginx-e2e.md` + `docs/tasks/phase5-evidence/`）：nginx 1.30.4 便携安装，三条 location（`/` 若依生产构建、`/prod-api/` 8080、`/agent-api/` 8000，前缀剥离+SSE 非缓冲+限流基线）；浏览器只走 80 端口，14 项矩阵全过（未登录闸机/自动回跳/角色渲染/任务 201+SSE/开发者弹回/登出吊销/角色隔离/控制台 8 工具 24 操作）；补充三剧本：伪造 token ×3 形态 401、强退（DEL Redis 键）两侧立即 401、禁用（UI 停用→新登录被拒 `用户已封禁`、既有会话仍有效【禁用≠吊销实证】、DEL 后立即 401）；验证码全程开启（答案经本机 Redis `captcha_codes:{uuid}` 读取，登录走真实校验链路）；截图 8 张归档标注 PC 证据。
 - [ ] Phase 6 部署包：`deployment/ruoyi-gateway/` 下 nginx.conf、systemd unit ×3、ARM64 安装脚本、自签证书脚本、部署手册、安全验收清单，文档走查通过。
 - [ ] Phase 7 板端验收（部署人执行）：公网可达出登录页、端口收敛仅 443、认证闭环（禁用立即失效）、`free -h` 资源实测不 OOM、重启后三个 systemd 服务自动恢复、带认证链路语音冒烟；证据归档后本任务标记 `done`。
 - [ ] 最终门禁：计划文档第 7 节五条安全清单（HTTPS、端口收敛、默认账号已改、防爆破、闸机纵深）全部有真实证据。
@@ -60,6 +60,14 @@
   - `/developer` 页面路由在门后（匿名 401、user 303、developer 200）；`/developer.html` 静态文件与 `/`、`/app.js` 等页壳资源匿名可加载（契约 §5 澄清的落地形态）。
   - 提醒/日程的 Windows toast 调度回调保持全局（单机开发态产物；板端 systemd 形态无此回调），数据本身已按 owner 隔离。
   - rk3588 POC 遗留工具（`deployment/rk3588/docker/benchmark_profiles.py` 等）仍引用 `DEVELOPER_PASSWORD`（对 agent 已是惰性变量）；留待 Phase 6 部署包统一重做 rk3588 部署形态时清理，不在本 Phase 改冻结的 PoC 验收材料。
+- 2026-08-21 Phase 5 落地决策：
+  - **nginx 拓扑与 Phase 4 dev 代理同构**：`/agent-api/` 前缀剥离转发到 8000（与 vue.config.js `pathRewrite` 一致），app.js 的 `API_BASE` 推导无需任何改动；`/prod-api/` 同法剥离转发 8080。SSE 用 `proxy_buffering off` + `proxy_read_timeout 3600s`（实测任务事件流经 80 端口 200）。加 `limit_req zone=gateway burst=60 nodelay` 防御基线，Phase 6 收敛到登录端点。
+  - **若依前端改生产构建**（`npm run build:prod`，Node 18）：`VUE_APP_BASE_API=/prod-api`，**history 模式路由**（如 `/system/user`）——与 Phase 4 dev 形态的 hash 路由不同，nginx `try_files $uri $uri/ /index.html` 回退已覆盖；Phase 6 部署包沿用生产构建形态。
+  - **Phase 5 运行时环境变量覆盖**：`RUOYI_LOGOUT_URL=/prod-api/logout` 经 cmd `set` 覆盖启动 serve（未改仓库 .env，dev 拓扑值保留）；页壳注入经 curl 实测为 `data-login-url="/#/login"` + `data-logout-url="/prod-api/logout"`。
+  - **验证码全程开启**（比 Phase 4 临时关闭更强）：浏览器登录页取码时若依把答案存本机 Redis `captcha_codes:{uuid}`（TTL 2 分钟），以环境所有者身份读取填入表单，登录仍走真实服务端验证码校验链路；全程 `captchaEnabled=true` 并终态复测。
+  - **IAB 自动化偏差（如实记录，不阻塞验收）**：① `window.open` 弹窗被 IAB 拦截 → 改第二标签页同源打开 `/#/login`（cookie/轮询机制相同，弹窗路径 Phase 4 已验证）；② 操作台页头固定栏按钮（退出）位于视口 y<50 被 IAB 顶部工具条遮挡，合成点击不触发 → 登出吊销改 HTTP 层验证（同 `/prod-api/logout` 路径：200 吊销 → 同 token 立即 401 → 浏览器新页回闸机且残留 cookie 被清空）；③ 停用开关二次点击因列表未刷新呈幂等"停用"，恢复启用走 DB UPDATE（与 changeUserStatus 同语义）。
+  - **禁用剧本正式形态**（契约"禁用≠吊销"落地为验收步骤）：禁用挡新登录（实测 `用户已封禁` 500）+ 既有会话保留（停用前 token 实测仍 200）+ 强退（DEL Redis key）立即 401；Phase 7 板端验收表按此两步写。
+  - nginx 1.30.4（最新稳定线）便携 ZIP 安装至 `D:\ruoyi-env\nginx`（延续 Phase 1 便携组件决策），配置快照已入库 `docs/tasks/phase5-evidence/nginx.conf.phase5-pc`；Phase 6 产出 `deployment/ruoyi-gateway/` 正式配置。
 - 2026-08-21 Phase 4 落地决策：
   - **同源拓扑**：复用若依前端 dev 服务器作站点根（8081），其 `vue.config.js` 增加 `/agent-api` 代理转发到 FastAPI（`AGENT_API_TARGET` 可覆盖，默认 127.0.0.1:8000）——与 Phase 5/6 Nginx 生产形态（`/`=若依、`/agent-api/`=agent）同构，仅换入口组件。vue.config.js 属仓库外 `D:\ruoyi-env\RuoYi-Vue2`，只改配置符合"若依当黑盒"冻结决策。
   - **登录回跳机制**：不用若依 `redirect` 参数（vue-router push 不做整页跳转，无法离开 SPA），改为操作台弹窗打开 `/#/login` + 800ms 轮询检测 `Admin-Token` cookie 有效（`/auth/me` 200）后自动继续并关闸；窗口 focus 事件与"我已登录，重新检测"按钮兜底。
@@ -105,6 +113,13 @@
   - 测试：新增 `tests/test_frontend_shell.py`（3 项页壳注入/角色行为）；`test_agent_api.py` 断言更新（303→200、EventSource→ReadableStream）；`test_ruoyi_auth.py` `/developer` 断言更新。全量 576 项通过（基线 573 + 新增 3）。
   - 文档：`docs/操作台使用手册.md` 第 1/4 节改写为若依统一登录模型（含两种启动拓扑与登录/角色/登出说明）；走查证据 `docs/tasks/2026-08-21-phase4-frontend-login.md`。
 
+- Phase 5（2026-08-21）：
+  - 环境：nginx 1.30.4 便携 ZIP → `D:\ruoyi-env\nginx`（80 端口，127.0.0.1）；若依前端生产构建 dist（`npm run build:prod`，Node 18，history 路由）；serve 以 `RUOYI_LOGOUT_URL=/prod-api/logout` + `MODEL_PROVIDER=mock` 环境变量覆盖启动（.env 未动）。
+  - 三条 location 全部 curl 验证：`/` 若依登录页 200、`/prod-api/captchaImage` 200、`/agent-api/health` 200（白名单）、`/agent-api/tasks` 401 `auth_required`、页壳注入 `/prod-api/logout`。
+  - 浏览器走查（仅 80 端口）：14 项矩阵全过（闸机拦截→若依登录含验证码→轮询自动回跳→user1 任务 201+SSE 经 nginx→直访 /developer 弹回→登出吊销 401+残留 cookie 清除→dev1 开发者入口+空数据空间→控制台 8 工具/24 操作→登出无残留→验证码全程开启）；补三剧本：伪造 token ×3 401、强退 DEL 键两侧立即 401、禁用（UI 停用→新登录"用户已封禁"、既有会话仍 200【禁用≠吊销】、DEL 后 401）；恢复 user1 启用并复测登录。
+  - 证据：`docs/tasks/2026-08-21-phase5-nginx-e2e.md`（矩阵+三剧本+偏差记录+复现步骤）与 `docs/tasks/phase5-evidence/`（截图 8 张 + nginx.conf 快照）入库，标注 PC 证据。
+  - 本阶段无代码变更（纯环境与联调）；Phase 6 起产出部署包代码。
+
 ## Phase 2 预发现（2026-08-20 已并入契约文档 `docs/contracts/ruoyi-auth-gateway.md` 定稿，以契约为准）
 
 - JWT 本体无 exp/有效期 claim：有效期完全由 Redis key TTL 承载（expireTime 分钟）；FastAPI 侧不能依赖 exp 验证，第二步 Redis 存在性校验即有效期校验。
@@ -122,11 +137,11 @@
 
 ## Pending
 
-- Phase 5～7 未开始（逐项见 Acceptance scenarios）；Phase 5 按计划文档 Phase 5 节 + 契约 §5/§8 实施（Nginx 三条 location、强退剧本、截图/录屏归档标注 PC 证据），并复用 Phase 4 走查矩阵（`docs/tasks/2026-08-21-phase4-frontend-login.md`）作剧本模板。
+- Phase 6～7 未开始（逐项见 Acceptance scenarios）。Phase 6 按计划文档 Phase 6 节实施：`deployment/ruoyi-gateway/` 下 nginx.conf 最终配置（443 + 三条转发 + 限流，以 `docs/tasks/phase5-evidence/nginx.conf.phase5-pc` 为底稿，改 443/自签证书/日志/限流收紧）、systemd unit ×3、ARM64 安装脚本、自签证书 openssl 脚本、部署手册、安全验收清单（第 7 节五条逐条附验证方法，含 Phase 2 预发现"清空内置普通角色菜单绑定"与"禁用+强退两步剧本"）。
 
 ## Next step
 
-- Phase 5 本地全链路联调：Windows 装 Nginx，按第 2 节架构配 `/`（若依前端生产构建或代理 8081）、`/prod-api/`（8080）、`/agent-api/`（8000）三条 location；浏览器只走 Nginx 入口按剧本验收：未登录 401/跳登录、普通用户控制台不可见且直调开发者接口被拒、developer 可用、若依禁用/强退账号立即 401（含删 Redis key 强退步骤，契约"禁用≠吊销"）、伪造 token 401；截图/录屏归档并标注 PC 证据。
+- Phase 6 部署包产出：在 `deployment/ruoyi-gateway/` 建目录，交付 ① nginx.conf（443 + 三条转发 + 限流片段，基于 Phase 5 已验证拓扑）；② systemd unit ×3（ruoyi、agent-platform、nginx 依赖顺序与开机自启）；③ 安装脚本（JDK/MySQL/Redis ARM64 安装与初始化、SQL 导入、环境变量模板提示填强随机值）；④ 自签证书 openssl 一键脚本（证书路线已定自签，不再核实 ZeroSSL）；⑤ 部署手册（裸机板子逐步命令）；⑥ 安全验收清单（第 7 节五条逐条验证方法：外网 telnet 22 不通、默认账号已改、验证码+登录失败限制、nginx 限流、绕 Nginx 直连 FastAPI 仍 401）。文档走查通过后进 Phase 7。
 
 ## Verification
 
@@ -142,9 +157,13 @@
   - 自动化：全量 `pytest -q -p no:cacheprovider --basetemp <独立目录>` 576 项全部通过（exit=0）；`compileall agent_platform evaluation deployment` OK；`node --check agent_platform/static/app.js` OK；`node .ai-team/check.mjs --base origin/main` Result: valid。
   - 浏览器走查（同源入口 `http://localhost:8081/agent-api/`）：未登录被闸机拦截（退出/开发者入口隐藏）→ user1 真实验证码登录 → 轮询自动回跳（身份 `user1 · 用户`）→ 提交待办任务（POST 201 + SSE events 200 + 结构化卡片，mock 模型）→ 直访 `/developer` 前端弹回 → 登出回登录页且 Redis 会话清空 → dev1 登录见开发者入口、数据空间独立（近期任务为空）→ 开发者控制台总览加载（8 工具/24 HTTP 操作）→ dev1 登出无残留会话。验证码临时关闭→恢复并经 `/captchaImage` 复测生效。
   - 走查驱动修复 2 项缺陷（见 Decisions：`[hidden]` CSS 覆盖、`/developer` 浏览器导航 401）。
+- [x] Phase 5（2026-08-21，nginx 本地全链路，全部实测）：
+  - 自动化基线：全量 `pytest -q -p no:cacheprovider --basetemp <独立目录>` 576 项全部通过（exit=0，collect-only 逐文件计数 576，与 Phase 4 基线一致——本阶段无代码变更）；`compileall agent_platform evaluation deployment` OK；`node --check agent_platform/static/app.js` OK；`node .ai-team/check.mjs --base origin/main` Result: valid。
+  - 联调实测（浏览器仅走 `http://localhost:80`，取证文件 `D:\ruoyi-env\tmp\phase5-*.txt`，关键摘录已嵌入证据文档）：三条 location curl 全通；14 项矩阵全过（详情见证据文档）；补充三剧本全过：伪造 token ×3（错密钥/未知会话/乱码）均 401 `auth_required`；强退 `DEL login_tokens:{uuid}` 后 agent 401 + 若依 getInfo code 401；禁用（UI 停用）后新登录 `用户已封禁` 500、停用前 token 仍 200、DEL 后立即 401；user1 已恢复启用并复测登录、全部会话清理、验证码 `captchaEnabled=true` 终态复测。
+  - 证据入库：`docs/tasks/2026-08-21-phase5-nginx-e2e.md` + `docs/tasks/phase5-evidence/`（截图 8 张、nginx.conf 快照），标注 PC 证据。
 
 ## Handoff note
 
 - From: `ZCode`
 - To: `spacemeowfish/reviewer`
-- Summary: Phase 0～4 完成。Phase 4（2026-08-21）：前端登录对接落地——同源拓扑（若依前端 8081 为根 + `/agent-api` 代理到 FastAPI）、无 token 被登录闸机拦（弹窗若依登录 + 轮询自动回跳）、全部 API/SSE（fetch 流）带 `Authorization: Bearer`、按角色渲染（普通用户无控制台入口、直访 `/developer` 前端弹回）、登出吊销若依会话后回登录页；`/developer` 改匿名页壳（修正 Phase 3 的浏览器导航 401 缺陷）；新增 `RUOYI_LOGIN_URL`/`RUOYI_LOGOUT_URL` 配置注入页壳；旧密码门前端残留全量清理。576 项测试全绿 + check.mjs valid；真实若依实例浏览器走查 14 项矩阵全过（证据 `docs/tasks/2026-08-21-phase4-frontend-login.md`）。下一动作：Phase 5 Nginx 本地全链路联调（复用该走查矩阵作剧本模板，加强退/伪造 token/禁用剧本与截图归档）。本地环境：`D:\ruoyi-env\start-env.cmd`（MySQL/Redis/8080/8081，vue.config.js 已含代理）+ 仓库根 `serve`（`.env` 已含 RUOYI_* 与 `RUOYI_LOGOUT_URL=/dev-api/logout`）；测试账号密码在 `D:\ruoyi-env\secrets\`。README 中旧密码门描述待冒烟任务工作区变更合并后另行更新（README.md 当前有他人未提交改动，避免纠缠）。
+- Summary: Phase 5 完成（2026-08-21）。nginx 1.30.4 便携安装于 `D:\ruoyi-env\nginx`（80 端口三条 location：若依生产构建 `/`、`/prod-api/`→8080、`/agent-api/`→8000，前缀剥离 + SSE 非缓冲 + 限流基线；配置快照入库 `docs/tasks/phase5-evidence/nginx.conf.phase5-pc`）。浏览器只走 Nginx 入口，Phase 4 14 项矩阵全过，另补三剧本：伪造 token ×3 形态 401、强退（DEL Redis 键）两侧立即 401、禁用（UI 停用→新登录"用户已封禁"、既有会话仍 200 实证"禁用≠吊销"、DEL 后立即 401）；验证码全程开启（答案经本机 Redis `captcha_codes:{uuid}` 读取，登录走真实校验链路）。证据 `docs/tasks/2026-08-21-phase5-nginx-e2e.md` + 截图 8 张标注 PC 证据；本阶段无代码变更，576 项测试全绿 + check.mjs valid。环境终态：会话清零、user1 启用、验证码开启、nginx/serve 仍在运行。下一动作：Phase 6 部署包（`deployment/ruoyi-gateway/`：443 nginx.conf、systemd ×3、ARM64 安装脚本、自签证书脚本、部署手册、安全验收清单）。IAB 自动化偏差已如实记录于证据文档"走查备注"（弹窗拦截、顶部固定栏按钮不可点、停用开关幂等），不阻塞验收。
