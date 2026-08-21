@@ -1,0 +1,19 @@
+[Unit]
+Description=cloud-flowing agent platform FastAPI (RuoYi JWT gate)
+After=network-online.target ruoyi.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/opt/agent-platform
+EnvironmentFile=/etc/ruoyi-gateway/env
+ExecStart=/opt/agent-platform/venv/bin/python -m agent_platform.cli serve
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

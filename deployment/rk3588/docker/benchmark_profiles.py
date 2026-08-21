@@ -41,7 +41,6 @@ def start_container(
     args = [
         "docker", "run", "--detach", "--name", name,
         "--publish", f"{bind_address}:{port}:8000",
-        "--env", "DEVELOPER_PASSWORD",
         "--env", f"LLAMACPP_THREADS={profile['threads']}",
         "--env", f"LLAMACPP_CONTEXT_SIZE={profile['context_size']}",
         "--env", f"LLAMACPP_MAX_TOKENS={profile['max_tokens']}",
@@ -199,8 +198,8 @@ def write_env(path: Path, profile: dict[str, int]) -> None:
 
 
 def main() -> None:
-    if not os.environ.get("DEVELOPER_PASSWORD", "").strip():
-        raise SystemExit("DEVELOPER_PASSWORD is required for the containerized Agent")
+    # 旧"开发者密码门"已退役（ADR 0007，RUOYI-AUTH-GATEWAY-001）：容器不再要求密码环境变量，
+    # 认证由若依网关承担（见 deployment/ruoyi-gateway/）。
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", required=True)
     parser.add_argument("--port", type=int, default=8000)

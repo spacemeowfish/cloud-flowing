@@ -1,0 +1,20 @@
+[Unit]
+Description=RuoYi-Vue admin (springboot3, JDK 17)
+After=network-online.target mysql.service redis-server.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ruoyi
+Group=ruoyi
+WorkingDirectory=/opt/ruoyi
+EnvironmentFile=/etc/ruoyi-gateway/env
+ExecStart=/usr/bin/java -Xms512m -Xmx1024m -jar /opt/ruoyi/ruoyi-admin.jar
+Restart=always
+RestartSec=10
+SuccessExitStatus=143
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

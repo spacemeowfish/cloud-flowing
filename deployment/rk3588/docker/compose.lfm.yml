@@ -5,8 +5,7 @@ services:
     restart: unless-stopped
     env_file:
       - ${POC_ENV_FILE:-./profiles/startup.env}
-    environment:
-      DEVELOPER_PASSWORD: ${DEVELOPER_PASSWORD:?set DEVELOPER_PASSWORD}
+    # 旧"开发者密码门"已退役（ADR 0007）；认证由若依网关承担（deployment/ruoyi-gateway/）。
     ports:
       - "8000:8000"
     volumes:
