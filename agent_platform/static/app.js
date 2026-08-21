@@ -2,33 +2,146 @@
 
 const appMode = document.body.dataset.mode || "user";
 
+// Same-origin gateway config injected by the server into the page shell
+// (settings RUOYI_LOGIN_URL / RUOYI_LOGOUT_URL). Defaults match the topology
+// where the RuoYi frontend is the site root behind the reverse proxy.
+function shellConfig(raw, fallback) {
+  return raw && !raw.includes("__RUOYI_") ? raw : fallback;
+}
+const gatewayConfig = {
+  loginUrl: shellConfig(document.body.dataset.loginUrl, "/#/login"),
+  logoutUrl: shellConfig(document.body.dataset.logoutUrl, "/prod-api/logout"),
+};
+
+// API base is derived from this script's own URL so the console works both
+// standalone at the site root and mounted under a reverse-proxy prefix such
+// as /agent-api/ (plan RUOYI-AUTH-GATEWAY-001 Phase 4/5 topology).
+const API_BASE = (document.currentScript ? new URL(document.currentScript.src, location.href).pathname : location.pathname).replace(/app\.js$/, "").replace(/\/+$/, "");
+const abs = path => `${API_BASE}${path}`;
+
+const TOKEN_COOKIE = "Admin-Token";
+function readToken() {
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${TOKEN_COOKIE}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : "";
+}
+function clearToken() {
+  document.cookie = `${TOKEN_COOKIE}=; Max-Age=0; path=/`;
+}
+
 const API = {
   async request(path, options = {}) {
     const started = performance.now();
     const headers = {...(options.headers || {})};
+    const token = readToken();
+    if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
     if (options.body && !headers["Content-Type"]) headers["Content-Type"] = "application/json";
-    const response = await fetch(path, {...options, headers});
+    const response = await fetch(abs(path), {...options, headers});
     const type = response.headers.get("content-type") || "";
     let body;
     if (type.includes("json")) body = await response.json();
     else body = await response.text();
     if (!response.ok) {
+      if (response.status === 401 && body?.code === "auth_required" && !options.skipAuthGate) handleAuthLoss();
       const error = new Error(body?.message || body?.detail || `请求失败 (${response.status})`);
       error.status = response.status; error.body = body; throw error;
     }
     return {body, status: response.status, elapsed: Math.round(performance.now() - started)};
   },
-  async get(path) { return (await this.request(path)).body; },
-  async post(path, body) { return (await this.request(path, {method:"POST", body:JSON.stringify(body)})).body; },
+  async get(path, options) { return (await this.request(path, options)).body; },
+  async post(path, body, options) { return (await this.request(path, {method:"POST", body:JSON.stringify(body), ...options})).body; },
   async put(path, body) { return (await this.request(path, {method:"PUT", body:JSON.stringify(body)})).body; }
 };
 
 const state = {
-  capabilities:null, openapi:null, health:null, history:[], currentTask:null,
+  capabilities:null, openapi:null, health:null, history:[], currentTask:null, auth:null,
   eventSources:new Map(), inspectorTab:"response", apiChecks:[],
   speechByTask:new Map(), speechAudio:new Audio(), speechTaskId:null,
-  desktopSettings:null, voiceStatus:null, voiceDevices:[], voiceRecording:null, voicePoll:null, voiceAutoStop:null, voiceStartPromise:null, voiceStopRequested:false, voiceCancelRequested:false
+  desktopSettings:null, voiceStatus:null, voiceDevices:[], voiceRecording:null, voicePoll:null, voiceAutoStop:null, voiceStartPromise:null, voiceStopRequested:false, voiceCancelRequested:false,
+  loginGate:null
 };
+
+// ---------------------------------------------------------------- ruoyi login gate
+// Contract docs/contracts/ruoyi-auth-gateway.md §8/§9: the token lives in the
+// RuoYi "Admin-Token" cookie on the shared origin; without a valid token the
+// console blocks until the user completes RuoYi login in a popup window.
+
+async function authProbe() {
+  if (!readToken()) return null;
+  try { return await API.get("/auth/me", {skipAuthGate:true}); }
+  catch { return null; }
+}
+
+function openLoginGate(onSuccess) {
+  if (state.loginGate) return;
+  const gate = document.createElement("div");
+  gate.className = "login-gate";
+  gate.innerHTML = `<section class="login-gate-card" aria-labelledby="loginGateTitle" role="dialog" aria-modal="true">
+    <span class="eyebrow">RUOYI LOGIN</span>
+    <h2 id="loginGateTitle">需要登录后使用</h2>
+    <p>云湃 AI 已接入若依统一登录。点击下方按钮完成登录后，本页会自动继续。</p>
+    <div class="form-actions">
+      <button id="gateRecheck" class="button quiet" type="button">我已登录，重新检测</button>
+      <button id="gateLogin" class="button primary" type="button">打开若依登录页</button>
+    </div>
+    <small>普通用户角色进入任务页；developer / admin 角色可使用开发者控制台。</small>
+  </section>`;
+  document.body.append(gate);
+  state.loginGate = gate;
+  let settled = false;
+  const check = async () => {
+    if (settled) return;
+    const auth = await authProbe();
+    if (!auth) return;
+    settled = true;
+    clearInterval(poll); window.removeEventListener("focus", check);
+    gate.remove(); state.loginGate = null;
+    onSuccess(auth);
+  };
+  $("#gateLogin", gate).onclick = () => window.open(gatewayConfig.loginUrl, "ruoyi-login", "width=560,height=680");
+  $("#gateRecheck", gate).onclick = check;
+  const poll = setInterval(check, 800);
+  window.addEventListener("focus", check);
+  check();
+}
+
+function ensureAuthenticated() {
+  return new Promise(resolve => {
+    void (async () => {
+      const auth = await authProbe();
+      if (auth) { resolve(auth); return; }
+      if (readToken()) clearToken(); // stale/revoked token: start clean
+      openLoginGate(resolve);
+    })();
+  });
+}
+
+function handleAuthLoss() {
+  // Mid-session 401 (revoked from RuoYi side, logout elsewhere): clear the
+  // dead token and re-gate; a fresh login reloads the whole console state.
+  if (state.loginGate) return;
+  clearToken();
+  openLoginGate(() => location.reload());
+}
+
+function applyIdentityUi(auth) {
+  state.auth = auth;
+  const identity = $("#userIdentity");
+  if (identity) identity.textContent = auth ? `${auth.username} · ${auth.role === "developer" ? "开发者" : "用户"}` : "";
+  const logout = $("#userLogout");
+  if (logout) { logout.hidden = !auth; logout.onclick = ruoyiLogout; }
+  const entry = $("#developerEntry");
+  if (entry) entry.hidden = auth?.role !== "developer";
+}
+
+async function ruoyiLogout() {
+  const token = readToken();
+  if (token) {
+    try { await fetch(gatewayConfig.logoutUrl, {method:"POST", headers:{Authorization:`Bearer ${token}`}, keepalive:true}); }
+    catch { /* network failure must still clear the local token below */ }
+  }
+  clearToken();
+  location.replace(gatewayConfig.loginUrl);
+}
 
 const lifecycle = ["接收","理解","校验","权限","路由","执行","交付"];
 const stateMeta = {
@@ -288,9 +401,48 @@ async function submitTask(text) {
   } catch (error) { toast(error.message, true); }
 }
 function connectTask(id) {
-  state.eventSources.get(id)?.close(); const source = new EventSource(`/tasks/${id}/events`); state.eventSources.set(id,source);
-  source.addEventListener("task", event => { const task=JSON.parse(event.data); updateTask(task); if(terminal.has(task.state)) source.close(); });
-  source.onerror = () => { if (!terminal.has(state.currentTask?.state)) toast("状态流暂时中断，浏览器会自动重连",true); };
+  // Contract §8: EventSource cannot send the Authorization header, so the
+  // task stream is consumed via fetch + ReadableStream instead.
+  state.eventSources.get(id)?.abort();
+  const controller = new AbortController();
+  state.eventSources.set(id, controller);
+  (async () => {
+    try {
+      const headers = {};
+      const token = readToken();
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const response = await fetch(abs(`/tasks/${id}/events`), {headers, signal:controller.signal});
+      if (!response.ok || !response.body) throw new Error(`状态流不可用 (${response.status})`);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      for (;;) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream:true});
+        let boundary;
+        while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          let eventName = "", data = "";
+          for (const line of frame.split("\n")) {
+            const colon = line.indexOf(":");
+            const field = colon < 0 ? line : line.slice(0, colon);
+            const valueText = colon < 0 ? "" : line.slice(colon + 1).replace(/^ /, "");
+            if (field === "event") eventName = valueText;
+            else if (field === "data") data += (data ? "\n" : "") + valueText;
+          }
+          if (eventName === "task" && data) {
+            const task = JSON.parse(data);
+            updateTask(task);
+            if (terminal.has(task.state)) { controller.abort(); return; }
+          }
+        }
+      }
+    } catch (error) {
+      if (!controller.signal.aborted && !terminal.has(state.currentTask?.state)) toast("状态流暂时中断，请刷新任务查看最新状态",true);
+    }
+  })();
 }
 function updateTask(task) {
   state.currentTask=task; const index=state.history.findIndex(t=>t.id===task.id); if(index>=0) state.history[index]=task; else state.history.unshift(task);
@@ -397,7 +549,7 @@ async function playTaskSpeech(task,regenerate=false) {
     }
     if(state.speechTaskId&&state.speechTaskId!==task.id) stopSpeech();
     state.speechAudio.pause(); state.speechAudio.currentTime=0;
-    state.speechAudio.src=`${speech.artifact.audio_url}?v=${speech.artifact.version_id}`;
+    state.speechAudio.src=`${abs(speech.artifact.audio_url)}?v=${speech.artifact.version_id}`;
     state.speechTaskId=task.id;
     await state.speechAudio.play(); refreshSpeechTask(task.id);
   } catch(error) {
@@ -486,7 +638,7 @@ async function runApiChecks() {
   button.disabled=false;toast(state.apiChecks.every(c=>c.ok)?"接口体检全部通过":"接口体检存在失败项",!state.apiChecks.every(c=>c.ok));
 }
 function drawApiChecks(){const root=$("#apiChecks");if(!root)return;root.innerHTML=state.apiChecks.length?state.apiChecks.map((c,i)=>`<button class="api-row" data-check="${i}" style="width:100%;border-left:0;border-right:0;border-top:0;background:#fff;text-align:left;cursor:pointer"><span class="method">${c.method}</span><span class="mono">${esc(c.path)}</span><span class="api-status ${c.ok?"pass":"fail"}">${c.ok?`${c.status} · ${c.elapsed}ms`:`失败 ${c.status}`}</span></button>`).join(""):`<div class="empty-state compact"><b>尚未运行体检</b><p>仅执行只读、安全的接口检查。</p></div>`;$$('[data-check]').forEach(b=>b.onclick=()=>{$("#customResponse").textContent=pretty(state.apiChecks[Number(b.dataset.check)]);});}
-async function renderApiLab(){const operations=[];for(const [path,item] of Object.entries(state.openapi?.paths||{}))for(const method of Object.keys(item))if(["get","post","put","patch","delete"].includes(method))operations.push([method.toUpperCase(),path,item[method].summary||item[method].description||""]);pageRoot.innerHTML=header("CONTRACT LAB","接口测试中心","从实时 OpenAPI 发现接口，执行安全体检、查看工具契约，并可发送自定义 HTTP 请求。",`<a class="button" href="/docs" target="_blank">Swagger UI ↗</a><button class="button primary" id="runChecks">运行只读体检</button>`)+`<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>接口清单</h3><p>${operations.length} 个 HTTP 操作 · 来自 /openapi.json</p></div></header><div>${operations.map(([m,p,s])=>`<div class="api-row"><span class="method">${m}</span><span><b class="mono">${esc(p)}</b><small style="display:block;color:var(--muted)">${esc(s)}</small></span><span class="api-status">已发现</span></div>`).join("")}</div></section><section class="panel"><header class="panel-head"><div><h3>接口体检</h3><p>健康、能力、OpenAPI、任务列表</p></div></header><div id="apiChecks"></div></section><section class="panel"><header class="panel-head"><div><h3>自定义请求</h3><p>可测试任意已暴露路径</p></div></header><div class="panel-body"><form id="customRequest"><div class="form-grid">${selectField("customMethod","方法",[["GET","GET"],["POST","POST"]])}${field("customPath","路径","text","/health")} ${field("customBody","JSON 请求体","textarea",'{"text":"查询产品保修政策"}',"full")}</div><div class="form-actions"><small>POST 请求体必须为合法 JSON</small><button class="button primary">发送请求</button></div></form></div></section><section class="panel"><header class="panel-head"><div><h3>原始响应</h3><p>点击体检项或发送自定义请求</p></div></header><div class="panel-body"><pre id="customResponse" class="json-view">{}</pre></div></section><section class="panel span-2"><header class="panel-head"><div><h3>工具契约</h3><p>${state.capabilities?.tools?.length||0} 个工具 · 参数、枚举、风险与数据等级</p></div></header><div class="module-list">${capabilityRows()}</div></section></div>`;drawApiChecks();$("#runChecks").onclick=runApiChecks;$("#customMethod").onchange=()=>{$("#customBody").closest(".field").style.display=$("#customMethod").value==="GET"?"none":"grid";};$("#customRequest").onsubmit=async e=>{e.preventDefault();const method=$("#customMethod").value,path=$("#customPath").value.trim();let body;try{if(method!=="GET")body=JSON.stringify(JSON.parse($("#customBody").value||"{}"));const r=await API.request(path,{method,body});$("#customResponse").textContent=pretty(r);toast(`${method} ${path} 成功`);}catch(err){$("#customResponse").textContent=pretty({error:err.message,status:err.status,body:err.body});toast(err.message,true);}};}
+async function renderApiLab(){const operations=[];for(const [path,item] of Object.entries(state.openapi?.paths||{}))for(const method of Object.keys(item))if(["get","post","put","patch","delete"].includes(method))operations.push([method.toUpperCase(),path,item[method].summary||item[method].description||""]);pageRoot.innerHTML=header("CONTRACT LAB","接口测试中心","从实时 OpenAPI 发现接口，执行安全体检、查看工具契约，并可发送自定义 HTTP 请求。",`<a class="button" href="${abs("/docs")}" target="_blank" rel="noreferrer">Swagger UI ↗</a><button class="button primary" id="runChecks">运行只读体检</button>`)+`<div class="grid-2"><section class="panel"><header class="panel-head"><div><h3>接口清单</h3><p>${operations.length} 个 HTTP 操作 · 来自 /openapi.json</p></div></header><div>${operations.map(([m,p,s])=>`<div class="api-row"><span class="method">${m}</span><span><b class="mono">${esc(p)}</b><small style="display:block;color:var(--muted)">${esc(s)}</small></span><span class="api-status">已发现</span></div>`).join("")}</div></section><section class="panel"><header class="panel-head"><div><h3>接口体检</h3><p>健康、能力、OpenAPI、任务列表</p></div></header><div id="apiChecks"></div></section><section class="panel"><header class="panel-head"><div><h3>自定义请求</h3><p>可测试任意已暴露路径</p></div></header><div class="panel-body"><form id="customRequest"><div class="form-grid">${selectField("customMethod","方法",[["GET","GET"],["POST","POST"]])}${field("customPath","路径","text","/health")} ${field("customBody","JSON 请求体","textarea",'{"text":"查询产品保修政策"}',"full")}</div><div class="form-actions"><small>POST 请求体必须为合法 JSON</small><button class="button primary">发送请求</button></div></form></div></section><section class="panel"><header class="panel-head"><div><h3>原始响应</h3><p>点击体检项或发送自定义请求</p></div></header><div class="panel-body"><pre id="customResponse" class="json-view">{}</pre></div></section><section class="panel span-2"><header class="panel-head"><div><h3>工具契约</h3><p>${state.capabilities?.tools?.length||0} 个工具 · 参数、枚举、风险与数据等级</p></div></header><div class="module-list">${capabilityRows()}</div></section></div>`;drawApiChecks();$("#runChecks").onclick=runApiChecks;$("#customMethod").onchange=()=>{$("#customBody").closest(".field").style.display=$("#customMethod").value==="GET"?"none":"grid";};$("#customRequest").onsubmit=async e=>{e.preventDefault();const method=$("#customMethod").value,path=$("#customPath").value.trim();let body;try{if(method!=="GET")body=JSON.stringify(JSON.parse($("#customBody").value||"{}"));const r=await API.request(path,{method,body});$("#customResponse").textContent=pretty(r);toast(`${method} ${path} 成功`);}catch(err){$("#customResponse").textContent=pretty({error:err.message,status:err.status,body:err.body});toast(err.message,true);}};}
 
 function currentRoute(){const route=location.hash.replace(/^#/,"")||"overview";return routeInfo[route]?route:"overview";}
 async function renderRoute(){const route=currentRoute(),info=routeInfo[route];$("#pageEyebrow").textContent=info[0];$("#pageTitle").textContent=info[1];$$('[data-route]').forEach(a=>a.classList.toggle("active",a.dataset.route===route));closeNavigation();const renderers={overview:renderOverview,console:renderConsole,knowledge:renderKnowledge,files:renderFiles,reminders:renderReminders,todos:renderTodos,schedule:renderSchedule,text:renderText,meetings:renderMeetings,"api-lab":renderApiLab,tasks:renderTasks,settings:renderSettings,logs:renderLogs};await renderers[route]();pageRoot.focus({preventScroll:true});window.scrollTo(0,0);}
@@ -496,23 +648,17 @@ if($("#menuButton"))$("#menuButton").onclick=()=>{const open=$("#sidebar").class
 if($("#navBackdrop"))$("#navBackdrop").onclick=closeNavigation;if($("#inspectorButton"))$("#inspectorButton").onclick=openInspector;if($("#closeInspector"))$("#closeInspector").onclick=closeInspector;
 $$('[data-inspector-tab]').forEach(button=>button.onclick=()=>{state.inspectorTab=button.dataset.inspectorTab;$$('[data-inspector-tab]').forEach(b=>b.classList.toggle("active",b===button));renderInspector();});
 if(appMode==="developer")window.addEventListener("hashchange",renderRoute);
-window.addEventListener("beforeunload",()=>state.eventSources.forEach(source=>source.close()));
-
-function bindUserLogin() {
-  const dialog=$("#developerLogin"), password=$("#developerPassword"), error=$("#loginError");
-  $("#developerEntry").onclick=()=>{error.textContent="";password.value="";dialog.showModal();password.focus();};
-  const close=()=>dialog.close(); $("#closeLogin").onclick=close;$("#cancelLogin").onclick=close;
-  $("#developerLoginForm").onsubmit=async event=>{event.preventDefault();error.textContent="";try{await API.post("/auth/developer/login",{password:password.value});location.assign("/developer");}catch(loginError){error.textContent=loginError.message;password.select();}};
-}
+window.addEventListener("beforeunload",()=>state.eventSources.forEach(stream=>stream.abort()));
 
 (async function boot(){
-  const auth=await API.get("/auth/me");
-  if(appMode==="developer"&&auth.role!=="developer"){location.replace("/");return;}
+  const auth=await ensureAuthenticated();
+  applyIdentityUi(auth);
+  if(appMode==="developer"&&auth.role!=="developer"){location.replace(abs("/"));return;}
   await loadRuntime();
   if(appMode==="user"){
-    bindUserLogin(); state.currentTask=state.history[0]||null; renderUserPage();
+    state.currentTask=state.history[0]||null; renderUserPage();
   }else{
-    $("#developerLogout").onclick=async()=>{await API.post("/auth/logout",{});location.replace("/");};
+    $("#developerLogout").onclick=ruoyiLogout;
     await renderRoute();
   }
 })();

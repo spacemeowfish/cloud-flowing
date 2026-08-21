@@ -134,6 +134,13 @@ class Settings(BaseSettings):
     port: int = Field(default=8000, ge=1, le=65535, validation_alias="AGENT_PORT")
     ruoyi_jwt_secret: str = Field(default="", repr=False, validation_alias="RUOYI_JWT_SECRET")
     ruoyi_redis_url: str = Field(default="redis://localhost:6379/0", validation_alias="RUOYI_REDIS_URL")
+    # Console shell bootstrap config injected into the static pages: where the
+    # RuoYi login page lives (empty = same-origin "/#/login", i.e. the Nginx /
+    # dev-proxy topology where RuoYi is the site root) and which same-origin
+    # path revokes the RuoYi session on console logout (Nginx default
+    # "/prod-api/logout"; the Vue dev-server proxy uses "/dev-api/logout").
+    ruoyi_login_url: str = Field(default="", validation_alias="RUOYI_LOGIN_URL")
+    ruoyi_logout_url: str = Field(default="/prod-api/logout", validation_alias="RUOYI_LOGOUT_URL")
     database_path: Path = Field(default=Path("data/agent_platform.db"), validation_alias="AGENT_DATABASE_PATH")
     audit_dir: Path = Field(default=Path("logs/audit"), validation_alias="AGENT_AUDIT_DIR")
     retention_days: int = Field(default=30, ge=1, validation_alias="AGENT_RETENTION_DAYS")

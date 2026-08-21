@@ -227,13 +227,12 @@ async def test_gate_401_paths_and_health_whitelist(tmp_path):
             health = await client.get("/health")
             assert health.status_code == 200
             assert (await client.post("/health")).status_code == 401
-            # Static page shells/assets load anonymously (contract §5); the
-            # /developer console URL itself is behind the gate (401 anonymous,
-            # 303 for plain users) while developer.html is a plain asset.
+            # Static page shells/assets load anonymously (contract §5): the
+            # console and /developer shells gate via client-side JS (Phase 4)
+            # because navigations cannot carry an Authorization header;
+            # developer.html is a plain asset either way.
             assert (await client.get("/")).status_code == 200
-            developer_page = await client.get("/developer")
-            assert developer_page.status_code == 401
-            assert developer_page.json()["code"] == "auth_required"
+            assert (await client.get("/developer")).status_code == 200
             assert (await client.get("/app.js")).status_code == 200
             assert (await client.get("/developer.html")).status_code == 200
             # Path traversal is not an anonymous static asset.

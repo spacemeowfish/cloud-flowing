@@ -31,7 +31,10 @@ from agent_platform.models import ErrorResponse
 AUTH_REQUIRED_CODE = "auth_required"
 
 _STATIC_DIRECTORY = (Path(__file__).resolve().parents[1] / "static").resolve()
-_PAGE_SHELL_PATHS = {"", "/"}
+# Page shells load anonymously (contract §5); app.js's login gate enforces
+# authentication and the developer role client-side while every data or
+# action endpoint stays behind the bearer-token gate.
+_PAGE_SHELL_PATHS = {"", "/", "/developer", "/developer/"}
 
 
 def _unauthorized() -> JSONResponse:

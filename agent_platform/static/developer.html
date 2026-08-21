@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="description" content="云湃 AI 开发者控制台">
   <title>云湃 AI · 开发者控制台</title>
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body data-mode="developer">
+<body data-mode="developer" data-login-url="__RUOYI_LOGIN_URL__" data-logout-url="__RUOYI_LOGOUT_URL__">
   <a class="skip-link" href="#pageRoot">跳到主要内容</a>
   <div class="app-shell">
     <aside id="sidebar" class="sidebar" aria-label="主要功能">
@@ -41,9 +41,10 @@
           <div><span id="pageEyebrow" class="eyebrow">DEVELOPER</span><h1 id="pageTitle">总览</h1></div>
         </div>
         <div class="topbar-actions">
+          <span id="userIdentity" class="user-identity"></span>
           <span id="runtimeBadge" class="runtime-badge"><i></i>正在检测</span>
           <button id="inspectorButton" class="button quiet inspector-button">检查器</button>
-          <a class="button quiet docs-link" href="/docs" target="_blank" rel="noreferrer">API 文档 ↗</a>
+          <a class="button quiet docs-link" href="docs" target="_blank" rel="noreferrer">API 文档 ↗</a>
           <button id="developerLogout" class="button quiet" type="button">退出</button>
         </div>
       </header>
@@ -62,6 +63,6 @@
     </div>
   </div>
   <div id="toastRegion" class="toast-region" aria-live="assertive"></div>
-  <script src="/app.js" defer></script>
+  <script src="app.js" defer></script>
 </body>
 </html>

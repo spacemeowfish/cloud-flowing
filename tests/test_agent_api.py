@@ -265,7 +265,10 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
             assert "云湃 AI" in page.text
             assert "接口测试中心" not in page.text
             assert "developerEntry" in page.text
-            assert (await client.get("/developer", follow_redirects=False)).status_code == 303
+            # Phase 4: /developer is an anonymous page shell (navigations
+            # cannot carry the Authorization header); app.js enforces the
+            # developer role client-side while data endpoints stay gated.
+            assert (await client.get("/developer", follow_redirects=False)).status_code == 200
             _developer_login(client, gateway)
             developer_page = await client.get("/developer")
             assert developer_page.status_code == 200
@@ -273,7 +276,7 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
             gateway.demote(client)
             script = await client.get("/app.js")
             assert script.status_code == 200
-            assert "EventSource" in script.text
+            assert "ReadableStream" in script.text
 
             file_task = (await client.post("/tasks", json={"text": "打开项目周报"})).json()
             file_task = await _wait_for_state(client, file_task["id"], TaskState.AWAITING_CONFIRMATION.value)
