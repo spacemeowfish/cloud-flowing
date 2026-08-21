@@ -117,7 +117,7 @@
   - 环境：nginx 1.30.4 便携 ZIP → `D:\ruoyi-env\nginx`（80 端口，127.0.0.1）；若依前端生产构建 dist（`npm run build:prod`，Node 18，history 路由）；serve 以 `RUOYI_LOGOUT_URL=/prod-api/logout` + `MODEL_PROVIDER=mock` 环境变量覆盖启动（.env 未动）。
   - 三条 location 全部 curl 验证：`/` 若依登录页 200、`/prod-api/captchaImage` 200、`/agent-api/health` 200（白名单）、`/agent-api/tasks` 401 `auth_required`、页壳注入 `/prod-api/logout`。
   - 浏览器走查（仅 80 端口）：14 项矩阵全过（闸机拦截→若依登录含验证码→轮询自动回跳→user1 任务 201+SSE 经 nginx→直访 /developer 弹回→登出吊销 401+残留 cookie 清除→dev1 开发者入口+空数据空间→控制台 8 工具/24 操作→登出无残留→验证码全程开启）；补三剧本：伪造 token ×3 401、强退 DEL 键两侧立即 401、禁用（UI 停用→新登录"用户已封禁"、既有会话仍 200【禁用≠吊销】、DEL 后 401）；恢复 user1 启用并复测登录。
-  - 证据：`docs/tasks/2026-08-21-phase5-nginx-e2e.md`（矩阵+三剧本+偏差记录+复现步骤）与 `docs/tasks/phase5-evidence/`（截图 8 张 + nginx.conf 快照）入库，标注 PC 证据。
+  - 证据：`docs/tasks/2026-08-21-phase5-nginx-e2e.md`（矩阵+三剧本+偏差记录+复现步骤）与 `docs/tasks/phase5-evidence/`（截图 8 张 + nginx.conf 快照）入库，标注 PC 证据；另附人工测试指引 `docs/tasks/2026-08-21-ruoyi-gateway-test-guide.md`（面向不懂网关实现的评审/测试人）。
   - 本阶段无代码变更（纯环境与联调）；Phase 6 起产出部署包代码。
 
 ## Phase 2 预发现（2026-08-20 已并入契约文档 `docs/contracts/ruoyi-auth-gateway.md` 定稿，以契约为准）
