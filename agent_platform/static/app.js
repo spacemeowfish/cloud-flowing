@@ -3,15 +3,26 @@
 const appMode = document.body.dataset.mode || "user";
 
 // Same-origin gateway config injected by the server into the page shell
-// (settings RUOYI_LOGIN_URL / RUOYI_LOGOUT_URL). Defaults match the topology
-// where the RuoYi frontend is the site root behind the reverse proxy.
+// (settings RUOYI_LOGIN_URL / RUOYI_LOGOUT_URL / RUOYI_MANAGE_URL). Defaults
+// match the topology where the RuoYi frontend is the site root behind the
+// reverse proxy (history-mode routes; the site root redirects to the console).
 function shellConfig(raw, fallback) {
   return raw && !raw.includes("__RUOYI_") ? raw : fallback;
 }
 const gatewayConfig = {
-  loginUrl: shellConfig(document.body.dataset.loginUrl, "/#/login"),
+  loginUrl: shellConfig(document.body.dataset.loginUrl, "/login"),
   logoutUrl: shellConfig(document.body.dataset.logoutUrl, "/prod-api/logout"),
+  manageUrl: shellConfig(document.body.dataset.manageUrl, ""),
 };
+
+// Developer console only: link to the RuoYi management backoffice. The link
+// stays hidden unless the deployment topology exposes one (RUOYI_MANAGE_URL,
+// e.g. "/index" behind Nginx; the desktop/serve topology has none).
+const manageLink = document.getElementById("manageLink");
+if (manageLink && gatewayConfig.manageUrl) {
+  manageLink.href = gatewayConfig.manageUrl;
+  manageLink.hidden = false;
+}
 
 // API base is derived from this script's own URL so the console works both
 // standalone at the site root and mounted under a reverse-proxy prefix such
@@ -76,18 +87,22 @@ function openLoginGate(onSuccess) {
   const gate = document.createElement("div");
   gate.className = "login-gate";
   gate.innerHTML = `<section class="login-gate-card" aria-labelledby="loginGateTitle" role="dialog" aria-modal="true">
-    <span class="eyebrow">RUOYI LOGIN</span>
+    <span class="eyebrow">ACCOUNT LOGIN</span>
     <h2 id="loginGateTitle">需要登录后使用</h2>
-    <p>云湃 AI 已接入若依统一登录。点击下方按钮完成登录后，本页会自动继续。</p>
+    <p>请使用云湃 AI 账号登录。点击下方按钮完成登录后，本页会自动继续。</p>
     <div class="form-actions">
       <button id="gateRecheck" class="button quiet" type="button">我已登录，重新检测</button>
-      <button id="gateLogin" class="button primary" type="button">打开若依登录页</button>
+      <button id="gateLogin" class="button primary" type="button">打开登录页</button>
     </div>
     <small>普通用户角色进入任务页；developer / admin 角色可使用开发者控制台。</small>
   </section>`;
   document.body.append(gate);
   state.loginGate = gate;
   let settled = false;
+  // The login window is opened by this script, so it may be closed by it:
+  // once the token probes valid, RuoYi has already landed the popup on its
+  // own dashboard — close it so the user stays on the console flow.
+  let loginWindow = null;
   const check = async () => {
     if (settled) return;
     const auth = await authProbe();
@@ -95,9 +110,12 @@ function openLoginGate(onSuccess) {
     settled = true;
     clearInterval(poll); window.removeEventListener("focus", check);
     gate.remove(); state.loginGate = null;
+    try { loginWindow?.close(); } catch { /* popup blocked / closed by user */ }
     onSuccess(auth);
   };
-  $("#gateLogin", gate).onclick = () => window.open(gatewayConfig.loginUrl, "ruoyi-login", "width=560,height=680");
+  $("#gateLogin", gate).onclick = () => {
+    loginWindow = window.open(gatewayConfig.loginUrl, "ruoyi-login", "width=560,height=680");
+  };
   $("#gateRecheck", gate).onclick = check;
   const poll = setInterval(check, 800);
   window.addEventListener("focus", check);
@@ -538,6 +556,8 @@ state.speechAudio.addEventListener("ended",()=>{
   state.speechTaskId=null;
   if(taskId) refreshSpeechTask(taskId);
 });
+// Object URL of the currently loaded speech blob; revoked on replacement.
+let speechObjectUrl=null;
 async function playTaskSpeech(task,regenerate=false) {
   let speech=state.speechByTask.get(task.id)||{};
   const voiceId=speech.voiceId||state.capabilities?.tts?.default_voice_id||state.capabilities?.tts?.voices?.[0]?.id;
@@ -549,7 +569,16 @@ async function playTaskSpeech(task,regenerate=false) {
     }
     if(state.speechTaskId&&state.speechTaskId!==task.id) stopSpeech();
     state.speechAudio.pause(); state.speechAudio.currentTime=0;
-    state.speechAudio.src=`${abs(speech.artifact.audio_url)}?v=${speech.artifact.version_id}`;
+    // The <audio> element cannot attach the Authorization header and the
+    // speech endpoint stays behind the JWT gate (audio reads re-verify the
+    // session), so fetch the WAV as an authenticated blob — same pattern the
+    // SSE stream uses (contract §8: no token in the URL).
+    const token=readToken();
+    const media=await fetch(abs(speech.artifact.audio_url),{headers:token?{Authorization:`Bearer ${token}`}:{}});
+    if(!media.ok) throw new Error(`语音加载失败 (${media.status})`);
+    if(speechObjectUrl) URL.revokeObjectURL(speechObjectUrl);
+    speechObjectUrl=URL.createObjectURL(await media.blob());
+    state.speechAudio.src=speechObjectUrl;
     state.speechTaskId=task.id;
     await state.speechAudio.play(); refreshSpeechTask(task.id);
   } catch(error) {

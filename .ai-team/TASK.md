@@ -84,6 +84,17 @@
   - **SSE 按契约 §8 改 fetch+ReadableStream**（带 Authorization 头、AbortController 管理、`event: task`/`keepalive` 帧解析）；API 前缀 `API_BASE` 由脚本自身 URL 推导，独立端口与 `/agent-api` 子路径两种形态通用；`/docs` 链接与语音 audio_url 同步加前缀。
   - **走查驱动修复**：`[hidden]` 被 `.button{display:inline-flex}` 覆盖导致匿名页可见退出/开发者入口（加 `[hidden]{display:none!important}`）；测试对 `.env` 泄漏敏感（`_settings` 显式固定 RUOYI_* 断言值）。
 
+- 2026-08-23 Phase 6 后增量（用户决定"想法二全套 + 想法一轻量档"）：
+  - **站点根直达操作台**：两份 nginx（本地 Phase 5 + Phase 6 部署包）443/80 server 各加 `location = / { return 302 /agent-api/; }`——用户打开根地址不再落在若依管理系统首页；管理系统经真实路由（/index、/login、/system/user）仍可达，无任何入口链接指向它。
+  - **`DEFAULT_LOGIN_URL` `/#/login` → `/login`**（正式修正，非推翻）：若依生产构建为 history 路由，且站点根被 302 接管后 hash 形式会被抢跳；desktop/serve 拓扑本就靠 `.env` 显式指定（`.env.example` 已有说明），不受默认值影响。
+  - **新增 `RUOYI_MANAGE_URL`**（默认空=隐藏；反向代理拓扑 `/index`）：开发者控制台顶栏新增"管理后台 ↗"按钮（`#manageLink`，默认 hidden，app.js 按 `data-manage-url` 接线）——管理系统入口按用户要求收进开发者页面；install.sh 板端 env 同步置 `/index`。
+  - **产品名（轻量档）**：若依前端（仓库外 checkout）`.env.production`/`.env.development` 的 `VUE_APP_TITLE` 改"云湃 AI"并重建 dist（黑盒约束内，只改配置不改源码；`pack_deploy.py` 直接取该 dist）。agent 内置登录卡片（中量档）暂不做，按真实用户反馈再议；启动时需修订 Phase 4"弹窗到若依登录页"冻结机制并另记 Decision。
+  - **SPA 入口禁启发式缓存**（用户反馈旧标题缓存后追加）：两份 nginx 新增 `location = /index.html { add_header Cache-Control "no-cache"; }`（部署包版在 location 级重复声明三条安全头——`add_header` 取消 server 级继承的 nginx 语义）；实测 `/login`、`/system/user`、`/index.html` 均带 no-cache，哈希命名的 /static 资源不受影响；部署包配置经路径适配副本 `nginx -t` 通过。
+  - **登录弹窗自动关闭**（用户提出"登录后直达 agent"追加）：闸机成功路径 `loginWindow?.close()`（弹窗为本方 window.open 打开，可安全关闭；若依前端登录后跳自身首页属其内部行为，未动源码）。IAB 无法验证弹窗路径，留真实浏览器人工复验。
+  - **修复语音播放 401**（用户人工测试发现，Phase 3 网关遗留缺陷）：`<audio src>` 直连 speech 端点带不了 Authorization 头 → 播放 401（合成 POST 201 正常，nginx 日志铁证）。修复为 fetch+blob（与 SSE §8 同构，令牌不进 URL，端点仍校验会话）。IAB 端到端验证：合成→播放 `news-female1 · 4.2 秒 · 24000 Hz`→自然播完复位，日志 200。此缺陷即测试计划"语音闭环 PC 预演"项排到的雷；Phase 7 语音冒烟保留。
+  - **登录闸机文案去若依化**（用户追加）：闸机卡片三处可见文案改中性——eyebrow `RUOYI LOGIN`→`ACCOUNT LOGIN`、"云湃 AI 已接入若依统一登录"→"请使用云湃 AI 账号登录"、"打开若依登录页"→"打开登录页"；登录机制与契约不变（Admin-Token cookie + `/auth/me` 探测 + 弹窗轮询），代码注释与内部标识符（`ruoyiLogout` 等）非用户可见，保留。
+  - 证据：`docs/tasks/2026-08-23-entry-redirect-and-title.md`（576 项测试全绿 + curl 六条 + 浏览器七步矩阵含真实验证码登录）。
+
 ## 会话执行约定（2026-08-21 订立，仅约束本任务 Phase 3～7 会话）
 
 为控制剩余 Phase 的会话 token 消耗，后续会话照此执行；不约束其他任务。本约定只调整会话工作方式，不放松任何不变式、验收或验证要求：
@@ -132,6 +143,7 @@
   - 走查证据（PC，见 `docs/tasks/2026-08-21-phase6-deploy-package.md`）：`bash -n` 全部脚本通过；nginx 配置经本机 nginx 1.30.4 `-t` 通过（路径适配到 Windows 临时副本，指令语法原样；"user" 指令 Windows 忽略告警为平台差异）；`pack_deploy.py` 实跑组装 78.2MB tar.gz（真实 jar/SQL/dist + `git archive` 源码），清单逐项核对、包内无 .env/密钥文件、模板占位符完好、真实密钥片段检索不到；模板注入逻辑 PC 实测（含 base64 特殊字符密钥，替换后 YAML 可解析）。
   - rk3588 旧材料清理 + `tests/test_rk3588_cpu_poc.py` 断言更新；全量 576 项测试通过（exit=0）。
   - 遗留：板端真实安装运行全部留 Phase 7（见 Decisions 未验证项登记）。
+- Phase 6 后增量（2026-08-23，用户决定）：入口直达操作台 + 产品名。站点根 302 `/agent-api/`（本地与部署包两份 nginx 同构）、登录默认地址改 history 路由 `/login`、新增 `RUOYI_MANAGE_URL`（开发者控制台"管理后台"按钮，默认隐藏）、若依前端（仓库外 checkout）标题换"云湃 AI"并重建 dist。若依源码零改动，认证契约不变。详见 `docs/tasks/2026-08-23-entry-redirect-and-title.md`。
 
 ## Phase 2 预发现（2026-08-20 已并入契约文档 `docs/contracts/ruoyi-auth-gateway.md` 定稿，以契约为准）
 
@@ -178,6 +190,11 @@
   - 自动化基线：全量 `pytest -q -p no:cacheprovider --basetemp <独立目录>` 576 项全部通过（exit=0，collect-only 计数 576；其中 `tests/test_rk3588_cpu_poc.py` 两断言按"密码门退役"新契约更新后通过）；`compileall agent_platform evaluation deployment` OK；`node --check agent_platform/static/app.js` OK；`node .ai-team/check.mjs --base origin/main` Result: valid。
   - 交付物走查：`bash -n` ×3 脚本通过；nginx `-t` 通过（Windows 路径适配副本校验，指令原样；"user" 忽略告警为平台差异）；`pack_deploy.py` 实跑组装 78.2MB tar.gz，清单核对 + 包内无 .env/密钥 + 占位符完好 + 真实密钥片段检索不到；模板注入含 base64 特殊字符实测、替换后 YAML 可解析。
   - 板端真实安装运行未验证（Phase 7）；rk3588 旧材料清理与测试更新见 Decisions。
+- [x] Phase 6 后增量（2026-08-23，PC 实测，证据 `docs/tasks/2026-08-23-entry-redirect-and-title.md`）：
+  - 自动化：全量 `pytest -q -p no:cacheprovider --basetemp <独立目录>` 576 项通过（exit=0，含工作区并行任务 89 项 WIP 测试亦绿）；`compileall` OK；`node --check app.js` OK；`bash -n install.sh` OK；`check.mjs --base origin/main` valid。
+  - curl：`/` 302 → `/agent-api/`；页壳注入 `data-login-url="/login"` + `data-manage-url="/index"`；`/login` 200 标题"云湃 AI"；`/index` 200 不受影响；`/agent-api/tasks` 无 token 仍 401。
+  - 浏览器（IAB，验证码开启）：根地址直达操作台闸机 → user1 经 `/login` 真实验证码登录 → 操作台自动放行（`user1 · 用户`，数据在）→ 用户页无管理按钮 → 退出按钮真实点击吊销会话回登录页 → dev1 登录开发者控制台见"管理后台 ↗"（href=/index）→ 点击新标签页打开若依后台。偏差：IAB 拦 `window.open`（同 Phase 5 已知限制，同标签页等价替代）。
+  - 追加（登录闸机文案去若依化，同日）：`node --check app.js` OK；全量 pytest 576 项通过（独立 `--basetemp`，输出落盘复核 576 进度点无失败标记）；`check.mjs --base origin/main` valid；`tests/test_frontend_shell.py` 仅断言注入 data 属性，不涉及闸机文案（改动无断言冲突）。
 
 ## Handoff note
 

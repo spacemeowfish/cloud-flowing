@@ -21,7 +21,10 @@ from agent_platform.config import Settings, get_settings
 from agent_platform.core.desktop_settings import PassiveRestartController, RestartController
 from agent_platform.core.recent_logs import RecentLogHandler
 
-DEFAULT_LOGIN_URL = "/#/login"
+# History-mode route of the RuoYi frontend (its production build dropped the
+# hash form). The site root itself is redirected to the console by Nginx
+# (location = / -> /agent-api/), so the gate must link the real /login path.
+DEFAULT_LOGIN_URL = "/login"
 
 
 def create_app(
@@ -88,6 +91,9 @@ def create_app(
         replacements = {
             "__RUOYI_LOGIN_URL__": application_settings.ruoyi_login_url or DEFAULT_LOGIN_URL,
             "__RUOYI_LOGOUT_URL__": application_settings.ruoyi_logout_url,
+            # Empty = no management entry exposed (desktop/serve topology);
+            # the reverse-proxy topologies point it at the RuoYi backoffice.
+            "__RUOYI_MANAGE_URL__": application_settings.ruoyi_manage_url,
         }
         for placeholder, value in replacements.items():
             text = text.replace(placeholder, html.escape(value, quote=True))

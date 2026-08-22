@@ -54,8 +54,10 @@ if [ ! -f "$ENV_FILE" ]; then
 # 修改后执行 systemctl restart ruoyi agent-platform 生效。密钥泄露即重生成。
 RUOYI_JWT_SECRET=$JWT_SECRET
 RUOYI_REDIS_URL=redis://127.0.0.1:6379/0
-# 网关拓扑默认值：登录页同源 /#/login，登出走 /prod-api/logout（留空/缺省即默认）
+# 网关拓扑默认值：登录页同源 /login（history 路由），登出走 /prod-api/logout，
+# 开发者控制台“管理后台”按钮指向若依后台首页（留空/缺省即默认）
 RUOYI_LOGOUT_URL=/prod-api/logout
+RUOYI_MANAGE_URL=/index
 # 模型：板上 RKLLM 厂商服务（127.0.0.1:8080，见 deployment/rk3588 的 vendor server 说明）
 MODEL_PROVIDER=rkllm
 RKLLM_SERVER_URL=http://127.0.0.1:8080/v1

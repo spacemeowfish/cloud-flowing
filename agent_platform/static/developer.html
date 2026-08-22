@@ -7,7 +7,7 @@
   <title>云湃 AI · 开发者控制台</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-mode="developer" data-login-url="__RUOYI_LOGIN_URL__" data-logout-url="__RUOYI_LOGOUT_URL__">
+<body data-mode="developer" data-login-url="__RUOYI_LOGIN_URL__" data-logout-url="__RUOYI_LOGOUT_URL__" data-manage-url="__RUOYI_MANAGE_URL__">
   <a class="skip-link" href="#pageRoot">跳到主要内容</a>
   <div class="app-shell">
     <aside id="sidebar" class="sidebar" aria-label="主要功能">
@@ -45,6 +45,7 @@
           <span id="runtimeBadge" class="runtime-badge"><i></i>正在检测</span>
           <button id="inspectorButton" class="button quiet inspector-button">检查器</button>
           <a class="button quiet docs-link" href="docs" target="_blank" rel="noreferrer">API 文档 ↗</a>
+          <a id="manageLink" class="button quiet manage-link" href="#" target="_blank" rel="noreferrer" hidden>管理后台 ↗</a>
           <button id="developerLogout" class="button quiet" type="button">退出</button>
         </div>
       </header>

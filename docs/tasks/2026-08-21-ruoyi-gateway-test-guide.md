@@ -64,15 +64,16 @@ D:\ruoyi-env\nginx\nginx.exe
 
 # ④ 云湃 AI 操作台后端（Nginx 拓扑的环境变量覆盖启动，不改 .env）
 cd /d "D:\my new work\cloud-flowing_0806"
-cmd /c "set RUOYI_LOGOUT_URL=/prod-api/logout&& set MODEL_PROVIDER=mock&& .venv\Scripts\python.exe -m agent_platform.cli serve"
+cmd /c "set RUOYI_LOGOUT_URL=/prod-api/logout&& set RUOYI_MANAGE_URL=/index&& set MODEL_PROVIDER=mock&& .venv\Scripts\python.exe -m agent_platform.cli serve"
 ```
 
 自检（三条路径都通）：
 
 ```powershell
-curl http://localhost/                     # 若依登录页（HTML，标题"若依管理系统"）
-curl http://localhost/agent-api/health     # {"status":"ok",...}
-curl http://localhost/agent-api/tasks      # 401 {"code":"auth_required",...}
+curl -I http://localhost/                     # 302 → /agent-api/（2026-08-23 起站点根直达操作台）
+curl http://localhost/login                   # 若依登录页（HTML，标题"云湃 AI"）
+curl http://localhost/agent-api/health        # {"status":"ok",...}
+curl http://localhost/agent-api/tasks         # 401 {"code":"auth_required",...}
 ```
 
 > 当前机器上这四步都已就绪且在运行，可直接开测。
@@ -100,15 +101,15 @@ D:\ruoyi-env\redis\redis-cli.exe get captcha_codes:<uuid>   # 返回答案，TTL
 
 浏览器只访问 `http://localhost/`，不要直连 8080/8081/8000。
 
-1. **未登录被拦**：打开 `http://localhost/agent-api/` → 弹出"需要登录后使用"闸机，无退出按钮、无开发者入口。
-2. **登录**：点"打开若依登录页"（或直接开 `http://localhost/#/login`）→ user1 登录（含验证码）→ 操作台约 1 秒内自动放行（无需刷新）。
+1. **未登录被拦**：打开 `http://localhost/` → 自动跳到操作台 `/agent-api/` 并弹出"需要登录后使用"闸机，无退出按钮、无开发者入口（2026-08-23 起站点根直达操作台，不再落在若依管理系统首页）。
+2. **登录**：点"打开若依登录页"（或直接开 `http://localhost/login`）→ user1 登录（含验证码）→ 操作台约 1 秒内自动放行（无需刷新）。
 3. **普通用户界面**：左上角身份显示 `user1 · 用户`；页脚**没有**"开发者控制台"。
 4. **用 AI 功能**：输入"添加待办 准备测试材料 高优先级"→ 提交 → 实时状态走到"已完成"，渲染待办结构化卡片（当前 mock 模型，响应确定性）。
 5. **角色边界**：user1 直访 `http://localhost/agent-api/developer` → 自动弹回任务页。
 6. **登出**：点右上"退出" → 回到若依登录页；再打开操作台回到闸机状态。
-7. **开发者**：dev1 登录 → 身份 `dev1 · 开发者`，页脚出现"开发者控制台"→ 进去看到"已注册能力 8 / HTTP 操作 24"；注意 dev1 的近期任务为空（与 user1 数据隔离）。
+7. **开发者**：dev1 登录 → 身份 `dev1 · 开发者`，页脚出现"开发者控制台"→ 进去看到"已注册能力 8 / HTTP 操作 24"；注意 dev1 的近期任务为空（与 user1 数据隔离）。顶栏有"管理后台 ↗"按钮 → 新标签页打开若依管理系统（账号/停启用管理入口，普通用户页无此按钮）。
 8. **数据隔离**：user1 建的待办，dev1/admin 登录后看不到；同一账号换浏览器登录看到的是同一份数据。
-9. **停用账号**（admin 登录 `http://localhost/system/user` → 搜 user1 → 状态开关停用）：
+9. **停用账号**（admin 经"管理后台"按钮或直访 `http://localhost/system/user` → 搜 user1 → 状态开关停用）：
    - user1 再登录 → 被拒（"用户已封禁"）；
    - 已登录的 user1 会话不受影响（设计如此：禁用只挡新登录，立即踢人靠下一步强退）；
    - 恢复：把开关切回启用。
