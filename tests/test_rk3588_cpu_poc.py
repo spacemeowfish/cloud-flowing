@@ -42,8 +42,12 @@ def test_two_compose_files_select_distinct_images_and_one_service():
     assert set(lfm["services"]) == {"agent"}
     assert qwen["services"]["agent"]["image"] != lfm["services"]["agent"]["image"]
     assert qwen["services"]["agent"]["ports"] == ["8000:8000"]
-    assert qwen["services"]["agent"]["environment"]["DEVELOPER_PASSWORD"]
-    assert lfm["services"]["agent"]["environment"]["DEVELOPER_PASSWORD"]
+    # 旧"环境变量开发者密码门"已退役（ADR 0007，RUOYI-AUTH-GATEWAY-001 Phase 6 清理）：
+    # compose 不再要求 DEVELOPER_PASSWORD，认证统一由若依网关承担。
+    assert "environment" not in qwen["services"]["agent"]
+    assert "environment" not in lfm["services"]["agent"]
+    assert "DEVELOPER_PASSWORD" not in (POC / "compose.qwen.yml").read_text(encoding="utf-8")
+    assert "DEVELOPER_PASSWORD" not in (POC / "compose.lfm.yml").read_text(encoding="utf-8")
 
 
 def test_profiles_and_automatic_benchmark_match_acceptance_plan():
@@ -69,13 +73,15 @@ def test_profiles_and_automatic_benchmark_match_acceptance_plan():
     assert "selected.env" in benchmark
     assert "--bind-address" in benchmark
     assert 'f"{bind_address}:{port}:8000"' in benchmark
-    assert '"--env", "DEVELOPER_PASSWORD"' in benchmark
+    # 密码门退役后（ADR 0007）：benchmark 不再注入/要求 DEVELOPER_PASSWORD
+    assert '"--env", "DEVELOPER_PASSWORD"' not in benchmark
+    assert "DEVELOPER_PASSWORD is required" not in benchmark
     install = (POC / "install.sh").read_text(encoding="utf-8")
     assert "board_probe.sh" in install
     assert "benchmark_profiles.py" in install
     assert 'sha256sum "$archive"' in install
     assert "POC_BIND_ADDRESS" in install
-    assert "POC_DEVELOPER_PASSWORD" in install
+    assert "POC_DEVELOPER_PASSWORD" not in install
     build = (POC / "build_images.ps1").read_text(encoding="utf-8")
     assert "SHA256SUMS" in build
     assert "Get-FileHash -Algorithm SHA256" in build

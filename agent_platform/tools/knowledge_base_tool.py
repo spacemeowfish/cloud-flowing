@@ -11,7 +11,7 @@ from pydantic import JsonValue
 from agent_platform.core.data_classification import DataClassificationService
 from agent_platform.core.errors import PermissionDeniedError
 from agent_platform.core.interfaces import Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 from agent_platform.tools.vector_store import (
     DocumentParser,
     HashingEmbedder,
@@ -63,12 +63,12 @@ class KnowledgeBaseTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"knowledge:{hashlib.sha256(value.encode()).hexdigest()}"
 
-    def sync_documents(self) -> int:
+    def sync_documents(self, owner: str) -> int:
         updated = 0
         for root in self._roots:
             for path in root.rglob("*"):
                 if path.is_file() and path.suffix.casefold() in {".txt", ".md", ".docx"}:
-                    updated += int(self.ingest_document(path))
+                    updated += int(self.ingest_document(path, owner=owner))
         return updated
 
     def _document_paths(self) -> list[Path]:
@@ -103,7 +103,7 @@ class KnowledgeBaseTool(Tool):
             candidates = [path for path in candidates if self._date_from_name(path.name).startswith(prefix)]
         return candidates
 
-    def ingest_document(self, path: Path, *, force: bool = False) -> bool:
+    def ingest_document(self, path: Path, *, owner: str = "", force: bool = False) -> bool:
         """Index one authorized document; return whether the stored index changed."""
 
         resolved = path.resolve()
@@ -114,7 +114,7 @@ class KnowledgeBaseTool(Tool):
         if any(marker in resolved.name.casefold() for marker in ("password", "secret", "key")):
             raise PermissionDeniedError(f"文档名称触发敏感规则：{path.name}")
         mtime = resolved.stat().st_mtime
-        if not force and self._store.indexed_mtime(resolved) == mtime:
+        if not force and self._store.indexed_mtime(resolved, owner) == mtime:
             return False
         text = self._parser.parse(resolved)
         classified = self._classifier.classify(text)
@@ -122,12 +122,19 @@ class KnowledgeBaseTool(Tool):
         if not chunks:
             raise ValueError(f"文档没有可索引内容：{path.name}")
         scope = extract_document_scope(classified.redacted_text, resolved.suffix)
-        self._store.replace_document(resolved, mtime, chunks, scope=scope)
+        self._store.replace_document(resolved, mtime, chunks, scope=scope, owner=owner)
         return True
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    @staticmethod
+    def _required_owner(context: ToolContext | None) -> str:
+        if context is None or not context.owner:
+            raise ValueError("knowledge operations require an authenticated owner context")
+        return context.owner
+
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
+        owner = self._required_owner(context)
         query = str(arguments["query"])
-        self.sync_documents()
+        self.sync_documents(owner)
         report_candidates = self._report_candidates(query)
         has_explicit_date = bool(
             re.search(r"20\d{2}\s*[年/-]?\s*\d{1,2}\s*[月/-]?\s*\d{1,2}", query)
@@ -186,7 +193,7 @@ class KnowledgeBaseTool(Tool):
         minimum_matches = 1 if len(normalized_query) <= 5 else 2
         hits = []
         allowed_paths = {str(path) for path in report_candidates} if report_candidates else None
-        search_hits = self._store.search(query, self._top_k * 3)
+        search_hits = self._store.search(query, self._top_k * 3, owner)
         if allowed_paths is not None:
             search_hits = [hit for hit in search_hits if hit.path in allowed_paths]
         for hit in search_hits[: self._top_k]:

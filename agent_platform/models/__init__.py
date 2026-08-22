@@ -24,7 +24,7 @@ from agent_platform.models.policy import ClassificationResult, ConfirmationReque
 from agent_platform.models.routing import ResourceMetrics, RoutingDecision, RoutingRequest
 from agent_platform.models.speech import SpeechArtifact, SpeechCreate
 from agent_platform.models.task import TERMINAL_STATES, TaskCancel, TaskConfirmation, TaskCreate, TaskEvent, TaskRecord, TaskState
-from agent_platform.models.tool import ToolCall, ToolMetadata, ToolReceipt
+from agent_platform.models.tool import ToolCall, ToolContext, ToolMetadata, ToolReceipt
 from agent_platform.models.voice import VoiceDevice, VoiceRecording, VoiceStatus
 
 __all__ = [
@@ -34,6 +34,6 @@ __all__ = [
     "MessageRole", "ModelMessage",
     "ModelRequest", "PolicyContext", "PolicyDecision", "ResourceMetrics", "RiskLevel",
     "RoutingDecision", "RoutingRequest", "SpeechArtifact", "SpeechCreate", "TERMINAL_STATES", "TaskCancel", "TaskConfirmation", "TaskCreate",
-    "TaskEvent", "TaskRecord", "TaskState", "ToolCall", "ToolMetadata", "ToolReceipt", "VoiceDevice", "VoiceRecording", "VoiceStatus",
+    "TaskEvent", "TaskRecord", "TaskState", "ToolCall", "ToolContext", "ToolMetadata", "ToolReceipt", "VoiceDevice", "VoiceRecording", "VoiceStatus",
     "argument_extraction_contract", "build_argument_extraction_schema", "build_model_acceptance_schema", "is_argument_extraction_schema", "is_intent_classification_schema", "is_model_acceptance_schema", "model_acceptance_contract", "select_model_acceptance_schema",
 ]

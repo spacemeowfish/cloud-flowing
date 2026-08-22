@@ -15,7 +15,7 @@ from typing import Awaitable, Callable
 from pydantic import JsonValue
 
 from agent_platform.core.interfaces import Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 from agent_platform.tools.reminder_tool import ChineseTimeParser
 
 
@@ -52,6 +52,7 @@ class ScheduleTool(Tool):
                 recurrence_until_at TEXT,
                 status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'cancelled')),
                 notify_before_minutes INTEGER NOT NULL DEFAULT 15 CHECK(notify_before_minutes BETWEEN 0 AND 1440),
+                owner TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 cancelled_at TEXT
             )"""
@@ -65,12 +66,25 @@ class ScheduleTool(Tool):
                 FOREIGN KEY(schedule_id) REFERENCES schedules(id)
             )"""
         )
-        self._connection.execute("CREATE INDEX IF NOT EXISTS idx_schedules_status_start ON schedules(status, start_at)")
+        existing_columns = {str(row[1]) for row in self._connection.execute("PRAGMA table_info(schedules)")}
+        if "owner" not in existing_columns:
+            # Pre-gateway rows keep owner='' and are invisible to every account.
+            self._connection.execute("ALTER TABLE schedules ADD COLUMN owner TEXT NOT NULL DEFAULT ''")
+        self._connection.execute("DROP INDEX IF EXISTS idx_schedules_status_start")
+        self._connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_schedules_owner_status_start ON schedules(owner, status, start_at)"
+        )
         self._connection.commit()
         self._parser = ChineseTimeParser(timezone)
         self._callback = callback or self._log_callback
         self._lock = asyncio.Lock()
         self._scheduler_task: asyncio.Task[None] | None = None
+
+    @staticmethod
+    def _required_owner(context: ToolContext | None) -> str:
+        if context is None or not context.owner:
+            raise ValueError("schedule operations require an authenticated owner context")
+        return context.owner
 
     @property
     def metadata(self) -> ToolMetadata:
@@ -133,14 +147,15 @@ class ScheduleTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"mutation:schedule:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
+        owner = self._required_owner(context)
         action = str(arguments["action"])
         if action == "create":
-            return await self._create(arguments)
+            return await self._create(arguments, owner)
         if action == "query":
-            return await self._query(arguments)
+            return await self._query(arguments, owner)
         if action == "cancel":
-            return await self._cancel(int(arguments["id"]), arguments)
+            return await self._cancel(int(arguments["id"]), arguments, owner)
         raise ValueError(f"Unsupported schedule action: {action}")
 
     @staticmethod
@@ -223,7 +238,7 @@ class ScheduleTool(Tool):
                 return self._input_error(arguments, "recurrence_until_text", "重复截止时间不能早于开始时间")
         return start_at, end_at, recurrence, weekdays, until_at
 
-    async def _create(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _create(self, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         parsed = self._parse_create(arguments)
         if isinstance(parsed, ToolReceipt):
             return parsed
@@ -233,8 +248,8 @@ class ScheduleTool(Tool):
             cursor = self._connection.execute(
                 """INSERT INTO schedules(
                     title, location, start_at, end_at, recurrence, weekdays_json, recurrence_until_at,
-                    status, notify_before_minutes, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)""",
+                    status, notify_before_minutes, owner, created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)""",
                 (
                     str(arguments["title"]).strip(),
                     str(arguments.get("location", "")).strip(),
@@ -244,6 +259,7 @@ class ScheduleTool(Tool):
                     json.dumps(weekdays),
                     until_at.isoformat() if until_at else None,
                     int(arguments.get("notify_before_minutes", 15)),
+                    owner,
                     now,
                 ),
             )
@@ -327,15 +343,17 @@ class ScheduleTool(Tool):
             cursor += timedelta(days=1)
         return items
 
-    async def _query(self, arguments: dict[str, JsonValue], *, now: datetime | None = None) -> ToolReceipt:
+    async def _query(
+        self, arguments: dict[str, JsonValue], owner: str = "", *, now: datetime | None = None
+    ) -> ToolReceipt:
         current = now or datetime.now(self._parser.timezone)
         try:
             range_start, range_end = self._range_window(arguments, current)
         except (ValueError, KeyError) as exc:
             return self._input_error(arguments, "range", str(exc))
         title_query = str(arguments.get("title_query", "")).strip()
-        sql = "SELECT * FROM schedules WHERE status = 'active'"
-        params: list[object] = []
+        sql = "SELECT * FROM schedules WHERE status = 'active' AND owner = ?"
+        params: list[object] = [owner]
         if title_query:
             sql += " AND title LIKE ?"
             params.append(f"%{title_query}%")
@@ -376,15 +394,17 @@ class ScheduleTool(Tool):
             },
         )
 
-    async def query(self, arguments: dict[str, JsonValue], *, now: datetime) -> ToolReceipt:
+    async def query(self, arguments: dict[str, JsonValue], *, now: datetime, owner: str = "") -> ToolReceipt:
         """Expose a fixed-clock query surface for deterministic tests and polling."""
 
-        return await self._query(arguments, now=now)
+        return await self._query(arguments, owner, now=now)
 
-    async def _cancel(self, schedule_id: int, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _cancel(self, schedule_id: int, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         now = datetime.now(UTC).isoformat()
         async with self._lock:
-            row = self._connection.execute("SELECT * FROM schedules WHERE id = ?", (schedule_id,)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM schedules WHERE id = ? AND owner = ?", (schedule_id, owner)
+            ).fetchone()
             if row is None:
                 return ToolReceipt(
                     tool_name=self.metadata.name,
@@ -402,10 +422,13 @@ class ScheduleTool(Tool):
                     output={"updated": False, "item": self._to_item(row)},
                 )
             self._connection.execute(
-                "UPDATE schedules SET status = 'cancelled', cancelled_at = ? WHERE id = ?", (now, schedule_id)
+                "UPDATE schedules SET status = 'cancelled', cancelled_at = ? WHERE id = ? AND owner = ?",
+                (now, schedule_id, owner),
             )
             self._connection.commit()
-            cancelled = self._connection.execute("SELECT * FROM schedules WHERE id = ?", (schedule_id,)).fetchone()
+            cancelled = self._connection.execute(
+                "SELECT * FROM schedules WHERE id = ? AND owner = ?", (schedule_id, owner)
+            ).fetchone()
         assert cancelled is not None
         return ToolReceipt(
             tool_name=self.metadata.name,
@@ -415,14 +438,21 @@ class ScheduleTool(Tool):
             output={"item": self._to_item(cancelled)},
         )
 
-    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+    async def confirmation_context(
+        self, arguments: dict[str, JsonValue], context: ToolContext | None = None
+    ) -> dict[str, str]:
         """Return read-only facts for a pre-execution cancellation confirmation."""
 
         if arguments.get("action") != "cancel" or not isinstance(arguments.get("id"), int):
             return {}
+        try:
+            owner = self._required_owner(context)
+        except ValueError:
+            return {}
         async with self._lock:
             row = self._connection.execute(
-                "SELECT title, start_at FROM schedules WHERE id = ?", (int(arguments["id"]),)
+                "SELECT title, start_at FROM schedules WHERE id = ? AND owner = ?",
+                (int(arguments["id"]), owner),
             ).fetchone()
         if row is None:
             return {}

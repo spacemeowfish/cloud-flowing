@@ -9,6 +9,7 @@ from agent_platform.api.server import create_app
 from agent_platform.config import Settings
 from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.models import TaskState
+from ruoyi_support import enable_gateway
 
 
 class _DateDroppingReminderAdapter(MockModelAdapter):
@@ -73,23 +74,22 @@ def _settings(tmp_path):
         knowledge_roots=[knowledge],
         meeting_output_dir=tmp_path / "meeting",
         audit_flush_size=1,
-        developer_password="test-developer-password",
     )
 
 
-async def _developer_login(client: httpx.AsyncClient) -> None:
-    response = await client.post(
-        "/auth/developer/login", json={"password": "test-developer-password"}
-    )
-    assert response.status_code == 200
+def _developer_login(client: httpx.AsyncClient, gateway) -> None:
+    # Same account, now presenting its developer-role token: audit and
+    # confirmation endpoints require developer role AND task ownership.
+    gateway.promote(client, username="user1", user_id=100, role_keys=("developer",))
 
 
 @pytest.mark.asyncio
 async def test_api_task_audit_errors_and_openapi(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post("/tasks", json={"text": "查询X产品保修期"})
             assert created.status_code == 201
             task = created.json()
@@ -99,7 +99,7 @@ async def test_api_task_audit_errors_and_openapi(tmp_path):
             queried = await client.get(f"/tasks/{task_id}")
             assert queried.status_code == 200
             assert (await client.get(f"/tasks/{task_id}/audit")).status_code == 403
-            await _developer_login(client)
+            _developer_login(client, gateway)
             audit = await client.get(f"/tasks/{task_id}/audit")
             assert audit.status_code == 200
             assert len(audit.json()) >= 7
@@ -141,8 +141,9 @@ async def test_meeting_confirmation_and_cancel(tmp_path):
     source.write_text("张三：决定发布。\n李四：我负责测试。", encoding="utf-8")
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post("/tasks", json={"text": f"整理会议纪要 {source}"})
             task_id = created.json()["id"]
             await _wait_for_state(client, task_id, TaskState.AWAITING_CONFIRMATION.value)
@@ -162,9 +163,12 @@ async def test_meeting_confirmation_and_cancel(tmp_path):
 async def test_session_isolation(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
-            transport=transport, base_url="http://test"
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers()
+        ) as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers(username="other", user_id=200)
         ) as other:
             created = await owner.post("/tasks", json={"text": "查询产品", "session_id": "forged"})
             task_id = created.json()["id"]
@@ -189,8 +193,9 @@ async def test_session_isolation(tmp_path):
 async def test_text_operations_complete_through_agent_and_real_tool_executor(tmp_path, request_text):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post("/tasks", json={"text": request_text})
             task = await _wait_for_state(client, created.json()["id"], TaskState.COMPLETED.value)
             assert task["result"]["tool_name"] == "text_polish"
@@ -203,11 +208,12 @@ async def test_text_operations_complete_through_agent_and_real_tool_executor(tmp
 async def test_text_optional_missing_fields_do_not_stop_processing_at_confirmation_gate(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
-        gateway = ModelGateway(_TextOptionalMissingAdapter())
-        app.state.container.gateway = gateway
-        app.state.container.agent._gateway = gateway
+        gateway = enable_gateway(app)
+        model_gateway = ModelGateway(_TextOptionalMissingAdapter())
+        app.state.container.gateway = model_gateway
+        app.state.container.agent._gateway = model_gateway
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             for request_text in (
                 "总结这段：项目将在2026年8月1日上线，预算为300万元。",
                 "调整为轻松语气：项目将在2026年8月1日上线，预算为300万元。",
@@ -223,8 +229,9 @@ async def test_forged_session_header_is_ignored_and_d3_never_persisted(tmp_path)
     settings = _settings(tmp_path)
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             created = await client.post(
                 "/tasks",
                 json={"text": "查询 password=abc123", "session_id": "payload-session"},
@@ -250,22 +257,26 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
     (allowed / "项目周报_上周.txt").write_text("上周完成需求评审。", encoding="utf-8")
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             page = await client.get("/")
             assert page.status_code == 200
             assert "云湃 AI" in page.text
             assert "接口测试中心" not in page.text
             assert "developerEntry" in page.text
-            assert (await client.get("/developer", follow_redirects=False)).status_code == 303
-            await _developer_login(client)
+            # Phase 4: /developer is an anonymous page shell (navigations
+            # cannot carry the Authorization header); app.js enforces the
+            # developer role client-side while data endpoints stay gated.
+            assert (await client.get("/developer", follow_redirects=False)).status_code == 200
+            _developer_login(client, gateway)
             developer_page = await client.get("/developer")
             assert developer_page.status_code == 200
             assert "接口测试中心" in developer_page.text
-            await client.post("/auth/logout")
+            gateway.demote(client)
             script = await client.get("/app.js")
             assert script.status_code == 200
-            assert "EventSource" in script.text
+            assert "ReadableStream" in script.text
 
             file_task = (await client.post("/tasks", json={"text": "打开项目周报"})).json()
             file_task = await _wait_for_state(client, file_task["id"], TaskState.AWAITING_CONFIRMATION.value)
@@ -277,9 +288,9 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
             )
             assert file_done.json()["state"] == TaskState.COMPLETED.value
 
-            replacement_gateway = ModelGateway(_DateDroppingReminderAdapter())
-            app.state.container.gateway = replacement_gateway
-            app.state.container.agent._gateway = replacement_gateway
+            replacement_model_gateway = ModelGateway(_DateDroppingReminderAdapter())
+            app.state.container.gateway = replacement_model_gateway
+            app.state.container.agent._gateway = replacement_model_gateway
             reminder = (await client.post("/tasks", json={"text": "提醒我明天开会"})).json()
             reminder = await _wait_for_state(client, reminder["id"], TaskState.AWAITING_CONFIRMATION.value)
             assert reminder["result"]["type"] == "missing_fields"
@@ -299,6 +310,6 @@ async def test_static_web_and_three_confirmation_flows(tmp_path):
                 json={"approved": False, "arguments": {}},
             )
             assert rejected.json()["state"] == TaskState.CANCELLED.value
-            await _developer_login(client)
+            _developer_login(client, gateway)
             audit = (await client.get(f"/tasks/{delete_task['id']}/audit")).json()
             assert any(event["event_type"] == "confirmation_rejected" for event in audit)

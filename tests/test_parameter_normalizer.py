@@ -10,6 +10,11 @@ from agent_platform.core.model_gateway import ModelGateway
 from agent_platform.core.parameter_normalizer import deterministic_pre_route_arguments, normalize_arguments
 from agent_platform.models import AuditEventType, TaskConfirmation, TaskCreate, TaskState, is_argument_extraction_schema
 
+from agent_platform.models import ToolContext
+
+CTX = ToolContext(owner="default")
+OWNER = "default"
+
 
 def test_alias_normalization_is_scoped_and_does_not_mutate_input():
     knowledge_arguments = {"question": "\u4ea7\u54c1\u4fdd\u4fee\u671f"}
@@ -425,8 +430,8 @@ async def test_agent_accepts_cancel_candidate_then_normalizes_id_before_contract
 async def test_todo_title_request_queries_candidates_and_delete_waits_for_confirmation(tmp_path):
     container = ApplicationContainer.build(_settings(tmp_path))
     try:
-        first = await container.todos.execute({"action": "create", "title": "提交报告"})
-        second = await container.todos.execute({"action": "create", "title": "提交报告"})
+        first = await container.todos.execute({"action": "create", "title": "提交报告"}, context=CTX)
+        second = await container.todos.execute({"action": "create", "title": "提交报告"}, context=CTX)
         first_id = first.output["item"]["id"]
         second_id = second.output["item"]["id"]
 
@@ -442,7 +447,7 @@ async def test_todo_title_request_queries_candidates_and_delete_waits_for_confir
         assert all(event.event_type != AuditEventType.TOOL_CALLED for event in events)
         completed = await container.agent.confirm(delete_task.id, TaskConfirmation(arguments={}, approved=True))
         assert completed.state == TaskState.COMPLETED
-        remaining = await container.todos.execute({"action": "query", "title_query": "提交报告"})
+        remaining = await container.todos.execute({"action": "query", "title_query": "提交报告"}, context=CTX)
         assert [item["id"] for item in remaining.output["items"]] == [second_id]
     finally:
         await container.close()
@@ -454,10 +459,10 @@ async def test_schedule_title_request_queries_candidates_and_cancel_preview_is_p
     try:
         first = await container.schedules.execute(
             {"action": "create", "title": "项目例会", "start_text": "2026-07-29 14:00"}
-        )
+        , context=CTX)
         second = await container.schedules.execute(
             {"action": "create", "title": "项目例会", "start_text": "2026-07-30 14:00"}
-        )
+        , context=CTX)
         first_id = first.output["item"]["id"]
         second_id = second.output["item"]["id"]
 
@@ -483,7 +488,7 @@ async def test_schedule_title_request_queries_candidates_and_cancel_preview_is_p
                 "range_end": "2026-08-01T00:00:00+08:00",
             },
             now=datetime.fromisoformat("2026-07-28T10:00:00+08:00"),
-        )
+         owner=OWNER)
         assert [item["schedule_id"] for item in remaining.output["items"]] == [second_id]
     finally:
         await container.close()

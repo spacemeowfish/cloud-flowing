@@ -36,7 +36,7 @@ class CountingTool(Tool):
     def idempotency_key(self, arguments: dict[str, JsonValue]) -> str:
         return hashlib.sha256(json.dumps(arguments, sort_keys=True).encode()).hexdigest()
 
-    async def execute(self, arguments):
+    async def execute(self, arguments, context=None):
         self.count += 1
         await asyncio.sleep(self.delay)
         return ToolReceipt(tool_name="counting", actual_arguments=arguments, success=True, output_summary="ok")

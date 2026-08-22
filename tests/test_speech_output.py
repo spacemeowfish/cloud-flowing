@@ -12,6 +12,7 @@ from agent_platform.core.errors import SpeechUnavailableError
 from agent_platform.core.interfaces import SpeechAudio, SpeechSynthesizer
 from agent_platform.core.speech_output import SpeechOutputService
 from agent_platform.models import TaskState
+from ruoyi_support import enable_gateway
 
 
 class _FakeSpeechSynthesizer(SpeechSynthesizer):
@@ -78,6 +79,7 @@ async def test_completed_task_speech_can_be_regenerated_and_downloaded(tmp_path)
     settings = _settings(tmp_path)
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         fake = _FakeSpeechSynthesizer()
         app.state.container.speech = SpeechOutputService(
             tasks=app.state.container.tasks,
@@ -87,7 +89,7 @@ async def test_completed_task_speech_can_be_regenerated_and_downloaded(tmp_path)
             keep_versions=1,
         )
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             task = (await client.post("/tasks", json={"text": "1+1=?"})).json()
             completed = await _wait_completed(client, task["id"])
             expected_text = completed["result"]["output"]["answer"]
@@ -105,7 +107,9 @@ async def test_completed_task_speech_can_be_regenerated_and_downloaded(tmp_path)
             second = await client.post(f"/tasks/{task['id']}/speech", json={"voice_id": "male"})
             assert second.status_code == 201
             assert second.json()["version_id"] != first_artifact["version_id"]
-            assert fake.requests == [(expected_text, "female"), (expected_text, "male")]
+            assert expected_text == "1+1 = 2"
+            # TTS 链路在合成前把阿拉伯数字归一化为中文读法（见 text_normalization）。
+            assert fake.requests == [("一加一等于 二", "female"), ("一加一等于 二", "male")]
             expired = await client.get(first_artifact["audio_url"])
             assert expired.status_code == 400
 
@@ -115,6 +119,7 @@ async def test_speech_rejects_unfinished_or_cross_session_tasks(tmp_path):
     settings = _settings(tmp_path)
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         app.state.container.speech = SpeechOutputService(
             tasks=app.state.container.tasks,
             synthesizer=_FakeSpeechSynthesizer(),
@@ -123,8 +128,10 @@ async def test_speech_rejects_unfinished_or_cross_session_tasks(tmp_path):
             keep_versions=3,
         )
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as owner, httpx.AsyncClient(
-            transport=transport, base_url="http://test"
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers()
+        ) as owner, httpx.AsyncClient(
+            transport=transport, base_url="http://test", headers=gateway.headers(username="other", user_id=200)
         ) as other:
             task = (await owner.post("/tasks", json={"text": "1+1=?"})).json()
             pending = await owner.post(f"/tasks/{task['id']}/speech", json={})
@@ -138,8 +145,9 @@ async def test_speech_rejects_unfinished_or_cross_session_tasks(tmp_path):
 async def test_tts_capability_does_not_change_agent_tool_set(tmp_path):
     app = create_app(_settings(tmp_path))
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             capabilities = (await client.get("/meta/client-capabilities")).json()
             assert capabilities["tts"]["provider"] == "disabled"
             assert capabilities["tts"]["enabled"] is False
@@ -151,6 +159,7 @@ async def test_speech_capabilities_publish_selectable_voices(tmp_path):
     settings = _settings(tmp_path)
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         app.state.container.speech = SpeechOutputService(
             tasks=app.state.container.tasks,
             synthesizer=_FakeSpeechSynthesizer(),
@@ -159,7 +168,7 @@ async def test_speech_capabilities_publish_selectable_voices(tmp_path):
             keep_versions=3,
         )
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             tts = (await client.get("/meta/client-capabilities")).json()["tts"]
             assert tts["default_voice_id"] == "female"
             assert [voice["id"] for voice in tts["voices"]] == ["female", "male"]

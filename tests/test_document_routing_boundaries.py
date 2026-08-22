@@ -13,6 +13,11 @@ from agent_platform.models import (
 from agent_platform.tools.knowledge_base_tool import KnowledgeBaseTool
 from agent_platform.tools.schedule_tool import ScheduleTool
 
+from agent_platform.models import ToolContext
+
+CTX = ToolContext(owner="default")
+OWNER = "default"
+
 
 @pytest.mark.parametrize(
     ("text", "intent"),
@@ -72,11 +77,11 @@ async def test_project_weekly_report_uses_filename_date_and_returns_clarificatio
     (root / "员工请假制度.md").write_text("员工每年享有年假。", encoding="utf-8")
     tool = KnowledgeBaseTool([root], tmp_path / "knowledge.db", DataClassificationService())
 
-    ambiguous = await tool.execute({"query": "项目周报中完成了什么"})
+    ambiguous = await tool.execute({"query": "项目周报中完成了什么"}, context=CTX)
     assert ambiguous.output["type"] == "clarification"
     assert {item["date"] for item in ambiguous.output["candidates"]} == {"2026-07-14", "2026-07-21"}
 
-    dated = await tool.execute({"query": "2026 年 7 月 21 日项目周报中完成了什么"})
+    dated = await tool.execute({"query": "2026 年 7 月 21 日项目周报中完成了什么"}, context=CTX)
     assert "2026-07-21" in dated.output["answer"]
     assert dated.output["sources"][0]["file"] == "项目周报_20260721.txt"
     assert dated.output["sources"][0]["date"] == "2026-07-21"
@@ -93,7 +98,7 @@ async def test_local_schedule_has_room_disclaimer(tmp_path: Path):
             "location": "A301",
             "start_text": "明天下午三点",
         }
-    )
+    , context=CTX)
     assert receipt.output["item"]["location"] == "A301"
     assert "不代表会议室已经锁定" in receipt.output["notice"]
     tool.close()

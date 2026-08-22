@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from pydantic import JsonValue
 
 from agent_platform.core.interfaces import Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 
 
 logger = logging.getLogger(__name__)
@@ -292,13 +292,27 @@ class ReminderTool(Tool):
                 due_at TEXT NOT NULL,
                 repeat_rule TEXT,
                 status TEXT NOT NULL DEFAULT 'active',
+                owner TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL
             )"""
+        )
+        existing_columns = {str(row[1]) for row in self._connection.execute("PRAGMA table_info(reminders)")}
+        if "owner" not in existing_columns:
+            # Pre-gateway rows keep owner='' and are invisible to every account.
+            self._connection.execute("ALTER TABLE reminders ADD COLUMN owner TEXT NOT NULL DEFAULT ''")
+        self._connection.execute(
+            "CREATE INDEX IF NOT EXISTS idx_reminders_owner_status_due ON reminders(owner, status, due_at)"
         )
         self._connection.commit()
         self._parser = ChineseTimeParser(timezone)
         self._callback = callback or self._log_callback
         self._scheduler_task: asyncio.Task[None] | None = None
+
+    @staticmethod
+    def _required_owner(context: ToolContext | None) -> str:
+        if context is None or not context.owner:
+            raise ValueError("reminder operations require an authenticated owner context")
+        return context.owner
 
     @property
     def metadata(self) -> ToolMetadata:
@@ -354,7 +368,8 @@ class ReminderTool(Tool):
             "created_at": str(get("created_at")),
         }
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
+        owner = self._required_owner(context)
         action = str(arguments["action"])
         if action == "create":
             raw_text = str(arguments.get("text", ""))
@@ -382,8 +397,8 @@ class ReminderTool(Tool):
                     next_actions=["补充具体时间后重试"],
                 )
             cursor = self._connection.execute(
-                "INSERT INTO reminders(text, due_at, repeat_rule, status, created_at) VALUES (?, ?, ?, 'active', ?)",
-                (text, due_at.isoformat(), repeat_rule, datetime.now(UTC).isoformat()),
+                "INSERT INTO reminders(text, due_at, repeat_rule, status, owner, created_at) VALUES (?, ?, ?, 'active', ?, ?)",
+                (text, due_at.isoformat(), repeat_rule, owner, datetime.now(UTC).isoformat()),
             )
             self._connection.commit()
             row = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (cursor.lastrowid,)).fetchone()
@@ -394,7 +409,9 @@ class ReminderTool(Tool):
         elif action in {"cancel", "complete"}:
             reminder_id = int(arguments.get("id", 0))
             status = "cancelled" if action == "cancel" else "completed"
-            existing = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
+            existing = self._connection.execute(
+                "SELECT * FROM reminders WHERE id = ? AND owner = ?", (reminder_id, owner)
+            ).fetchone()
             if existing is None:
                 self._connection.commit()
                 output = {"id": reminder_id, "status": status, "updated": False, "item": None}
@@ -406,17 +423,23 @@ class ReminderTool(Tool):
                     output_summary=summary,
                     output=output,
                 )
-            cursor = self._connection.execute("UPDATE reminders SET status = ? WHERE id = ?", (status, reminder_id))
+            cursor = self._connection.execute(
+                "UPDATE reminders SET status = ? WHERE id = ? AND owner = ?", (status, reminder_id, owner)
+            )
             self._connection.commit()
-            updated = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (reminder_id,)).fetchone()
+            updated = self._connection.execute(
+                "SELECT * FROM reminders WHERE id = ? AND owner = ?", (reminder_id, owner)
+            ).fetchone()
             assert updated is not None
             item = self._item(updated)
             output = {"id": reminder_id, "status": status, "updated": cursor.rowcount == 1, "item": item}
             verb = "已取消" if action == "cancel" else "已完成"
             summary = f"提醒 {reminder_id} {verb}：{item['text']}（{item['due_at']}）"
         elif action == "delete_all":
-            rows = self._connection.execute("SELECT * FROM reminders ORDER BY due_at, id").fetchall()
-            cursor = self._connection.execute("DELETE FROM reminders")
+            rows = self._connection.execute(
+                "SELECT * FROM reminders WHERE owner = ? ORDER BY due_at, id", (owner,)
+            ).fetchall()
+            cursor = self._connection.execute("DELETE FROM reminders WHERE owner = ?", (owner,))
             self._connection.commit()
             deleted_items = [self._item(row) for row in rows]
             output = {"deleted_count": cursor.rowcount, "deleted_items": deleted_items, "status": "deleted"}
@@ -424,7 +447,7 @@ class ReminderTool(Tool):
                 "：" + "；".join(f"{item['id']} {item['text']}" for item in deleted_items) if deleted_items else ""
             )
         elif action == "query":
-            output = {"items": self.query(str(arguments.get("scope", "next_7_days")))}
+            output = {"items": self.query(str(arguments.get("scope", "next_7_days")), owner=owner)}
             summary = f"查询到 {len(output['items'])} 条提醒"
         return ToolReceipt(
             tool_name=self.metadata.name,
@@ -434,18 +457,22 @@ class ReminderTool(Tool):
             output=output,
         )
 
-    def query(self, scope: str = "next_7_days", *, now: datetime | None = None) -> list[dict[str, JsonValue]]:
+    def query(
+        self, scope: str = "next_7_days", *, now: datetime | None = None, owner: str = ""
+    ) -> list[dict[str, JsonValue]]:
         current = now or datetime.now(self._parser.timezone)
         if scope == "overdue":
             rows = self._connection.execute(
-                "SELECT * FROM reminders WHERE status IN ('active', 'notified') AND due_at < ? ORDER BY due_at",
-                (current.isoformat(),),
+                """SELECT * FROM reminders
+                WHERE owner = ? AND status IN ('active', 'notified') AND due_at < ? ORDER BY due_at""",
+                (owner, current.isoformat()),
             ).fetchall()
         else:
             end = current + timedelta(days=7)
             rows = self._connection.execute(
-                "SELECT * FROM reminders WHERE status IN ('active', 'notified') AND due_at BETWEEN ? AND ? ORDER BY due_at",
-                (current.isoformat(), end.isoformat()),
+                """SELECT * FROM reminders
+                WHERE owner = ? AND status IN ('active', 'notified') AND due_at BETWEEN ? AND ? ORDER BY due_at""",
+                (owner, current.isoformat(), end.isoformat()),
             ).fetchall()
         return [self._item(row) for row in rows]
 
@@ -470,12 +497,20 @@ class ReminderTool(Tool):
             self._connection.commit()
         return len(rows)
 
-    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+    async def confirmation_context(
+        self, arguments: dict[str, JsonValue], context: ToolContext | None = None
+    ) -> dict[str, str]:
         """Expose the selected reminder body to a confirmation UI."""
 
         if arguments.get("action") not in {"cancel", "complete"} or not isinstance(arguments.get("id"), int):
             return {}
-        row = self._connection.execute("SELECT * FROM reminders WHERE id = ?", (int(arguments["id"]),)).fetchone()
+        try:
+            owner = self._required_owner(context)
+        except ValueError:
+            return {}
+        row = self._connection.execute(
+            "SELECT * FROM reminders WHERE id = ? AND owner = ?", (int(arguments["id"]), owner)
+        ).fetchone()
         if row is None:
             return {}
         item = self._item(row)

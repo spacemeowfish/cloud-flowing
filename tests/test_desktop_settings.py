@@ -14,6 +14,7 @@ from agent_platform.core.desktop_settings import DesktopSettingsService, Passive
 from agent_platform.core.desktop_supervisor import DesktopRestartController
 from agent_platform.core.errors import ConfigurationError
 from agent_platform.models.admin import DesktopSettingsUpdate
+from ruoyi_support import enable_gateway
 
 
 def _wav(path: Path) -> Path:
@@ -38,7 +39,6 @@ def _settings(tmp_path: Path) -> Settings:
         authorized_file_roots=[files],
         knowledge_roots=[knowledge],
         meeting_output_dir=tmp_path / "meeting",
-        developer_password="test-developer-password",
     )
 
 
@@ -125,14 +125,12 @@ async def test_admin_api_never_exposes_secret_and_reindexes(tmp_path: Path) -> N
     (settings.knowledge_roots[0] / "policy.txt").write_text("产品保修期为两年。", encoding="utf-8")
     app = create_app(settings)
     async with app.router.lifespan_context(app):
+        gateway = enable_gateway(app)
         transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test", headers=gateway.headers()) as client:
             denied = await client.get("/admin/settings")
             assert denied.status_code == 403
-            login = await client.post(
-                "/auth/developer/login", json={"password": "test-developer-password"}
-            )
-            assert login.status_code == 200
+            gateway.promote(client)
             response = await client.get("/admin/settings")
             assert response.status_code == 200
             assert "api_key" not in response.text.casefold()

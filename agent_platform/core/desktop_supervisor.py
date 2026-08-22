@@ -134,7 +134,11 @@ def run_desktop(*, open_browser: bool = True) -> None:
         )
         server = uvicorn.Server(config)
         controller.bind(server)
-        url = f"http://{settings.host}:{settings.port}/"
+        # Cookies are host-scoped (not port-scoped): the RuoYi login popup runs
+        # on "localhost", so the workbench must too or the Admin-Token cookie
+        # set there stays invisible to the 127.0.0.1 page. Still loopback-only.
+        browser_host = "localhost" if settings.host == "127.0.0.1" else settings.host
+        url = f"http://{browser_host}:{settings.port}/"
         watcher = threading.Thread(
             target=_watch_ready,
             args=(server, controller, url),

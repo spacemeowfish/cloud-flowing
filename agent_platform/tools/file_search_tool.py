@@ -10,7 +10,7 @@ from pydantic import JsonValue
 
 from agent_platform.core.errors import PermissionDeniedError
 from agent_platform.core.interfaces import FileOpener, Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 
 _CJK_RUN = re.compile(r"[\u4e00-\u9fff]")
 
@@ -101,7 +101,7 @@ class FileSearchTool(Tool):
         resolved = path.resolve()
         return resolved in self._index and any(resolved.is_relative_to(root) for root in self._roots)
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
         query = str(arguments["query"])
         selected = arguments.get("selected_path")
         if selected:

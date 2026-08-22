@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from agent_platform.core.errors import ToolExecutionError, ToolTimeoutError
 from agent_platform.core.schema_validator import SchemaValidator
 from agent_platform.core.tool_registry import ToolRegistry
-from agent_platform.models import ToolCall, ToolReceipt
+from agent_platform.models import ToolCall, ToolContext, ToolReceipt
 
 
 @dataclass(frozen=True)
@@ -35,10 +35,19 @@ class ToolExecutor:
         self._cache: dict[str, _CachedReceipt] = {}
         self._cache_lock = asyncio.Lock()
 
-    async def execute(self, call: ToolCall, cancellation: asyncio.Event | None = None) -> ToolReceipt:
+    async def execute(
+        self,
+        call: ToolCall,
+        cancellation: asyncio.Event | None = None,
+        context: ToolContext | None = None,
+    ) -> ToolReceipt:
         tool = self._registry.get(call.tool_name)
         SchemaValidator.validate(call.arguments, tool.metadata.parameters_schema)
         key = call.idempotency_key or tool.idempotency_key(call.arguments)
+        if context is not None:
+            # Identical arguments from two accounts are different operations;
+            # the cache key must never cross owner boundaries.
+            key = f"owner:{context.owner}:{key}"
         cached = await self._get_cached(key)
         if cached is not None:
             return cached
@@ -48,7 +57,7 @@ class ToolExecutor:
         last_error: Exception | None = None
         for attempt in range(tool.metadata.retry_budget + 1):
             try:
-                receipt = await self._execute_once(tool, call, cancellation)
+                receipt = await self._execute_once(tool, call, cancellation, context)
                 if receipt.tool_name != call.tool_name:
                     raise ToolExecutionError("Tool receipt name does not match registration")
                 if receipt.success:
@@ -68,9 +77,15 @@ class ToolExecutor:
                     raise ToolExecutionError(f"Tool {call.tool_name} failed: {type(exc).__name__}") from exc
         raise ToolExecutionError(f"Tool failed: {last_error}")
 
-    async def _execute_once(self, tool: object, call: ToolCall, cancellation: asyncio.Event | None) -> ToolReceipt:
+    async def _execute_once(
+        self,
+        tool: object,
+        call: ToolCall,
+        cancellation: asyncio.Event | None,
+        context: ToolContext | None,
+    ) -> ToolReceipt:
         started = time.perf_counter()
-        execution = asyncio.create_task(tool.execute(call.arguments))  # type: ignore[attr-defined]
+        execution = asyncio.create_task(tool.execute(call.arguments, context))  # type: ignore[attr-defined]
         waiters: set[asyncio.Task[object]] = {execution}
         cancel_waiter: asyncio.Task[object] | None = None
         if cancellation is not None:

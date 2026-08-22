@@ -12,6 +12,11 @@ from agent_platform.tools.file_search_tool import FileSearchTool
 from agent_platform.tools.knowledge_base_tool import KnowledgeBaseTool
 from agent_platform.tools.meeting_notes_tool import MeetingNotesTool
 
+from agent_platform.models import ToolContext
+
+CTX = ToolContext(owner="default")
+OWNER = "default"
+
 
 def test_default_resource_roots_follow_checkout_when_started_elsewhere(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
@@ -36,7 +41,7 @@ async def test_demo_knowledge_file_and_meeting_tools_work_from_foreign_cwd(tmp_p
     classifier = DataClassificationService()
 
     file_tool = FileSearchTool(settings.authorized_file_roots, DisabledFileOpener())
-    file_receipt = await file_tool.execute({"query": "\u9879\u76ee\u5468\u62a5"})
+    file_receipt = await file_tool.execute({"query": "\u9879\u76ee\u5468\u62a5"}, context=CTX)
     assert file_receipt.output["requires_confirmation"] is True
     assert {item["name"] for item in file_receipt.output["candidates"]} >= {
         "\u9879\u76ee\u5468\u62a5_20260714.txt",
@@ -49,7 +54,7 @@ async def test_demo_knowledge_file_and_meeting_tools_work_from_foreign_cwd(tmp_p
         classifier,
     )
     try:
-        receipt = await knowledge.execute({"query": "\u4ea7\u54c1\u4fdd\u4fee\u671f\u662f\u591a\u4e45"})
+        receipt = await knowledge.execute({"query": "\u4ea7\u54c1\u4fdd\u4fee\u671f\u662f\u591a\u4e45"}, context=CTX)
         assert receipt.output["sources"]
         assert "\u4e24\u5e74" in receipt.output["answer"]
     finally:
@@ -57,7 +62,7 @@ async def test_demo_knowledge_file_and_meeting_tools_work_from_foreign_cwd(tmp_p
 
     source = settings.authorized_file_roots[-1] / "\u9879\u76ee\u5468\u62a5_20260721.txt"
     meeting = MeetingNotesTool(settings.authorized_file_roots, settings.meeting_output_dir, classifier)
-    meeting_receipt = await meeting.execute({"source_path": str(source)})
+    meeting_receipt = await meeting.execute({"source_path": str(source)}, context=CTX)
     output_path = Path(meeting_receipt.output["output_path"])
     assert meeting_receipt.success is True
     assert output_path.is_file()

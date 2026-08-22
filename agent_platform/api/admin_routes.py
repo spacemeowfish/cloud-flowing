@@ -43,15 +43,16 @@ async def restart_status(request: Request) -> RestartStatus:
     return controller.status()
 
 
-def _reindex(knowledge: KnowledgeBaseTool) -> dict[str, object]:
+def _reindex(knowledge: KnowledgeBaseTool, owner: str) -> dict[str, object]:
     # Reuse the container's live instance: it is built from
     # settings.document_roots, so the rebuilt index can never diverge from
     # what queries actually read (knowledge_roots may differ when
-    # AGENT_DOCUMENT_ROOTS is explicitly configured).
+    # AGENT_DOCUMENT_ROOTS is explicitly configured). Documents land in the
+    # requesting developer's own knowledge space (owner key).
     aggregate = {"scanned": 0, "imported": 0, "skipped": 0, "failures": []}
     importer = KnowledgeDocumentImporter(knowledge)
     for root in knowledge.roots:
-        report = importer.import_directory(Path(root), force=True)
+        report = importer.import_directory(Path(root), owner=owner, force=True)
         aggregate["scanned"] += report.scanned
         aggregate["imported"] += report.imported
         aggregate["skipped"] += report.skipped
@@ -63,7 +64,8 @@ def _reindex(knowledge: KnowledgeBaseTool) -> dict[str, object]:
 
 @router.post("/knowledge/reindex")
 async def reindex_knowledge(request: Request) -> dict[str, object]:
-    return await asyncio.to_thread(_reindex, _container(request).knowledge)
+    owner = str(getattr(request.state, "session_id", ""))
+    return await asyncio.to_thread(_reindex, _container(request).knowledge, owner)
 
 
 @router.post("/notifications/test")

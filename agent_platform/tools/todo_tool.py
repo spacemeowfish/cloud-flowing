@@ -12,7 +12,7 @@ from pathlib import Path
 from pydantic import JsonValue
 
 from agent_platform.core.interfaces import Tool
-from agent_platform.models import DataLevel, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 from agent_platform.tools.reminder_tool import ChineseTimeParser
 
 
@@ -55,13 +55,25 @@ class TodoTool(Tool):
                 tags TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'in_progress', 'completed')),
                 due_at TEXT,
+                owner TEXT NOT NULL DEFAULT '',
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 completed_at TEXT
             )"""
         )
-        self._connection.execute("CREATE INDEX IF NOT EXISTS idx_todos_status_due ON todos(status, due_at)")
+        existing_columns = {str(row[1]) for row in self._connection.execute("PRAGMA table_info(todos)")}
+        if "owner" not in existing_columns:
+            # Pre-gateway rows keep owner='' and are invisible to every account.
+            self._connection.execute("ALTER TABLE todos ADD COLUMN owner TEXT NOT NULL DEFAULT ''")
+        self._connection.execute("DROP INDEX IF EXISTS idx_todos_status_due")
+        self._connection.execute("CREATE INDEX IF NOT EXISTS idx_todos_owner_status_due ON todos(owner, status, due_at)")
         self._connection.commit()
+
+    @staticmethod
+    def _required_owner(context: ToolContext | None) -> str:
+        if context is None or not context.owner:
+            raise ValueError("todo operations require an authenticated owner context")
+        return context.owner
 
     @property
     def metadata(self) -> ToolMetadata:
@@ -118,18 +130,19 @@ class TodoTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"mutation:todo:{hashlib.sha256(value.encode('utf-8')).hexdigest()}"
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
+        owner = self._required_owner(context)
         action = str(arguments["action"])
         if action == "create":
-            return await self._create(arguments)
+            return await self._create(arguments, owner)
         if action == "query":
-            return await self._query(arguments)
+            return await self._query(arguments, owner)
         if action == "update":
-            return await self._update(arguments)
+            return await self._update(arguments, owner)
         if action == "complete":
-            return await self._complete(int(arguments["id"]), arguments)
+            return await self._complete(int(arguments["id"]), arguments, owner)
         if action == "delete":
-            return await self._delete(int(arguments["id"]), arguments)
+            return await self._delete(int(arguments["id"]), arguments, owner)
         raise ValueError(f"Unsupported todo action: {action}")
 
     def _due_at(self, arguments: dict[str, JsonValue]) -> str | None:
@@ -166,7 +179,7 @@ class TodoTool(Tool):
             "completed_at": str(row["completed_at"]) if row["completed_at"] is not None else None,
         }
 
-    async def _create(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _create(self, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         now = datetime.now(UTC).isoformat()
         try:
             due_at = self._due_at(arguments)
@@ -175,14 +188,15 @@ class TodoTool(Tool):
         tags = list(dict.fromkeys(str(tag).strip() for tag in arguments.get("tags", []) if str(tag).strip()))
         async with self._lock:
             cursor = self._connection.execute(
-                """INSERT INTO todos(title, description, priority, tags, status, due_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)""",
+                """INSERT INTO todos(title, description, priority, tags, status, due_at, owner, created_at, updated_at)
+                VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)""",
                 (
                     str(arguments["title"]).strip(),
                     str(arguments.get("description", "")).strip(),
                     str(arguments.get("priority", "medium")),
                     json.dumps(tags, ensure_ascii=False),
                     due_at,
+                    owner,
                     now,
                     now,
                 ),
@@ -199,9 +213,9 @@ class TodoTool(Tool):
             output={"item": item},
         )
 
-    async def _query(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
-        clauses: list[str] = []
-        parameters: list[object] = []
+    async def _query(self, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
+        clauses: list[str] = ["owner = ?"]
+        parameters: list[object] = [owner]
         status = _STATUS_ALIASES.get(str(arguments.get("status", "")), str(arguments.get("status", "")))
         if status and status != "all":
             clauses.append("status = ?")
@@ -240,7 +254,7 @@ class TodoTool(Tool):
             output={"items": items},
         )
 
-    async def _update(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _update(self, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         todo_id = int(arguments["id"])
         fields: list[str] = []
         parameters: list[object] = []
@@ -270,10 +284,15 @@ class TodoTool(Tool):
         fields.append("updated_at = ?")
         parameters.append(datetime.now(UTC).isoformat())
         parameters.append(todo_id)
+        parameters.append(owner)
         async with self._lock:
-            cursor = self._connection.execute(f"UPDATE todos SET {', '.join(fields)} WHERE id = ?", tuple(parameters))
+            cursor = self._connection.execute(
+                f"UPDATE todos SET {', '.join(fields)} WHERE id = ? AND owner = ?", tuple(parameters)
+            )
             self._connection.commit()
-            row = self._connection.execute("SELECT * FROM todos WHERE id = ?", (todo_id,)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM todos WHERE id = ? AND owner = ?", (todo_id, owner)
+            ).fetchone()
         if cursor.rowcount != 1 or row is None:
             return self._not_found(arguments, todo_id)
         item = self._item(row)
@@ -285,15 +304,17 @@ class TodoTool(Tool):
             output={"item": item},
         )
 
-    async def _complete(self, todo_id: int, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _complete(self, todo_id: int, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         now = datetime.now(UTC).isoformat()
         async with self._lock:
             cursor = self._connection.execute(
-                "UPDATE todos SET status = 'completed', completed_at = ?, updated_at = ? WHERE id = ?",
-                (now, now, todo_id),
+                "UPDATE todos SET status = 'completed', completed_at = ?, updated_at = ? WHERE id = ? AND owner = ?",
+                (now, now, todo_id, owner),
             )
             self._connection.commit()
-            row = self._connection.execute("SELECT * FROM todos WHERE id = ?", (todo_id,)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM todos WHERE id = ? AND owner = ?", (todo_id, owner)
+            ).fetchone()
         if cursor.rowcount != 1 or row is None:
             return self._not_found(arguments, todo_id)
         return ToolReceipt(
@@ -304,13 +325,15 @@ class TodoTool(Tool):
             output={"item": self._item(row)},
         )
 
-    async def _delete(self, todo_id: int, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def _delete(self, todo_id: int, arguments: dict[str, JsonValue], owner: str) -> ToolReceipt:
         async with self._lock:
-            row = self._connection.execute("SELECT * FROM todos WHERE id = ?", (todo_id,)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM todos WHERE id = ? AND owner = ?", (todo_id, owner)
+            ).fetchone()
             if row is None:
                 return self._not_found(arguments, todo_id)
             item = self._item(row)
-            self._connection.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+            self._connection.execute("DELETE FROM todos WHERE id = ? AND owner = ?", (todo_id, owner))
             self._connection.commit()
         return ToolReceipt(
             tool_name=self.metadata.name,
@@ -329,13 +352,21 @@ class TodoTool(Tool):
             output={"updated": False, "id": todo_id},
         )
 
-    async def confirmation_context(self, arguments: dict[str, JsonValue]) -> dict[str, str]:
+    async def confirmation_context(
+        self, arguments: dict[str, JsonValue], context: ToolContext | None = None
+    ) -> dict[str, str]:
         """Expose the selected todo title before a destructive confirmation."""
 
         if arguments.get("action") != "delete" or not isinstance(arguments.get("id"), int):
             return {}
+        try:
+            owner = self._required_owner(context)
+        except ValueError:
+            return {}
         async with self._lock:
-            row = self._connection.execute("SELECT * FROM todos WHERE id = ?", (int(arguments["id"]),)).fetchone()
+            row = self._connection.execute(
+                "SELECT * FROM todos WHERE id = ? AND owner = ?", (int(arguments["id"]), owner)
+            ).fetchone()
         if row is None:
             return {}
         item = self._item(row)

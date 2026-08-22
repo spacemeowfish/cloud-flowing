@@ -12,7 +12,7 @@ from pydantic import JsonValue
 
 from agent_platform.core.interfaces import Tool
 from agent_platform.core.model_gateway import ModelGateway
-from agent_platform.models import DataLevel, MessageRole, ModelMessage, RiskLevel, ToolMetadata, ToolReceipt
+from agent_platform.models import DataLevel, MessageRole, ModelMessage, RiskLevel, ToolContext, ToolMetadata, ToolReceipt
 
 
 _ARITHMETIC_QUERY = re.compile(
@@ -76,7 +76,7 @@ class GeneralChatTool(Tool):
         value = json.dumps(arguments, ensure_ascii=False, sort_keys=True)
         return f"general-chat:{hashlib.sha256(value.encode()).hexdigest()}"
 
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
         text = str(arguments["text"]).strip()
         arithmetic = _evaluate_arithmetic(text)
         if arithmetic is not None:

@@ -18,6 +18,7 @@ from agent_platform.models import (
     TaskRecord,
     ToolMetadata,
     ToolReceipt,
+    ToolContext,
 )
 
 
@@ -73,8 +74,13 @@ class Tool(ABC):
         """Return a stable key for semantically equivalent arguments."""
 
     @abstractmethod
-    async def execute(self, arguments: dict[str, JsonValue]) -> ToolReceipt:
-        """Execute with already validated arguments and return a receipt."""
+    async def execute(self, arguments: dict[str, JsonValue], context: ToolContext | None = None) -> ToolReceipt:
+        """Execute with already validated arguments and return a receipt.
+
+        ``context`` carries the authenticated data-owner identity; tools that
+        persist per-account data must scope every read and write by
+        ``context.owner`` and reject execution without it.
+        """
 
 
 class Policy(ABC):
